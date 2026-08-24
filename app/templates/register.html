@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-card-bg p-8 rounded-lg shadow-xl border border-neon-magenta/50 mt-12">
+    <h1 class="text-3xl font-bold mb-8 text-center text-neon-magenta">{{ page_title }}</h1>
+
+    {% if error_message or request.query_params.get('error_message') %}
+    <div class="bg-red-700/70 border border-red-500/50 text-red-200 px-4 py-3 rounded relative mb-4" role="alert">
+        <strong class="font-bold">{{ _('Error!') }}</strong>
+        <span class="block sm:inline">{{ error_message or request.query_params.get('error_message') }}</span>
+    </div>
+    {% endif %}
+
+    <form action="{{ url_for('ui_register_submit') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="space-y-6">
+            <div>
+                <label for="username" class="block text-sm font-medium text-text-secondary">{{ _('Username') }}</label>
+                <input type="text" name="username" id="username" required minlength="3"
+                       value="{{ form_data.username or '' }}"
+                       class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-magenta focus:ring-1 focus:ring-neon-magenta sm:text-sm"
+                       placeholder="{{ _('Choose a username') }}">
+            </div>
+            <div>
+                <label for="email" class="block text-sm font-medium text-text-secondary">{{ _('Email Address') }}</label>
+                <input type="email" name="email" id="email" required
+                       value="{{ form_data.email or '' }}"
+                       class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-magenta focus:ring-1 focus:ring-neon-magenta sm:text-sm"
+                       placeholder="{{ _('your@email.com') }}">
+            </div>
+            <div>
+                <label for="password" class="block text-sm font-medium text-text-secondary">{{ _('Password') }}</label>
+                <input type="password" name="password" id="password" required 
+                       class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-magenta focus:ring-1 focus:ring-neon-magenta sm:text-sm"
+                       placeholder="{{ _('Enter password') }}">
+                <p class="mt-2 text-xs text-text-secondary">
+                    {{ _('Must be 12 to 128 characters long. Include uppercase, lowercase, a digit, and a special character (e.g., !@#$%%^&*).') }}
+                </p>
+            </div>
+             <div>
+                <label for="confirm_password" class="block text-sm font-medium text-text-secondary">{{ _('Confirm Password') }}</label>
+                <input type="password" name="confirm_password" id="confirm_password" required
+                       class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-magenta focus:ring-1 focus:ring-neon-magenta sm:text-sm"
+                       placeholder="{{ _('Repeat your password') }}">
+            </div>
+        </div>
+
+        <div class="mt-8">
+            <button type="submit"
+                    class="w-full px-4 py-2.5 text-sm font-medium text-dark-bg bg-neon-magenta border border-neon-magenta rounded-md hover:bg-neon-magenta-darker hover:border-neon-magenta-darker hover:shadow-lg hover:shadow-neon-magenta/40 transition-all duration-200">
+                {{ _('Register') }}
+            </button>
+        </div>
+    </form>
+    <p class="mt-6 text-center text-sm text-text-secondary">
+        {{ _('Already have an account?') }} <a href="{{ url_for('ui_login_form') }}" class="font-medium text-neon-blue hover:text-neon-blue-darker">{{ _('Login here') }}</a>
+    </p>
+</div>
+{% endblock %}

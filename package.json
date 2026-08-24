@@ -1,0 +1,22 @@
+{
+  "name": "pyovms",
+  "version": "2.2.1",
+  "description": "Tailwind CSS build for PyOVMS",
+  "scripts": {
+    "build": "tailwindcss -i ./app/static/css/input.css -o ./app/static/css/main.css",
+    "watch": "tailwindcss -i ./app/static/css/input.css -o ./app/static/css/main.css --watch"
+  },
+  "author": "Carsten Schmiemann",
+  "license": "GPL-3.0-only",
+  "devDependencies": {
+    "@alpinejs/collapse": "^3.15.12",
+    "@alpinejs/csp": "^3.15.12",
+    "@msgpack/msgpack": "^3.1.3",
+    "chart.js": "^4.5.1",
+    "pmtiles": "^3.2.1",
+    "protomaps-leaflet": "^5.1.0",
+    "redoc": "^2.5.2",
+    "swagger-ui-dist": "^5.32.6",
+    "tailwindcss": "^3.4.1"
+  }
+}

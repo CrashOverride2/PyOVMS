@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyOVMS - Not Found</title>
+    <style>
+        /* Basic Reset & Font Setup */
+        :root {
+            --neon-magenta: #ff00ff;
+            --neon-magenta-darker: #cc00cc;
+            --neon-blue: #00c6ff;
+            --dark-bg: #0d1117;
+            --card-bg: #161b22;
+            --border-color: #30363d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+        }
+
+        html {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-primary);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+
+        /* Main Content Styling */
+        main {
+            text-align: center;
+        }
+
+        .card-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            position: relative;
+            background-color: var(--card-bg);
+            padding: 2rem 3rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .glow {
+            position: absolute;
+            top: -0.375rem;
+            left: -0.375rem;
+            right: -0.375rem;
+            bottom: -0.375rem;
+            background: var(--neon-magenta);
+            border-radius: 0.5rem;
+            filter: blur(1rem);
+            opacity: 0.6;
+            animation: pulse-glow 4s infinite ease-in-out;
+            z-index: -1;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% {
+                opacity: 0.6;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.8;
+                transform: scale(1.02);
+            }
+        }
+
+        h1 {
+            font-size: 3.75rem;
+            line-height: 1;
+            font-weight: 700;
+            color: var(--neon-magenta);
+            text-shadow: 0 0 10px var(--neon-magenta);
+        }
+
+        h2 {
+            font-size: 1.875rem;
+            line-height: 2.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: 0.5rem;
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-top: 1.5rem;
+            max-width: 28rem;
+        }
+
+        .home-button {
+            display: inline-block;
+            margin-top: 2rem;
+            padding: 0.625rem 1.5rem;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            font-weight: 500;
+            color: var(--dark-bg);
+            background-color: var(--neon-magenta);
+            border: 1px solid var(--neon-magenta);
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+        }
+        
+        .home-button:hover {
+            background-color: var(--neon-magenta-darker);
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+        }
+
+        /* Footer */
+        footer {
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+        
+        footer p {
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <main>
+        <div class="card-wrapper">
+            <div class="glow"></div>
+            <div class="card">
+                <h1>404</h1>
+                <h2>Page Not Found</h2>
+                <p>
+                    Oops! The page you are looking for does not exist. It might have been moved or deleted.
+                </p>
+                <div>
+                    <a href="/" class="home-button">
+                        Go to Start Page
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>PyOVMS Control</p>
+    </footer>
+
+</body>
+</html>

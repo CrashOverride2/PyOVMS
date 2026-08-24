@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Registration Successful') }}{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto bg-card-bg p-8 rounded-lg shadow-xl border border-neon-green/50 mt-12 text-center">
+    <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-700/70 mb-4">
+        <svg class="h-6 w-6 text-green-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+    </div>
+    <h1 class="text-3xl font-bold mb-4 text-neon-green">{{ _('Check Your Email!') }}</h1>
+    <p class="text-text-primary mb-6">
+        {# The email is interpolated escaped: on the username-collision path it is still the
+           raw, pre-validation form value, so it must not be trusted. |safe stays because the
+           translated string itself carries the <strong> markup. #}
+        {{ (_("We've sent an account activation link to <strong>%(email)s</strong>. Please click the link in the email to complete your registration.") % {'email': email | e}) | safe }}
+    </p>
+    <p class="text-sm text-text-secondary">
+        {{ _('The link will expire in %(valid_hours)s hours. If you don\'t see the email, please check your spam folder.') % {'valid_hours': valid_hours} }}
+    </p>
+    <div class="mt-8">
+        <a href="{{ url_for('ui_login_form') }}" class="px-6 py-2 text-sm font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">
+            {{ _('Back to Login') }}
+        </a>
+    </div>
+</div>
+{% endblock %}

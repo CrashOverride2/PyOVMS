@@ -1,0 +1,84 @@
+<div x-show="tripsState.showLoading" class="p-4 text-center text-text-secondary">
+    <p>{{ _('Loading trips...') }}</p>
+</div>
+
+<div x-show="tripsState.showError" class="p-4 text-center text-yellow-400 bg-yellow-900/40 border border-yellow-700/60 rounded-md">
+    <p x-text="tripsState.error"></p>
+</div>
+
+<div x-show="tripsState.showEmpty" class="p-4 text-center text-text-secondary">
+    <p>{{ _('No trips have been recorded for this vehicle yet.') }}</p>
+</div>
+
+<div x-show="tripsState.showList" class="space-y-4 transition-opacity duration-300" :class="tripsState.listOpacityClass">
+    <template x-for="trip in tripsState.displayTrips" :key="trip.id">
+        <div @click="tripsState.saveTripsScrollState"
+            class="bg-gray-800/50 p-4 rounded-md border border-border-color/50 transition-all hover:border-neon-blue/70 hover:shadow-lg flex flex-col sm:flex-row gap-4 relative">
+
+            <div class="absolute top-2 right-2 z-10">
+                <button @click.stop="tripsState.selectTripForDelete"
+                    :data-trip-id="trip.id"
+                    class="px-2 py-1 text-xs text-red-400 border border-red-500/50 rounded bg-card-bg/50 backdrop-blur-sm hover:bg-red-500/20 transition-colors" title="{{ _('Delete Trip') }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 011-1h4a1 1 0 110 2H8a1 1 0 01-1-1z" clip-rule="evenodd" /></svg>
+                </button>
+            </div>
+
+            <a :href="trip.detailHref"
+                x-show="trip.mapPreviewVisible"
+                data-trip-preview
+                class="flex-shrink-0 w-full sm:w-48 h-32 bg-gray-700/50 rounded-md block border border-border-color relative overflow-hidden">
+
+                <div data-trip-preview-skeleton
+                    class="absolute inset-0 animate-pulse bg-gradient-to-br from-gray-700/80 via-gray-600/60 to-gray-700/80">
+                </div>
+
+                <img data-trip-preview-image
+                    :src="trip.mapPreviewSrc"
+                    :alt="trip.mapAltText"
+                    loading="lazy"
+                    class="absolute inset-0 rounded-md w-full h-full object-cover opacity-0 transition-opacity duration-300">
+            </a>
+
+            <div class="flex-grow">
+                <a :href="trip.detailHref" class="block">
+                    <h3 class="font-semibold text-text-primary text-base hover:text-neon-blue hover:underline" x-text="trip.startDateText"></h3>
+                    <p class="text-xs text-text-secondary">
+                        <span x-text="trip.startTimeText"></span> → <span x-text="trip.endTimeText"></span>
+                    </p>
+                </a>
+
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-3 text-sm mt-3 border-t border-border-color/30 pt-3">
+                    <div><dt class="text-text-secondary text-xs">{{ _('Duration') }}</dt><dd class="text-text-primary font-medium" x-text="trip.durationText"></dd></div>
+                    <div><dt class="text-text-secondary text-xs">{{ _('Distance') }}</dt><dd class="text-text-primary font-medium" x-text="trip.distanceText"></dd></div>
+                    <div><dt class="text-text-secondary text-xs">{{ _('Avg. Speed') }}</dt><dd class="text-text-primary font-medium" x-text="trip.averageSpeedText"></dd></div>
+                    <div><dt class="text-text-secondary text-xs">{{ _('SOC Used') }}</dt><dd class="font-medium" :class="trip.socClass" x-text="trip.socUsedText"></dd></div>
+                    <div x-show="trip.energyUsedText"><dt class="text-text-secondary text-xs">{{ _('Energy Used') }}</dt><dd class="text-text-primary font-medium" x-text="trip.energyUsedText"></dd></div>
+                    <div x-show="trip.consumptionText"><dt class="text-text-secondary text-xs">{{ _('Consumption') }}</dt><dd class="text-text-primary font-medium" x-text="trip.consumptionText"></dd></div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+
+<nav x-show="tripsState.hasPagination" class="flex items-center justify-between border-t border-border-color/50 px-4 sm:px-0 pt-4 mt-6">
+    <div class="flex-1 flex justify-start">
+        <button x-show="tripsState.showPrevPage" @click="tripsState.goToPreviousPage"
+            :disabled="tripsState.isPaginating"
+            class="relative inline-flex items-center px-4 py-2 border border-border-color text-sm font-medium rounded-md text-text-secondary bg-card-bg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-wait">
+            {{ _('Previous') }}
+        </button>
+    </div>
+    <div class="hidden md:flex items-center gap-4">
+        <div x-show="tripsState.isPaginating" class="animate-spin rounded-full h-5 w-5 border-b-2 border-neon-blue"></div>
+        <p class="text-sm text-text-secondary">
+            {{ _('Page') }} <span x-text="tripsState.currentPageText"></span> {{ _('of') }} <span x-text="tripsState.totalPagesText"></span>
+        </p>
+    </div>
+    <div class="flex-1 flex justify-end">
+        <button x-show="tripsState.showNextPage" @click="tripsState.goToNextPage"
+            :disabled="tripsState.isPaginating"
+            class="ml-3 relative inline-flex items-center px-4 py-2 border border-border-color text-sm font-medium rounded-md text-text-secondary bg-card-bg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-wait">
+            {{ _('Next') }}
+        </button>
+    </div>
+</nav>

@@ -1,0 +1,15 @@
+{{ _('Hello %(name)s,') % {'name': display_name} }}
+
+{{ _('This is an automated notice from your PyOVMS server.') }}
+
+{{ _('Your account has no registered vehicles and you have not logged in for more than 30 days. Inactive accounts without vehicles are automatically cleaned up after a grace period.') }}
+
+{{ _('Your account will be permanently deleted in 7 days unless you log in or register a vehicle.') }}
+
+{{ _('To prevent deletion, log in at:') }}
+{{ server_base_url }}
+
+{{ _('If you no longer need this account, no action is required.') }}
+
+{{ _('PyOVMS Control Server') }}
+{{ server_base_url }}

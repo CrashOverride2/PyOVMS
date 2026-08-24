@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _(page_title) }}{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-card-bg p-8 rounded-lg shadow-xl border border-neon-green/50 mt-12">
+    <h1 class="text-3xl font-bold mb-2 text-center text-neon-green">{{ _(page_title) }}</h1>
+    <p class="text-center text-text-secondary mb-6">{{ _('Use your security key or biometric authenticator') }}</p>
+
+    <div x-data="webauthnLogin">
+        <!-- Security Key Login -->
+        <div class="space-y-6">
+            <div class="text-center">
+                <svg class="mx-auto h-20 w-20 text-neon-green/50 mb-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clip-rule="evenodd" />
+                </svg>
+                <p class="text-sm text-text-secondary mb-4">
+                    {{ _('Insert your security key or prepare your biometric authenticator, then click the button below.') }}
+                </p>
+            </div>
+
+            <button type="button" @click="authenticate" :disabled="authenticateButtonDisabled"
+                    class="w-full px-4 py-3 text-sm font-medium text-dark-bg bg-neon-green border border-neon-green rounded-md hover:bg-neon-green-darker transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
+                <svg x-show="showIdleIcon" class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                </svg>
+                <svg x-show="showLoadingIcon" class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span x-text="authenticateButtonText"></span>
+            </button>
+
+            <!-- Error Display -->
+            <div x-show="showError" x-transition class="p-3 bg-red-900/40 border border-red-700/60 rounded-md">
+                <p class="text-sm text-red-200" x-text="errorMessage"></p>
+            </div>
+
+            <!-- Browser Support Check -->
+            <div x-show="showBrowserUnsupported" class="p-4 bg-yellow-900/40 border border-yellow-700/60 rounded-md">
+                <h3 class="font-semibold text-yellow-400 mb-2">{{ _('Browser Not Supported') }}</h3>
+                <p class="text-sm text-yellow-200">
+                    {{ _('Your browser does not support WebAuthn/FIDO2. Please use a modern browser.') }}
+                </p>
+            </div>
+        </div>
+
+        <!-- Alternative Login Methods -->
+        <div class="mt-8 pt-6 border-t border-border-color">
+            <p class="text-center text-sm text-text-secondary mb-4">{{ _('Or use an alternative login method') }}</p>
+            <div class="space-y-2">
+                <a href="{{ url_for('ui_login_form') }}"
+                   class="block w-full px-4 py-2 text-center text-sm font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors">
+                    {{ _('Password Login') }}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ request.state.csp_nonce }}">
+document.addEventListener('alpine:init', () => {
+    Alpine.data('webauthnLogin', () => ({
+        isAuthenticating: false,
+        errorMessage: '',
+        browserSupported: true,
+        authenticateButtonDisabled: false,
+        showIdleIcon: true,
+        showLoadingIcon: false,
+        authenticateButtonText: {{ _('Authenticate with Security Key') | tojson | safe }},
+        showError: false,
+        showBrowserUnsupported: false,
+
+        init() {
+            // Check browser support
+            if (!window.PublicKeyCredential) {
+                this.browserSupported = false;
+            }
+            this.refreshUi();
+            this.$watch('isAuthenticating', () => this.refreshUi());
+            this.$watch('errorMessage', () => this.refreshUi());
+            this.$watch('browserSupported', () => this.refreshUi());
+
+            // Auto-trigger authentication if user came from password login
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('auto') === '1') {
+                // Small delay to let the page render
+                setTimeout(() => this.authenticate(), 500);
+            }
+        },
+        refreshUi() {
+            this.authenticateButtonDisabled = this.isAuthenticating;
+            this.showIdleIcon = !this.isAuthenticating;
+            this.showLoadingIcon = this.isAuthenticating;
+            this.authenticateButtonText = this.isAuthenticating
+                ? {{ _('Authenticating...') | tojson | safe }}
+                : {{ _('Authenticate with Security Key') | tojson | safe }};
+            this.showError = !!this.errorMessage;
+            this.showBrowserUnsupported = !this.browserSupported;
+        },
+
+        async authenticate() {
+            this.isAuthenticating = true;
+            this.errorMessage = '';
+            this.refreshUi();
+
+            try {
+                // Step 1: Get authentication options from server
+                const optionsResponse = await fetch('{{ url_for('ui_webauthn_auth_begin') }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        csrf_token: window.csrfToken || '{{ csrf_token }}'
+                    })
+                });
+
+                if (!optionsResponse.ok) {
+                    const error = await optionsResponse.json();
+                    throw new Error(error.detail || '{{ _('Failed to start authentication') }}');
+                }
+
+                const options = await optionsResponse.json();
+
+                // Convert base64url strings to ArrayBuffers
+                options.publicKey.challenge = this.base64urlToBuffer(options.publicKey.challenge);
+                if (options.publicKey.allowCredentials) {
+                    options.publicKey.allowCredentials = options.publicKey.allowCredentials.map(cred => ({
+                        ...cred,
+                        id: this.base64urlToBuffer(cred.id)
+                    }));
+                }
+
+                // Step 2: Get assertion from authenticator
+                const assertion = await navigator.credentials.get(options);
+
+                // Step 3: Send assertion to server
+                const verifyResponse = await fetch('{{ url_for('ui_webauthn_auth_complete') }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        credential: {
+                            id: assertion.id,
+                            rawId: this.bufferToBase64url(assertion.rawId),
+                            type: assertion.type,
+                            response: {
+                                authenticatorData: this.bufferToBase64url(assertion.response.authenticatorData),
+                                clientDataJSON: this.bufferToBase64url(assertion.response.clientDataJSON),
+                                signature: this.bufferToBase64url(assertion.response.signature),
+                                userHandle: assertion.response.userHandle ? this.bufferToBase64url(assertion.response.userHandle) : null
+                            }
+                        },
+                        csrf_token: window.csrfToken || '{{ csrf_token }}'
+                    })
+                });
+
+                if (!verifyResponse.ok) {
+                    const error = await verifyResponse.json();
+                    throw new Error(error.detail || '{{ _('Authentication failed') }}');
+                }
+
+                const result = await verifyResponse.json();
+
+                // Redirect to dashboard on success
+                window.location.href = result.redirect_url || '{{ url_for('ui_dashboard') }}';
+
+            } catch (error) {
+                console.error('WebAuthn authentication error:', error);
+
+                // Handle user cancellation gracefully
+                if (error.name === 'NotAllowedError') {
+                    this.errorMessage = '{{ _('Authentication was cancelled') }}';
+                } else {
+                    this.errorMessage = error.message || '{{ _('Authentication failed. Please try again.') }}';
+                }
+            } finally {
+                this.isAuthenticating = false;
+                this.refreshUi();
+            }
+        },
+
+        // Helper functions for base64url encoding/decoding
+        base64urlToBuffer(base64url) {
+            const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+            const binary = atob(base64);
+            const buffer = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                buffer[i] = binary.charCodeAt(i);
+            }
+            return buffer.buffer;
+        },
+
+        bufferToBase64url(buffer) {
+            const binary = String.fromCharCode(...new Uint8Array(buffer));
+            const base64 = btoa(binary);
+            return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        }
+    }));
+});
+</script>
+{% endblock %}

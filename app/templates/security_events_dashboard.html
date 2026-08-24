@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _(page_title) }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto" x-data="securityDashboard">
+    <div class="flex justify-between items-center mb-6">
+        <a href="{{ url_for('ui_admin_dashboard') }}" class="px-4 py-2 text-sm font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">← {{ _('Admin Dashboard') }}</a>
+
+        <button @click="refresh" class="px-4 py-2 text-sm font-medium text-neon-green border border-neon-green rounded-md hover:bg-neon-green hover:text-dark-bg transition-colors">
+            {{ _('Refresh') }}
+        </button>
+    </div>
+
+    <h1 class="text-2xl md:text-3xl font-bold mb-2 text-center text-neon-red">{{ _(page_title) }}</h1>
+    <p class="text-sm text-center text-text-secondary mb-8">{{ _('Monitor security events and audit trail') }}</p>
+
+    <!-- Time Range Selector -->
+    <div class="flex justify-center mb-6 space-x-2">
+        <button @click="setTimeRange1" :class="timeRangeButtonClasses.hour1"
+                class="px-3 py-2 text-sm rounded-md transition-colors">{{ _('Last Hour') }}</button>
+        <button @click="setTimeRange24" :class="timeRangeButtonClasses.hour24"
+                class="px-3 py-2 text-sm rounded-md transition-colors">{{ _('Last 24 Hours') }}</button>
+        <button @click="setTimeRange168" :class="timeRangeButtonClasses.hour168"
+                class="px-3 py-2 text-sm rounded-md transition-colors">{{ _('Last Week') }}</button>
+        <button @click="setTimeRange720" :class="timeRangeButtonClasses.hour720"
+                class="px-3 py-2 text-sm rounded-md transition-colors">{{ _('Last Month') }}</button>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-card-bg p-5 rounded-lg border border-border-color shadow-md">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-text-secondary">{{ _('Total Events') }}</p>
+                    <p class="text-3xl font-bold text-neon-blue" x-text="statsTotalEvents"></p>
+                </div>
+                <svg class="h-12 w-12 text-neon-blue/30" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+        </div>
+
+        <div class="bg-card-bg p-5 rounded-lg border border-yellow-500/50 shadow-md">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-text-secondary">{{ _('Warnings') }}</p>
+                    <p class="text-3xl font-bold text-yellow-400" x-text="statsWarningSeverity"></p>
+                </div>
+                <svg class="h-12 w-12 text-yellow-400/30" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+        </div>
+
+        <div class="bg-card-bg p-5 rounded-lg border border-red-500/50 shadow-md">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-text-secondary">{{ _('Errors') }}</p>
+                    <p class="text-3xl font-bold text-red-400" x-text="statsErrorSeverity"></p>
+                </div>
+                <svg class="h-12 w-12 text-red-400/30" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+        </div>
+
+        <div class="bg-card-bg p-5 rounded-lg border border-neon-red/50 shadow-md">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-text-secondary">{{ _('Critical') }}</p>
+                    <p class="text-3xl font-bold text-neon-red" x-text="statsCriticalSeverity"></p>
+                </div>
+                <svg class="h-12 w-12 text-neon-red/30" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Failed Logins by IP -->
+    <div x-show="showFailedLoginsSection" class="bg-card-bg p-6 rounded-lg border border-border-color shadow-lg mb-8">
+        <h2 class="text-xl font-semibold text-neon-yellow mb-4">{{ _('Failed Login Attempts by IP') }}</h2>
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="min-w-full divide-y divide-border-color/50 text-sm">
+                <thead class="bg-input-bg">
+                    <tr>
+                        <th class="px-4 py-2 text-left font-medium text-text-secondary">{{ _('IP Address') }}</th>
+                        <th class="px-4 py-2 text-left font-medium text-text-secondary">{{ _('Failed Attempts') }}</th>
+                        <th class="px-4 py-2 text-left font-medium text-text-secondary">{{ _('Status') }}</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-card-bg divide-y divide-border-color/30">
+                    <template x-for="item in displayFailedLogins" :key="item.ip">
+                        <tr>
+                            <td class="px-4 py-2 font-mono text-text-primary" x-text="item.ip"></td>
+                            <td class="px-4 py-2" :class="item.countClass" x-text="item.count"></td>
+                            <td class="px-4 py-2">
+                                <span x-show="item.showHighRisk" class="px-2 py-1 text-xs font-semibold rounded-full bg-red-700/70 text-red-300">{{ _('High Risk') }}</span>
+                                <span x-show="item.showSuspicious" class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-700/70 text-yellow-300">{{ _('Suspicious') }}</span>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Blocked IPs -->
+    <div x-show="showBlockedIpsSection" class="bg-card-bg p-6 rounded-lg border border-red-500/70 shadow-lg mb-8">
+        <h2 class="text-xl font-semibold text-red-400 mb-4">{{ _('Blocked IP Addresses') }}</h2>
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="min-w-full divide-y divide-border-color/50 text-sm">
+                <thead class="bg-input-bg">
+                    <tr>
+                        <th class="px-4 py-2 text-left font-medium text-text-secondary">{{ _('IP Address') }}</th>
+                        <th class="px-4 py-2 text-left font-medium text-text-secondary">{{ _('Blocked At') }}</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-card-bg divide-y divide-border-color/30">
+                    <template x-for="item in displayBlockedIps" :key="item.ip">
+                        <tr>
+                            <td class="px-4 py-2 font-mono text-red-400" x-text="item.ip"></td>
+                            <td class="px-4 py-2 text-text-secondary" x-text="item.blockedAtText"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Events -->
+    <div class="bg-card-bg p-6 rounded-lg border border-border-color shadow-lg">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-neon-blue">{{ _('Recent Security Events') }}</h2>
+            <div class="flex space-x-2">
+                <select :value="filterSeverity" @change="setFilterSeverityAndLoad($event.target.value)"
+                        class="px-2 py-1 text-sm bg-input-bg border-border-color text-text-primary rounded-md">
+                    <option value="">{{ _('All Severities') }}</option>
+                    <option value="info">{{ _('Info') }}</option>
+                    <option value="warning">{{ _('Warning') }}</option>
+                    <option value="error">{{ _('Error') }}</option>
+                    <option value="critical">{{ _('Critical') }}</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
+            <template x-for="event in displayEvents" :key="event.id">
+                <div class="p-3 rounded-md border" :class="event.containerClass">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-grow">
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2 py-0.5 text-xs font-semibold rounded uppercase" :class="event.severityClass" x-text="event.severity"></span>
+                                <span class="text-sm font-medium text-text-primary" x-text="event.eventTypeText"></span>
+                            </div>
+                            <div class="mt-1 text-xs text-text-secondary space-x-3">
+                                <span x-show="event.showUsername">
+                                    <strong>{{ _('User:') }}</strong> <span x-text="event.username"></span>
+                                </span>
+                                <span x-show="event.showIpAddress">
+                                    <strong>{{ _('IP:') }}</strong> <span x-text="event.ipAddress" class="font-mono"></span>
+                                </span>
+                            </div>
+                            <div x-show="event.showDetails" class="mt-1 text-xs text-text-secondary">
+                                <strong>{{ _('Details:') }}</strong> <span x-text="event.detailsText"></span>
+                            </div>
+                        </div>
+                        <div class="text-xs text-text-secondary whitespace-nowrap ml-4" x-text="event.createdAtText"></div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ request.state.csp_nonce }}">
+document.addEventListener('alpine:init', () => {
+    Alpine.data('securityDashboard', () => ({
+        stats: {},
+        displayEvents: [],
+        displayFailedLogins: [],
+        displayBlockedIps: [],
+        timeRange: 24,
+        filterSeverity: '',
+        showFailedLoginsSection: false,
+        showBlockedIpsSection: false,
+        timeRangeButtonClasses: {
+            hour1: 'bg-input-bg text-text-primary hover:bg-input-bg/80',
+            hour24: 'bg-neon-blue text-dark-bg',
+            hour168: 'bg-input-bg text-text-primary hover:bg-input-bg/80',
+            hour720: 'bg-input-bg text-text-primary hover:bg-input-bg/80'
+        },
+
+        get statsTotalEvents() { return this.stats.total_events ?? 0; },
+        get statsWarningSeverity() { return (this.stats.severity_counts || {}).warning ?? 0; },
+        get statsErrorSeverity() { return (this.stats.severity_counts || {}).error ?? 0; },
+        get statsCriticalSeverity() { return (this.stats.severity_counts || {}).critical ?? 0; },
+
+        setFilterSeverityAndLoad(value) { this.filterSeverity = value; this.loadEvents(); },
+
+        async init() {
+            await this.loadData();
+        },
+        refreshUiState() {
+            const active = 'bg-neon-blue text-dark-bg';
+            const inactive = 'bg-input-bg text-text-primary hover:bg-input-bg/80';
+            this.timeRangeButtonClasses.hour1 = this.timeRange === 1 ? active : inactive;
+            this.timeRangeButtonClasses.hour24 = this.timeRange === 24 ? active : inactive;
+            this.timeRangeButtonClasses.hour168 = this.timeRange === 168 ? active : inactive;
+            this.timeRangeButtonClasses.hour720 = this.timeRange === 720 ? active : inactive;
+            this.showFailedLoginsSection = this.displayFailedLogins.length > 0;
+            this.showBlockedIpsSection = this.displayBlockedIps.length > 0;
+        },
+        setTimeRange1() { this.changeTimeRange(1); },
+        setTimeRange24() { this.changeTimeRange(24); },
+        setTimeRange168() { this.changeTimeRange(168); },
+        setTimeRange720() { this.changeTimeRange(720); },
+
+        async changeTimeRange(hours) {
+            this.timeRange = hours;
+            this.refreshUiState();
+            await this.loadData();
+        },
+
+        async loadData() {
+            await Promise.all([this.loadStats(), this.loadEvents()]);
+        },
+
+        async loadStats() {
+            try {
+                const response = await fetch(`/api/v1/security/statistics?hours=${this.timeRange}`, {
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                this.stats = await response.json();
+                this.displayFailedLogins = (this.stats.failed_logins_by_ip || []).map((item) => {
+                    const count = Number(item.count) || 0;
+                    return {
+                        ip: item.ip,
+                        count,
+                        countClass: count >= 5 ? 'text-red-400 font-bold' : 'text-text-primary',
+                        showHighRisk: count >= 10,
+                        showSuspicious: count >= 5 && count < 10
+                    };
+                });
+                this.displayBlockedIps = (this.stats.blocked_ips || []).map((item) => ({
+                    ip: item.ip,
+                    blockedAtText: item.blocked_at ? new Date(item.blocked_at).toLocaleString() : 'N/A'
+                }));
+                this.refreshUiState();
+            } catch (error) {
+                console.error('Failed to load statistics:', error);
+                this.stats = {
+                    total_events: 0,
+                    severity_counts: {},
+                    event_type_counts: {},
+                    failed_logins_by_ip: [],
+                    blocked_ips: []
+                };
+                this.displayFailedLogins = [];
+                this.displayBlockedIps = [];
+                this.refreshUiState();
+            }
+        },
+
+        async loadEvents() {
+            try {
+                const params = new URLSearchParams({
+                    hours: this.timeRange,
+                    limit: 50
+                });
+                if (this.filterSeverity) {
+                    params.append('severity', this.filterSeverity);
+                }
+                const response = await fetch(`/api/v1/security/events?${params}`, {
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                const data = await response.json();
+                const events = Array.isArray(data) ? data : [];
+                this.displayEvents = events.map((event) => {
+                    const severity = event.severity || 'info';
+                    let containerClass = 'bg-blue-900/30 border-blue-700/50';
+                    let severityClass = 'bg-blue-700/70 text-blue-300';
+                    if (severity === 'warning') {
+                        containerClass = 'bg-yellow-900/30 border-yellow-700/50';
+                        severityClass = 'bg-yellow-700/70 text-yellow-300';
+                    } else if (severity === 'error') {
+                        containerClass = 'bg-red-900/30 border-red-700/50';
+                        severityClass = 'bg-red-700/70 text-red-300';
+                    } else if (severity === 'critical') {
+                        containerClass = 'bg-neon-red/20 border-neon-red/50';
+                        severityClass = 'bg-neon-red/70 text-white';
+                    }
+                    const eventTypeText = event.event_type
+                        ? String(event.event_type).replace(/_/g, ' ').toUpperCase()
+                        : 'UNKNOWN';
+                    const hasDetails = !!(event.details && Object.keys(event.details).length > 0);
+                    return {
+                        id: event.id,
+                        severity,
+                        containerClass,
+                        severityClass,
+                        eventTypeText,
+                        showUsername: !!event.username,
+                        username: event.username || '',
+                        showIpAddress: !!event.ip_address,
+                        ipAddress: event.ip_address || '',
+                        showDetails: hasDetails,
+                        detailsText: hasDetails ? JSON.stringify(event.details) : '',
+                        createdAtText: event.created_at ? new Date(event.created_at).toLocaleString() : 'N/A'
+                    };
+                });
+            } catch (error) {
+                console.error('Failed to load events:', error);
+                this.displayEvents = [];
+            }
+        },
+
+        async refresh() {
+            await this.loadData();
+        }
+    }));
+});
+</script>
+{% endblock %}

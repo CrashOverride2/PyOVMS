@@ -1,0 +1,14 @@
+[{
+  "relation": [
+    "delegate_permission/common.handle_all_urls",
+    "delegate_permission/common.get_login_creds"
+  ],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.CrashOverride.OVMS",
+    "sha256_cert_fingerprints": [
+      "A5:D8:4D:AA:E3:45:C7:14:41:1D:A9:26:5B:53:39:A1:84:1B:91:50:57:8E:4B:F1:5E:DA:09:8E:A4:5D:CE:05",
+      "AF:4D:FF:B9:3D:5C:85:B5:ED:DB:F6:28:2E:7C:F2:73:B9:CF:9F:1B:87:EA:52:CD:AB:DF:D5:D4:4C:6E:92:4B"
+    ]
+  }
+}]

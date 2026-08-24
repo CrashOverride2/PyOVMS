@@ -1,0 +1,96 @@
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <div class="bg-input-bg p-5 rounded-md border border-border-color shadow-md">
+        <h2 class="text-xl font-semibold text-neon-blue mb-3">{{ _('Connection') }}</h2>
+        <div class="space-y-1 text-sm">
+            <p class="text-text-primary" id="ws-status-container"></p>
+            <p class="text-text-primary" x-show="protocolView.showV2">
+                {{ _('V2 (TCP) Online:') }}
+                <span x-show="protocolView.v2Online" class="font-bold text-green-400">{{ _('Yes') }}</span>
+                <span x-show="protocolView.v2Offline" class="font-bold text-red-400">{{ _('No') }}</span>
+            </p>
+            <p class="text-text-primary" x-show="protocolView.showV3">
+                {{ _('V3 (MQTT) Online:') }}
+                <span x-show="protocolView.v3Online" class="font-bold text-green-400">{{ _('Yes') }}</span>
+                <span x-show="protocolView.v3Offline" class="font-bold text-red-400">{{ _('No') }}</span>
+            </p>
+            <p class="text-text-secondary" x-show="protocolView.showV2">
+                {{ _('Last Seen (TCP):') }} <span class="font-medium">{{ vehicle.last_seen_tcp | datetimeformat
+                    if vehicle.last_seen_tcp else _('N/A') }}</span>
+            </p>
+            <p class="text-text-secondary" x-show="protocolView.showV3">
+                {{ _('Last Seen (V3):') }} <span class="font-medium">{{ vehicle.last_seen_v3 | datetimeformat if
+                    vehicle.last_seen_v3 else _('N/A') }}</span>
+            </p>
+        </div>
+    </div>
+
+    <div class="bg-input-bg p-5 rounded-md border border-border-color shadow-md">
+        <h2 class="text-xl font-semibold text-neon-blue mb-3">{{ _('Key Metrics') }}</h2>
+        <div class="space-y-1 text-sm" x-cloak>
+            <p class="text-text-primary">{{ _('SOC:') }}
+                <span x-text="overviewMetrics.socText" class="font-bold text-base" :class="overviewMetrics.socClass">
+                </span>
+            </p>
+            <p class="text-text-primary">{{ _('Est. Range:') }}
+                <span x-text="overviewMetrics.estimatedRangeText" class="font-medium"></span>
+            </p>
+            <p class="text-text-primary">{{ _('12V Battery:') }}
+                <span x-text="overviewMetrics.vehicle12vText" class="font-medium"></span>
+            </p>
+            <p class="text-text-primary">{{ _('Battery Voltage:') }}
+                <span x-text="overviewMetrics.batteryVoltageText" class="font-medium"></span>
+            </p>
+            <p class="text-text-primary">{{ _('Battery Current:') }}
+                <span x-text="overviewMetrics.batteryCurrentText" class="font-medium"></span>
+            </p>
+            <p class="text-text-primary">{{ _('Battery SOH:') }}
+                <span x-text="overviewMetrics.batterySohText" class="font-medium"></span>
+            </p>
+            <p class="text-text-primary">{{ _('Line Voltage:') }}
+                <span x-text="overviewMetrics.lineVoltageText" class="font-medium"></span>
+            </p>
+            <p class="text-text-primary">{{ _('Charge Current:') }}
+                <span x-text="overviewMetrics.chargeCurrentText" class="font-medium"></span>
+            </p>
+            <p class="text-text-primary">{{ _('Charge State:') }}
+                <span x-text="overviewMetrics.chargeStateText" class="font-medium"></span>
+            </p>
+            <p class="text-text-primary">{{ _('Charge Mode:') }}
+                <span x-text="overviewMetrics.chargeModeText" class="font-medium"></span>
+            </p>
+            <p class="text-text-primary">{{ _('Position:') }}
+                <span x-text="overviewMetrics.positionText" class="font-medium"></span>
+            </p>
+        </div>
+    </div>
+</div>
+
+
+<div class="mb-8 bg-input-bg p-5 rounded-md border border-border-color shadow-md" x-cloak x-show="hasMeaningfulTpmsDataAvailable">
+    <h2 class="text-xl font-semibold text-neon-blue mb-4">{{ _('Tire Pressure & Temperature (TPMS)') }}</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <template x-for="tyre in tpmsWheelCards" :key="tyre.name">
+            <div class="bg-gray-800/50 p-3 rounded-md text-center border border-gray-700">
+                <p class="font-semibold text-text-primary text-sm mb-1" x-text="tyre.name"></p>
+                <div class="w-full bg-gray-600 rounded h-4 mb-1 relative shadow-inner">
+                    <div class="h-full rounded transition-all duration-300 ease-out"
+                        :style="tyre.pressureBarStyle"
+                        :class="tyre.pressureBarClass">
+                    </div>
+                </div>
+                <p class="text-xs text-text-secondary">
+                    <span x-text="tyre.pressureText"></span>
+                    <span class="mx-1 text-gray-600">|</span>
+                    <span x-text="tyre.temperatureText"></span>
+                </p>
+                <p x-show="tyre.showHealth" class="text-xs text-text-secondary mt-0.5"
+                    x-text="tyre.healthText"></p>
+                <p x-show="tyre.showAlert" class="text-xs mt-0.5" :class="tyre.alertClass" x-text="tyre.alertText">
+                </p>
+            </div>
+        </template>
+    </div>
+</div>
+
+<div id="vehicle-map" class="h-[350px] mb-8 rounded-md border border-border-color bg-gray-700">
+</div>

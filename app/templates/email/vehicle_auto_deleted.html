@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Removed</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .header { text-align: center; border-bottom: 2px solid #e74c3c; padding-bottom: 20px; margin-bottom: 20px; }
+        .header h1 { color: #c0392b; margin: 0; }
+        .content { color: #555555; line-height: 1.6; }
+        .info-box { background-color: #fdedec; border-left: 4px solid #e74c3c; padding: 15px 20px; margin: 20px 0; border-radius: 4px; }
+        .details-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .details-table td { padding: 8px; border: 1px solid #dddddd; }
+        .details-table td:first-child { font-weight: bold; background-color: #f9f9f9; width: 35%; }
+        .button { display: block; width: fit-content; margin: 30px auto; padding: 15px 25px; background-color: #3498db; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; }
+        .footer { text-align: center; font-size: 12px; color: #999999; margin-top: 30px; border-top: 1px solid #eeeeee; padding-top: 20px; }
+        a { color: #3498db; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗑️ {{ _('Vehicle Automatically Removed') }}</h1>
+        </div>
+        <div class="content">
+            <p>{{ _('Hello %(name)s,') % {'name': display_name} }}</p>
+            <p>{{ _('This is an automated notice from your PyOVMS server.') }}</p>
+
+            <div class="info-box">
+                <strong>{{ _('Your vehicle %(vehicle_id)s has been automatically removed from the server because it had not communicated for more than 12 months.') % {'vehicle_id': vehicle_id} }}</strong>
+            </div>
+
+            <table class="details-table">
+                <tr>
+                    <td>{{ _('Vehicle ID') }}</td>
+                    <td>{{ vehicle_id }}</td>
+                </tr>
+                {% if vehicle_name %}
+                <tr>
+                    <td>{{ _('Vehicle Name') }}</td>
+                    <td>{{ vehicle_name }}</td>
+                </tr>
+                {% endif %}
+            </table>
+
+            <p>{{ _('All associated data including charge logs and trip records has been deleted.') }}</p>
+            <p>{{ _('If you wish to continue monitoring this vehicle, you can register it again on the server.') }}</p>
+
+            <a href="{{ server_base_url }}" class="button">{{ _('Log In to Register Vehicle') }}</a>
+        </div>
+        <div class="footer">
+            <p>{{ _('PyOVMS Control Server') }} | <a href="{{ server_base_url }}">{{ server_base_url }}</a></p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _(page_title) }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-card-bg p-6 md:p-8 rounded-lg shadow-xl border border-neon-yellow/50"
+     id="profile-page">
+    <div class="flex justify-start mb-6">
+        <a href="{{ url_for('ui_admin_dashboard') if is_admin else url_for('ui_dashboard') }}" class="px-4 py-2 text-sm font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">← {{ _('Back') }}</a>
+    </div>
+    <h1 class="text-2xl md:text-3xl font-bold mb-6 text-center text-neon-yellow">{{ _(page_title) }}</h1>
+
+    <div class="mb-6 border-b border-border-color overflow-hidden">
+        <div class="overflow-x-auto pb-2 custom-scrollbar">
+            <nav class="-mb-px flex space-x-6 min-w-max" aria-label="Tabs">
+                <button type="button" data-tab-btn="info"
+                        class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-text-secondary hover:text-text-primary hover:border-gray-500">
+                    {{ _('User Information') }}
+                </button>
+                <button type="button" data-tab-btn="password"
+                        class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-text-secondary hover:text-text-primary hover:border-gray-500">
+                    {{ _('Change Password') }}
+                </button>
+                <button type="button" data-tab-btn="apikeys"
+                        class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-text-secondary hover:text-text-primary hover:border-gray-500">
+                    {{ _('API Keys') }}
+                </button>
+                <button type="button" data-tab-btn="2fa"
+                        class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-text-secondary hover:text-text-primary hover:border-gray-500">
+                    {{ _('Two-Factor Auth') }}
+                </button>
+                <button type="button" data-tab-btn="webauthn"
+                        class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-text-secondary hover:text-text-primary hover:border-gray-500">
+                    {{ _('Security Keys') }}
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <div data-tab-panel="info">
+        <h2 class="text-xl font-semibold text-text-primary mb-4">{{ _('User Information') }}</h2>
+        <form action="{{ url_for('ui_update_profile_submit') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="space-y-5">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-text-secondary">{{ _('Username') }}</label>
+                    <input type="text" name="username" id="username" readonly disabled
+                           value="{{ current_user.username }}"
+                           class="mt-1 block w-full px-3 py-2 bg-input-bg/50 border-border-color text-text-secondary rounded-md shadow-sm sm:text-sm cursor-not-allowed">
+                </div>
+                <div>
+                    <label for="full_name" class="block text-sm font-medium text-text-secondary">{{ _('Full Name') }}</label>
+                    <input type="text" name="full_name" id="full_name"
+                           value="{{ current_user.full_name or '' }}"
+                           class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-yellow focus:ring-1 focus:ring-neon-yellow sm:text-sm"
+                           placeholder="{{ _('Your full name') }}">
+                </div>
+                <div>
+                    <label for="email" class="block text-sm font-medium text-text-secondary">{{ _('Email') }}</label>
+                    <input type="email" name="email" id="email"
+                           value="{{ current_user.email or '' }}"
+                           class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-yellow focus:ring-1 focus:ring-neon-yellow sm:text-sm"
+                           placeholder="{{ _('your@email.com') }}">
+                </div>
+                <div>
+                    <label for="timezone" class="block text-sm font-medium text-text-secondary">{{ _('Timezone') }}</label>
+                    <select id="timezone" name="timezone" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-yellow focus:ring-1 focus:ring-neon-yellow sm:text-sm">
+                        {% for tz in all_timezones %}
+                        <option value="{{ tz }}" {% if tz == current_user.timezone %}selected{% endif %}>{{ tz }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="unit_preference" class="block text-sm font-medium text-text-secondary">{{ _('Distance Units') }}</label>
+                    <select id="unit_preference" name="unit_preference" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-yellow focus:ring-1 focus:ring-neon-yellow sm:text-sm">
+                        <option value="metric" {% if current_user.unit_preference != 'imperial' %}selected{% endif %}>{{ _('Metric (km, kph)') }}</option>
+                        <option value="imperial" {% if current_user.unit_preference == 'imperial' %}selected{% endif %}>{{ _('Imperial (mi, mph)') }}</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mt-8">
+                <button type="submit"
+                        class="w-full px-4 py-2.5 text-sm font-medium text-dark-bg bg-neon-yellow border border-neon-yellow rounded-md hover:bg-neon-yellow-darker hover:border-neon-yellow-darker hover:shadow-lg hover:shadow-neon-yellow/40 transition-all duration-200">
+                    {{ _('Update Profile') }}
+                </button>
+            </div>
+        </form>
+        <hr class="border-border-color/50 my-6">
+        <div class="space-y-2 text-sm">
+            <p><span class="font-medium text-text-secondary">{{ _('Role:') }}</span> <span class="text-text-primary">{{ _('Administrator') if current_user.is_admin else _('User') }}</span></p>
+            <p><span class="font-medium text-text-secondary">{{ _('Status:') }}</span> <span class="text-text-primary">{{ _('Active') if current_user.is_active else _('Inactive') }}</span></p>
+            <p><span class="font-medium text-text-secondary">{{ _('Joined:') }}</span> <span class="text-text-primary">{{ current_user.created_at | datetimeformat }}</span></p>
+            <p><span class="font-medium text-text-secondary">{{ _('TOTP Enabled:') }}</span> <span class="text-text-primary font-semibold {{ 'text-green-400' if is_totp_enabled else 'text-red-400' }}">{{ _('Yes') if is_totp_enabled else _('No') }}</span></p>
+        </div>
+    </div>
+
+    <div data-tab-panel="password" class="hidden"> 
+        <h2 class="text-xl font-semibold text-text-primary mb-4">{{ _('Change Password') }}</h2>
+        <form action="{{ url_for('ui_change_password_submit') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="space-y-5">
+                <div>
+                    <label for="current_password" class="block text-sm font-medium text-text-secondary">{{ _('Current Password') }}</label>
+                    <input type="password" name="current_password" id="current_password" required
+                           class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-yellow focus:ring-1 focus:ring-neon-yellow sm:text-sm"
+                           placeholder="{{ _('Your current password') }}">
+                </div>
+                <div>
+                    <label for="new_password" class="block text-sm font-medium text-text-secondary">{{ _('New Password') }}</label>
+                    <input type="password" name="new_password" id="new_password" required
+                           class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-yellow focus:ring-1 focus:ring-neon-yellow sm:text-sm"
+                           placeholder="{{ _('Enter new password') }}">
+                    <p class="mt-2 text-xs text-text-secondary">
+                        {{ _('Must be 12 to 128 characters long. Include uppercase, lowercase, a digit, and a special character (e.g., !@#$%%^&*).') }}
+                    </p>
+                </div>
+                <div>
+                    <label for="confirm_new_password" class="block text-sm font-medium text-text-secondary">{{ _('Confirm New Password') }}</label>
+                    <input type="password" name="confirm_new_password" id="confirm_new_password" required
+                           class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-yellow focus:ring-1 focus:ring-neon-yellow sm:text-sm"
+                           placeholder="{{ _('Repeat new password') }}">
+                </div>
+            </div>
+            <div class="mt-8">
+                <button type="submit"
+                        class="w-full px-4 py-2.5 text-sm font-medium text-dark-bg bg-neon-yellow border border-neon-yellow rounded-md hover:bg-neon-yellow-darker hover:border-neon-yellow-darker hover:shadow-lg hover:shadow-neon-yellow/40 transition-all duration-200">
+                    {{ _('Change Password') }}
+                </button>
+            </div>
+        </form>
+        <hr class="border-border-color/50 my-8">
+        
+        <div class="p-4 bg-red-900/40 border border-red-700/60 rounded-md">
+            <h3 class="text-lg font-semibold text-red-400 mb-2">{{ _('Danger Zone') }}</h3>
+            <p class="text-sm text-red-200 mb-2">
+                {{ _('Deleting your account is a permanent action. All of your vehicles, API keys, and historical data will be immediately and irreversibly erased.') }}
+            </p>
+            <p class="text-sm text-red-200 mb-4">
+                {{ _('To confirm, please type <strong>DELETE</strong> into the box below.') | safe }}
+            </p>
+            <form action="{{ url_for('ui_delete_profile_submit') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div>
+                    <label for="delete_confirmation" class="sr-only">{{ _('Type DELETE to confirm') }}</label>
+                    <input type="text" name="delete_confirmation" id="delete_confirmation"
+                           class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-red-500 focus:ring-1 focus:ring-red-500 sm:text-sm"
+                           placeholder="{{ _('Type DELETE here') }}">
+                </div>
+                <div class="mt-4">
+                    <button type="submit"
+                            id="delete_account_submit"
+                            disabled
+                            class="w-full px-4 py-2 text-sm font-medium text-dark-bg bg-red-600 border border-red-500 rounded-md 
+                                   hover:bg-red-700 transition-colors 
+                                   disabled:bg-gray-600 disabled:border-gray-500 disabled:cursor-not-allowed">
+                        {{ _('Delete My Account') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div data-tab-panel="apikeys" class="hidden">
+        <h2 class="text-xl font-semibold text-text-primary mb-4">{{ _('API Keys') }}</h2>
+        <p class="text-sm text-text-secondary mb-4">{{ _('Manage your API keys for programmatic access. Store keys securely as they are shown only once.') }}</p>
+        
+        {% if settings.MQTT_PASSWD_FILE and settings.MQTT_ACL_FILE %}
+        <div class="p-3 mb-4 bg-blue-900/40 border border-blue-700/60 rounded-md text-sm text-blue-200">
+            <h3 class="font-semibold text-neon-blue">{{ _('MQTT V3 Protocol Access') }}</h3>
+            <p class="mt-1">{{ _('Your active API keys can also be used to access the MQTT broker for real-time data.') }}</p>
+            <ul class="list-disc list-inside mt-2 space-y-1 text-xs">
+                <li><strong>{{ _('Username:') }}</strong> {{ _('The 8-character Key Prefix.') }}</li>
+                <li><strong>{{ _('Password:') }}</strong> {{ _('The full API Key.') }}</li>
+                <li><strong>{{ _('Topic Access:') }}</strong> `ovms/{{ current_user.username }}/{vehicle_id}/#` for each of your vehicles.</li>
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if newly_created_api_keys %}
+            {% for new_key_info in newly_created_api_keys %}
+            <div id="new-key-{{ new_key_info.prefix }}" class="mb-6 p-4 bg-card-bg/50 border-l-4 border-green-500 rounded-r-lg space-y-4">
+                <h3 class="text-lg font-semibold text-green-400">{{ _('New API Key Created:') }} <span class="text-text-primary">{{ new_key_info.name }}</span></h3>
+                <p class="text-sm text-yellow-300 font-semibold">{{ _('Please store the Full API Key securely. It will not be shown again.') }}</p>
+
+                <!-- Key Prefix -->
+                <div class="space-y-1">
+                    <label class="text-xs font-bold uppercase text-text-secondary tracking-wider">{{ _('API Key Prefix') }}</label>
+                    <div class="flex items-center">
+                        <code id="apiKeyPrefix{{ loop.index }}" class="flex-grow p-2 bg-input-bg text-text-primary rounded-l-md font-mono">{{ new_key_info.prefix }}</code>
+                        <button type="button" data-copy-target="apiKeyPrefix{{ loop.index }}" class="px-3 py-2 bg-neon-blue text-dark-bg rounded-r-md hover:bg-neon-blue-darker transition-colors flex-shrink-0">{{ _('Copy') }}</button>
+                    </div>
+                </div>
+
+                <!-- Full API Key -->
+                <div class="space-y-1">
+                    <label class="text-xs font-bold uppercase text-text-secondary tracking-wider">{{ _('Full API Key') }}</label>
+                    <div class="flex items-center">
+                        <code id="apiKey{{ loop.index }}" class="flex-grow p-2 bg-input-bg text-text-primary rounded-l-md font-mono break-all">{{ new_key_info.key }}</code>
+                        <button type="button" data-copy-target="apiKey{{ loop.index }}" class="px-3 py-2 bg-neon-blue text-dark-bg rounded-r-md hover:bg-neon-blue-darker transition-colors flex-shrink-0">{{ _('Copy') }}</button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+
+
+        <form action="{{ url_for('ui_create_api_key') }}" method="post" class="mb-6 p-4 bg-input-bg/70 border border-border-color rounded-md">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <h3 class="text-lg font-medium text-neon-yellow mb-3">{{ _('Create New API Key') }}</h3>
+            <div class="space-y-4">
+                <div>
+                    <label for="key_name" class="block text-sm font-medium text-text-secondary">{{ _('Key Name') }}</label>
+                    <input type="text" name="key_name" id="key_name" required maxlength="100"
+                           class="mt-1 block w-full px-3 py-2 bg-dark-bg border-border-color/70 text-text-primary rounded-md shadow-sm focus:border-neon-yellow focus:ring-1 focus:ring-neon-yellow sm:text-sm"
+                           placeholder="{{ _('e.g., My Script Key') }}">
+                </div>
+                <div>
+                    <label for="expires_in_days" class="block text-sm font-medium text-text-secondary">{{ _('Expires In (Days)') }}</label>
+                    <input type="text" name="expires_in_days" id="expires_in_days"
+                           class="mt-1 block w-full px-3 py-2 bg-dark-bg border-border-color/70 text-text-primary rounded-md shadow-sm focus:border-neon-yellow focus:ring-1 focus:ring-neon-yellow sm:text-sm"
+                           placeholder="{{ _('Optional, e.g., 30, 90. Leave blank for no expiry.') }}">
+                </div>
+                <button type="submit"
+                        class="px-4 py-2 text-sm font-medium text-dark-bg bg-neon-yellow border border-neon-yellow rounded-md hover:bg-neon-yellow-darker hover:border-neon-yellow-darker transition-colors">
+                    {{ _('Create API Key') }}
+                </button>
+            </div>
+        </form>
+
+        {% if api_keys %}
+        <h3 class="text-lg font-medium text-neon-yellow mb-3">{{ _('Your API Keys') }}</h3>
+        <div class="space-y-3">
+            {% for key in api_keys %}
+            {% set is_expired_status = (key.expires_at and ( (key.expires_at.tzinfo and key.expires_at < now_utc) or (not key.expires_at.tzinfo and key.expires_at < now_utc.replace(tzinfo=None)) )) %}
+            <div class="bg-input-bg/50 border border-border-color/50 rounded-md overflow-hidden">
+                <!-- Row 1: Name, Prefix, Status -->
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5 border-b border-border-color/30">
+                    <span class="font-medium text-text-primary">{{ key.name }}</span>
+                    <code class="text-xs font-mono text-text-secondary bg-dark-bg/60 px-1.5 py-0.5 rounded">{{ key.key_prefix }}...</code>
+                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full
+                               {{ 'bg-green-700/70 text-green-300' if key.is_active and not is_expired_status else 'bg-red-700/70 text-red-300' }}">
+                        {{ _('Active') if key.is_active and not is_expired_status else _('Inactive/Expired') }}
+                    </span>
+                </div>
+                <!-- Row 2: Dates, Delete -->
+                <div class="flex flex-wrap items-center gap-x-5 gap-y-1 px-4 py-2 text-xs text-text-secondary">
+                    <span><span class="font-medium text-text-secondary/70">{{ _('Created:') }}</span> {{ key.created_at | datetimeformat(format_str='medium_date') }}</span>
+                    <span>
+                        <span class="font-medium text-text-secondary/70">{{ _('Expires:') }}</span>
+                        {% if key.expires_at %}
+                            {{ key.expires_at | datetimeformat(format_str='medium_date') }}{% if is_expired_status %} <span class="text-red-400">({{ _('Expired') }})</span>{% endif %}
+                        {% else %}
+                            {{ _('Never') }}
+                        {% endif %}
+                    </span>
+                    <span><span class="font-medium text-text-secondary/70">{{ _('Last used:') }}</span> {{ key.last_used_at | datetimeformat if key.last_used_at else _('Never') }}</span>
+                    <span class="ml-auto">
+                        {% set confirm_msg = _("Are you sure you want to delete API key '%(key_name)s'? This action cannot be undone.") % {'key_name': key.name} %}
+                        <form action="{{ url_for('ui_delete_api_key', api_key_id=key.id) }}" method="post" class="inline js-confirm-form"
+                              {# Single quotes: |tojson emits a double-quoted JSON string, so a
+                                 double-quoted attribute would close immediately. The filter escapes
+                                 ' as ', which is what makes this delimiter safe. #}
+                              data-confirm-message='{{ confirm_msg | tojson }}'>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="text-red-500 hover:text-red-400 font-medium transition-colors">{{ _('Delete') }}</button>
+                        </form>
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-text-secondary">{{ _('You have no API keys.') }}</p>
+        {% endif %}
+    </div>
+
+    <div data-tab-panel="2fa" class="hidden">
+        <h2 class="text-xl font-semibold text-text-primary mb-4">{{ _('Two-Factor Authentication (2FA)') }}</h2>
+        
+        <div class="p-4 bg-input-bg/70 border border-border-color rounded-md">
+            <h3 class="text-lg font-medium text-neon-blue mb-3">{{ _('Authenticator App (TOTP)') }}</h3>
+            {% if is_totp_enabled %}
+                <p class="text-green-400 mb-3">{{ _('Authenticator app is currently <strong>ENABLED</strong>.') | safe }}</p>
+                <form action="{{ url_for('ui_totp_disable_submit') }}" method="post" class="js-confirm-form"
+                      data-confirm-message='{{ _("Are you sure you want to disable 2FA with your authenticator app?") | tojson }}'>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit"
+                            class="px-4 py-2 text-sm font-medium text-dark-bg bg-red-500 border border-red-500 rounded-md hover:bg-red-600 transition-colors">
+                        {{ _('Disable Authenticator App') }}
+                    </button>
+                </form>
+            {% else %}
+                <div class="p-3 mb-4 bg-yellow-900/40 border border-yellow-700/60 rounded-md text-sm text-yellow-200">
+                    <h3 class="font-semibold text-neon-yellow">{{ _('Security Recommendation') }}</h3>
+                    <p class="mt-1">
+                        {{ _("Two-Factor Authentication is currently <strong>DISABLED</strong>. We "
+                           "strongly recommend enabling it to significantly improve your account's "
+                           "security.") | safe }}
+                    </p>
+                </div>
+                <p class="text-sm text-text-secondary mb-3">
+                    {{ _('Using an authenticator app (like Google Authenticator, Authy, etc.) adds "
+                       "an extra layer of security to your account.') }}
+                </p>
+                <a href="{{ url_for('ui_totp_setup_form') }}"
+                   class="inline-block px-4 py-2 text-sm font-medium text-dark-bg bg-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue-darker transition-colors">
+                    {{ _('Enable Authenticator App') }}
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- WebAuthn Tab -->
+    {% include 'profile_webauthn_tab.html' %}
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script nonce="{{ request.state.csp_nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+    const activeClass = 'border-neon-yellow text-neon-yellow';
+    const inactiveClass = 'border-transparent text-text-secondary hover:text-text-primary hover:border-gray-500';
+    const tabButtons = Array.from(document.querySelectorAll('[data-tab-btn]'));
+    const tabPanels = Array.from(document.querySelectorAll('[data-tab-panel]'));
+    const allowedTabs = new Set(['info', 'password', 'apikeys', '2fa', 'webauthn']);
+
+    function setTab(tabName) {
+        const tab = allowedTabs.has(tabName) ? tabName : 'info';
+        tabPanels.forEach((panel) => {
+            panel.classList.toggle('hidden', panel.dataset.tabPanel !== tab);
+        });
+        tabButtons.forEach((button) => {
+            const isActive = button.dataset.tabBtn === tab;
+            button.classList.remove('border-neon-yellow', 'text-neon-yellow', 'border-transparent', 'text-text-secondary', 'hover:text-text-primary', 'hover:border-gray-500');
+            button.classList.add(...(isActive ? activeClass : inactiveClass).split(' '));
+        });
+    }
+
+    tabButtons.forEach((button) => {
+        button.addEventListener('click', () => setTab(button.dataset.tabBtn));
+    });
+    const initialTab = new URLSearchParams(window.location.search).get('tab') || 'info';
+    setTab(initialTab);
+
+    const deleteInput = document.getElementById('delete_confirmation');
+    const deleteButton = document.getElementById('delete_account_submit');
+    if (deleteInput && deleteButton) {
+        const updateState = () => { deleteButton.disabled = deleteInput.value !== 'DELETE'; };
+        deleteInput.addEventListener('input', updateState);
+        updateState();
+    }
+
+    const copyButtons = Array.from(document.querySelectorAll('[data-copy-target]'));
+    copyButtons.forEach((button) => {
+        button.addEventListener('click', async () => {
+            const targetId = button.dataset.copyTarget;
+            if (!targetId) return;
+            const target = document.getElementById(targetId);
+            if (!target) return;
+            try {
+                await navigator.clipboard.writeText(target.innerText);
+                const originalText = button.innerText;
+                button.innerText = '{{ _("Copied!") }}';
+                setTimeout(() => { button.innerText = originalText; }, 2000);
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+            }
+        });
+    });
+
+});
+</script>
+<script nonce="{{ request.state.csp_nonce }}">
+    // Preserve scroll position on page reload (for API key deletion, etc.)
+    document.addEventListener('DOMContentLoaded', function() {
+        // Restore scroll position if available
+        const savedScrollX = sessionStorage.getItem('profileScrollX');
+        const savedScrollY = sessionStorage.getItem('profileScrollY');
+
+        if (savedScrollX !== null && savedScrollY !== null) {
+            window.scrollTo(parseInt(savedScrollX), parseInt(savedScrollY));
+            sessionStorage.removeItem('profileScrollX');
+            sessionStorage.removeItem('profileScrollY');
+        }
+
+        // Save scroll position before form submissions
+        const forms = document.querySelectorAll('form');
+        forms.forEach(form => {
+            form.addEventListener('submit', function() {
+                sessionStorage.setItem('profileScrollX', window.scrollX.toString());
+                sessionStorage.setItem('profileScrollY', window.scrollY.toString());
+            });
+        });
+    });
+</script>
+{% endblock %}

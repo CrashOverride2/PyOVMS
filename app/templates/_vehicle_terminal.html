@@ -1,0 +1,45 @@
+<div class="bg-input-bg p-5 rounded-md border border-neon-blue/70 shadow-lg">
+    <h2 class="text-xl font-semibold text-neon-blue mb-4">{{ _('Command Terminal') }}</h2>
+
+    {% if vehicle.protocol == 'both' and is_mqtt_configured %}
+    <div class="mb-3 text-sm">
+        <span class="mr-2 text-text-secondary">{{ _('Terminal Protocol:') }}</span>
+        <label class="mr-3">
+            <input type="radio" name="terminalProtocol" value="v2" :checked="selectedTerminalProtocol === 'v2'" @change="setSelectedTerminalProtocol($event.target.value)"
+                class="mr-1 text-neon-blue focus:ring-neon-blue focus:ring-opacity-50 border-gray-600 bg-gray-700 form-radio">
+            {{ _('V2 (TCP)') }}
+        </label>
+        <label>
+            <input type="radio" name="terminalProtocol" value="v3" :checked="selectedTerminalProtocol === 'v3'" @change="setSelectedTerminalProtocol($event.target.value)"
+                class="mr-1 text-neon-magenta focus:ring-neon-magenta focus:ring-opacity-50 border-gray-600 bg-gray-700 form-radio">
+            {{ _('V3 (MQTT)') }}
+        </label>
+    </div>
+    {% endif %}
+
+    <div x-ref="terminalOutput"
+        class="h-64 overflow-y-auto overflow-x-auto bg-black text-white p-3 font-mono text-sm border border-gray-700 rounded-md mb-2 scroll-smooth custom-scrollbar">
+        <template x-for="line in commandHistory" :key="line.id">
+            <div :class="line.cssClass"><span x-text="line.text"></span></div>
+        </template>
+    </div>
+    <form @submit.prevent="submitCommand"
+        class="flex items-center bg-black border border-gray-700 rounded-md overflow-x-auto custom-scrollbar">
+        <span class="text-green-400 font-mono text-sm pl-3 pr-1 py-2 select-none whitespace-nowrap"
+            x-text="promptText"></span>
+        <div class="flex-grow flex items-center">
+            <input type="text" :value="currentCommand" @input="handleCommandInput" x-ref="commandInput"
+                :disabled="terminalUi.inputDisabled"
+                @keydown.arrow-up.prevent="showPreviousCommand"
+                @keydown.arrow-down.prevent="showNextCommand"
+                class="flex-grow min-w-[100px] bg-black text-green-300 font-mono text-sm p-2 border-0 focus:ring-0 outline-none disabled:text-gray-500"
+                :placeholder="terminalUi.inputPlaceholder"
+                autocomplete="off">
+            <span x-show="isSubmitting" class="animate-pulse text-yellow-400 font-mono text-sm px-2">...</span>
+        </div>
+        <button type="submit" :disabled="terminalUi.sendDisabled"
+            class="px-4 py-2 text-sm font-medium text-dark-bg bg-neon-blue border-l border-gray-700 rounded-r-md hover:bg-neon-blue-darker disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors">
+            {{ _('Send') }}
+        </button>
+    </form>
+</div>

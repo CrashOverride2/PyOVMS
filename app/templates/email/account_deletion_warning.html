@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Deletion Notice</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .header { text-align: center; border-bottom: 2px solid #e74c3c; padding-bottom: 20px; margin-bottom: 20px; }
+        .header h1 { color: #c0392b; margin: 0; }
+        .content { color: #555555; line-height: 1.6; }
+        .warning-box { background-color: #fdedec; border-left: 4px solid #e74c3c; padding: 15px 20px; margin: 20px 0; border-radius: 4px; }
+        .button { display: block; width: fit-content; margin: 30px auto; padding: 15px 25px; background-color: #27ae60; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; }
+        .footer { text-align: center; font-size: 12px; color: #999999; margin-top: 30px; border-top: 1px solid #eeeeee; padding-top: 20px; }
+        a { color: #3498db; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚠️ {{ _('Account Deletion Notice') }}</h1>
+        </div>
+        <div class="content">
+            <p>{{ _('Hello %(name)s,') % {'name': display_name} }}</p>
+            <p>{{ _('This is an automated notice from your PyOVMS server.') }}</p>
+
+            <div class="warning-box">
+                <strong>{{ _('Your account has no registered vehicles and you have not logged in for more than 30 days.') }}</strong>
+                <p style="margin: 10px 0 0 0;">{{ _('Your account will be permanently deleted in 7 days unless you log in or register a vehicle.') }}</p>
+            </div>
+
+            <p>{{ _('Inactive accounts without vehicles are automatically removed to keep the server clean.') }}</p>
+            <p>{{ _('Simply logging in will cancel the deletion. You can also register a new vehicle to reactivate your account.') }}</p>
+
+            <a href="{{ server_base_url }}" class="button">{{ _('Log In to Keep My Account') }}</a>
+
+            <p style="color: #999; font-size: 13px;">{{ _('If you no longer need this account, no action is required.') }}</p>
+        </div>
+        <div class="footer">
+            <p>{{ _('PyOVMS Control Server') }} | <a href="{{ server_base_url }}">{{ server_base_url }}</a></p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en" class="dark font-sans" x-data="fontSwitcher" x-cloak>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ _('PyOVMS Control') }}{% endblock %}</title>
+    
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', path='img/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', path='img/favicon-16x16.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='img/apple-touch-icon.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/fonts.css') }}">
+
+    <link rel="stylesheet" href="{{ url_for('static', path='css/main.css') }}">
+
+    <!-- Alpine.js Component Definitions - Must load before Alpine.js initializes -->
+    <script nonce="{{ request.state.csp_nonce }}">
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('fontSwitcher', () => ({
+            currentFont: 'sans',
+            open: false,
+            _activeClass: 'bg-neon-blue/20 text-neon-blue',
+            _inactiveClass: 'text-text-secondary hover:bg-gray-700/50 hover:text-text-primary',
+            fonts: [
+                { key: 'sans',       name: '{{ _("System Sans") }}',   cls: '' },
+                { key: 'mono',       name: '{{ _("Roboto Mono") }}',   cls: '' },
+                { key: 'mono_droid', name: '{{ _("DroidSans Mono") }}', cls: '' }
+            ],
+            get currentFontName() {
+                for (let i = 0; i < this.fonts.length; i++) {
+                    if (this.fonts[i].key === this.currentFont) return this.fonts[i].name;
+                }
+                return 'Select Font';
+            },
+            _updateClasses() {
+                for (let i = 0; i < this.fonts.length; i++) {
+                    this.fonts[i].cls = this.fonts[i].key === this.currentFont
+                        ? this._activeClass : this._inactiveClass;
+                }
+            },
+            init() {
+                this.currentFont = localStorage.getItem('font-preference') || 'sans';
+                this._updateClasses();
+                this.$watch('currentFont', (newFont) => {
+                    this.applyFont(newFont);
+                    localStorage.setItem('font-preference', newFont);
+                    this._updateClasses();
+                });
+            },
+            applyFont(fontKey) {
+                const html = document.documentElement;
+                html.classList.remove('font-sans', 'font-mono', 'font-mono_droid');
+                html.classList.add('font-' + fontKey);
+            },
+            toggleOpen() { this.open = !this.open; },
+            closeOpen() { this.open = false; },
+            selectFont(event) {
+                const key = event.currentTarget.dataset.key;
+                if (key) { this.currentFont = key; this.open = false; }
+            }
+        }));
+    });
+    </script>
+
+    <script defer src="{{ url_for('static', path='/js/alpine-collapse.min.js') }}"></script>
+    <script defer src="{{ url_for('static', path='/js/alpine.min.js') }}"></script>
+    
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/leaflet.css') }}"/>
+    <script nonce="{{ request.state.csp_nonce }}">
+    // Leaflet 1.9.x accesses e.pressure and e.pointerType on plain MouseEvent objects.
+    // In Firefox those properties are implemented via deprecated mozPressure/mozInputSource
+    // shims, which emit console warnings on every map interaction. Overriding them on
+    // MouseEvent.prototype with direct getters bypasses the shim; PointerEvent.prototype
+    // defines its own pressure/pointerType and is unaffected.
+    (function () {
+        try {
+            if ('pressure' in MouseEvent.prototype)
+                Object.defineProperty(MouseEvent.prototype, 'pressure', { get: function () { return 0; }, configurable: true });
+            if ('pointerType' in MouseEvent.prototype)
+                Object.defineProperty(MouseEvent.prototype, 'pointerType', { get: function () { return ''; }, configurable: true });
+        } catch (_) {}
+    })();
+    </script>
+    <script src="{{ url_for('static', path='/js/leaflet.js') }}"></script>
+    <script src="{{ url_for('static', path='/js/leaflet.heat.js') }}"></script>
+    
+    {% if PROTOMAPS_URL %}
+    <script src="{{ url_for('static', path='/js/pmtiles.js') }}"></script>
+    <script src="{{ url_for('static', path='/js/protomaps-leaflet.js') }}"></script>
+    {% endif %}
+    
+    <script src="{{ url_for('static', path='/js/msgpack.min.js') }}"></script>
+    
+    <style nonce="{{ request.state.csp_nonce }}">
+        /* Prevent white flash on page load */
+        html, body {
+            background-color: #0d1117 !important;
+        }
+        /* Use visibility instead of display to prevent layout shift */
+        html[x-cloak] {
+            visibility: visible !important;
+        }
+        [x-cloak]:not(html) {
+            visibility: hidden !important;
+        }
+        .leaflet-container {
+            background: #2d3748;
+        }
+        .flash-message {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.25rem;
+        }
+        .flash-success { background-color: #166534; color: #a7f3d0; border: 1px solid #15803d; }
+        .flash-error { background-color: #991b1b; color: #fecaca; border: 1px solid #b91c1c; }
+        .flash-info { background-color: #1e40af; color: #bfdbfe; border: 1px solid #1d4ed8; }
+        /* Custom scrollbar styles */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #00c6ff;
+            box-shadow: 0 0 8px rgba(0, 198, 255, 0.6);
+        }
+        /* Firefox scrollbar */
+        .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: #30363d transparent;
+        }
+        .prose h1, .prose h2, .prose h3, .prose h4 { color: #c9d1d9; }
+        .prose p { margin-bottom: 1em; }
+        .prose a { color: #00c6ff; text-decoration: underline; }
+        .prose a:hover { color: #0072ff; }
+        .prose strong { color: #c9d1d9; font-weight: 600; }
+        .prose ul { list-style-type: disc; margin-left: 1.5em; margin-bottom: 1em; }
+        .prose ol { list-style-type: decimal; margin-left: 1.5em; margin-bottom: 1em; }
+        .prose li { margin-bottom: 0.5em; }
+        .prose code { background-color: #0d1117; color: #ff00ff; padding: 0.2em 0.4em; border-radius: 3px; font-size: 85%; }
+        .prose pre { background-color: #0d1117; padding: 1em; border-radius: 5px; overflow-x: auto; }
+        .prose blockquote { border-left: 4px solid #30363d; padding-left: 1em; margin-left: 0; color: #8b949e; }
+    </style>
+    
+    <script nonce="{{ request.state.csp_nonce }}">
+        (function() {
+            try {
+                const font = localStorage.getItem('font-preference') || 'sans';
+                const html = document.documentElement;
+                html.classList.remove('font-sans', 'font-mono', 'font-mono_droid');
+                html.classList.add(`font-${font}`);
+            } catch (e) {
+                console.error('Failed to apply font preference from localStorage', e);
+            }
+        })();
+    </script>
+    
+    {% block head_extra_styles %}{% endblock %}
+</head>
+<body class="bg-dark-bg text-text-primary min-h-screen flex flex-col">
+    <nav class="bg-card-bg/80 backdrop-blur-md text-white p-4 shadow-lg border-b border-border-color sticky top-0 z-50">
+        <div class="container mx-auto flex flex-wrap justify-between items-center">
+            <a href="{{ url_for('root') }}" class="text-3xl font-bold text-neon-blue hover:text-neon-blue-darker transition-colors mb-2 sm:mb-0 mr-4">PyOVMS</a>
+            <div class="flex-grow sm:flex-grow-0 flex items-center flex-wrap justify-center sm:justify-end space-x-1 xs:space-x-2 sm:space-x-3">
+                {% if current_user %}
+                    <span class="text-sm text-text-secondary hidden lg:inline mr-2">{{ _('Hi,') }} {{ current_user.username }}!</span>
+                    {% if not is_admin %}
+                    <a href="{{ url_for('ui_dashboard') }}"
+                        class="px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">
+                        {{ _('Dashboard') }}
+                    </a>
+                    {% endif %}
+                    {% if is_admin %}
+                    <a href="{{ url_for('ui_admin_dashboard') }}"
+                        class="px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-medium text-neon-green border border-neon-green rounded-md hover:bg-neon-green hover:text-dark-bg transition-colors duration-200">
+                        {{ _('Admin') }}
+                    </a>
+                    <a href="{{ url_for('ui_manage_users') }}"
+                        class="px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-medium text-neon-yellow border border-neon-yellow rounded-md hover:bg-neon-yellow hover:text-dark-bg transition-colors duration-200">
+                        {{ _('Users') }}
+                    </a>
+                    <a href="{{ url_for('ui_manage_autoprovision_profiles') }}"
+                        class="px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-medium text-purple-400 border border-purple-500 rounded-md hover:bg-purple-500 hover:text-dark-bg transition-colors duration-200">
+                        {{ _('Auto-Provision') }}
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('ui_add_vehicle_form') }}"
+                        class="px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-medium text-neon-magenta border border-neon-magenta rounded-md hover:bg-neon-magenta hover:text-dark-bg transition-colors duration-200">
+                        {{ _('Add Vehicle') }}
+                    </a>
+                    <a href="{{ url_for('ui_profile_page') }}"
+                        class="px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-medium text-neon-yellow border border-neon-yellow rounded-md hover:bg-neon-yellow hover:text-dark-bg transition-colors duration-200">
+                        {{ _('My Profile') }}
+                    </a>
+                    <a href="{{ url_for('ui_logout') }}"
+                        class="px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-medium text-gray-400 border border-gray-500 rounded-md hover:bg-gray-500 hover:text-dark-bg transition-colors duration-200">
+                        {{ _('Logout') }}
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('ui_login_form') }}"
+                        class="px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200 shadow-sm hover:shadow-neon-glow-blue">
+                        {{ _('Login') }}
+                    </a>
+                    {% if settings.ALLOW_USER_REGISTRATION %}
+                    <a href="{{ url_for('ui_register_form') }}" class="px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-medium text-neon-magenta border border-neon-magenta rounded-md hover:bg-neon-magenta hover:text-dark-bg transition-colors duration-200 shadow-sm hover:shadow-neon-glow-magenta">
+                        {{ _('Register') }}
+                    </a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4 sm:p-6 mt-6 flex-grow">
+        {% if request.query_params.get('error_message') %}
+            <div class="p-4 mb-4 text-sm text-red-300 bg-red-700/70 border border-red-500/50 rounded-lg" role="alert">
+                <span class="font-medium">{{ _('Error!') }}</span> {{ request.query_params.get('error_message') }}
+            </div>
+        {% endif %}
+        {% if request.query_params.get('success_message') %}
+            <div class="p-4 mb-4 text-sm text-green-300 bg-green-700/70 border border-green-500/50 rounded-lg" role="alert">
+                <span class="font-medium">{{ _('Success!') }}</span> {{ request.query_params.get('success_message') }}
+            </div>
+        {% endif %}
+         {% if request.query_params.get('info_message') %}
+            <div class="p-4 mb-4 text-sm text-blue-300 bg-blue-700/70 border border-blue-500/50 rounded-lg" role="alert">
+                <span class="font-medium">{{ _('Info:') }}</span> {{ request.query_params.get('info_message') }}
+            </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-card-bg text-text-secondary text-center p-6 mt-10 border-t border-border-color shadow-inner">
+        <div class="container mx-auto">
+            <p class="text-sm mb-1">
+                <span class="font-semibold text-neon-blue">PyOVMS Control</span> © {{ current_year }}
+                <span class="mx-1 text-border-color">|</span>
+                Version <span class="font-semibold text-neon-yellow">{{ settings.SERVER_VERSION }}</span>
+            </p>
+            <p class="text-xs mb-2">
+                Crafted with <span class="text-red-500">♥</span> by 
+                <strong class="text-neon-magenta">schorle</strong> & <strong class="text-neon-green">Crash_Override</strong>
+            </p>
+            <div class="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 text-xs">
+                {# Instance-specific: hidden unless the operator sets DONATION_URL. #}
+                {% if donation_url %}
+                <a href="{{ donation_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center hover:text-neon-blue transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" /></svg>
+                    {{ _('Donation') }}
+                </a>
+                <span class="text-border-color hidden sm:inline">/</span>
+                {% endif %}
+                {# Instance-specific: hidden unless the operator sets FIRMWARE_REPO_URL. #}
+                {% if firmware_repo_url %}
+                <a href="{{ firmware_repo_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center hover:text-neon-blue transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor"><path d="M5.5 13a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1.977A4.5 4.5 0 1113.5 13H5.5z" /><path d="M9 13.5a1 1 0 011 1v1.5a1 1 0 11-2 0V14.5a1 1 0 011-1z" /><path d="M12.5 14.5a1 1 0 00-2 0v1.5a1 1 0 102 0V14.5z" /></svg>
+                    {{ _('Firmware Repo') }}
+                </a>
+                <span class="text-border-color hidden sm:inline">/</span>
+                {% endif %}
+                {# Operator-supplied privacy_policy.md; the link disappears when there is none. #}
+                {% if privacy_policy_available %}
+                <a href="{{ url_for('ui_privacy_policy') }}" class="inline-flex items-center hover:text-neon-blue transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1.944A11.954 11.954 0 012.166 5.02.75.75 0 012 5.75v8.5a.75.75 0 01.166.73 11.954 11.954 0 017.834 3.02 11.954 11.954 0 017.834-3.02.75.75 0 01.166-.73v-8.5a.75.75 0 01-.166-.73A11.954 11.954 0 0110 1.944zM9 11a1 1 0 112 0v2a1 1 0 11-2 0v-2zm1-4a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd" /></svg>
+                    {{ _('Privacy Policy') }}
+                </a>
+                <span class="text-border-color hidden sm:inline">/</span>
+                {% endif %}
+                {# PyOVMS is GPL-3.0, which has no network clause — this link is a courtesy, not
+                   an obligation. If you run a MODIFIED PyOVMS, point SOURCE_CODE_URL at your own
+                   source so users of this instance can find the code they are talking to. #}
+                <a href="{{ source_code_url }}" target="_blank" rel="noopener" class="inline-flex items-center hover:text-neon-blue transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    {{ _('Source Code') }}
+                </a>
+                {% if current_user %}
+                <span class="text-border-color hidden sm:inline">/</span>
+                <a href="{{ url_for('swagger_ui_docs') }}" class="inline-flex items-center hover:text-neon-blue transition-colors">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 1.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L7.586 10 5.293 7.707a1 1 0 010-1.414zM11 12a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" /></svg>
+                    {{ _('Swagger Docs') }}
+                </a>
+                <span class="text-border-color hidden sm:inline">/</span>
+                <a href="{{ url_for('redoc_docs') }}" class="inline-flex items-center hover:text-neon-blue transition-colors">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                    {{ _('ReDoc') }}
+                </a>
+                {% endif %}
+
+            </div>
+            <div class="mt-4 text-xs">
+                 <div class="relative inline-block text-left">
+                    <div>
+                        <button @click="toggleOpen" type="button" class="inline-flex justify-center w-full rounded-md border border-border-color/50 shadow-sm px-3 py-1.5 bg-card-bg text-xs font-medium text-text-secondary hover:bg-input-bg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-neon-blue" id="menu-button" aria-expanded="true" aria-haspopup="true">
+                            <span x-text="currentFontName"></span>
+                            <svg class="-mr-1 ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                        </button>
+                    </div>
+                    <div x-show="open" @click.away="closeOpen" x-transition class="origin-bottom-right absolute right-0 bottom-12 w-40 rounded-md shadow-lg bg-input-bg ring-1 ring-black ring-opacity-5 border border-border-color z-10">
+                        <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="menu-button">
+                            <template x-for="font in fonts" :key="font.key">
+                                <a href="#" x-bind:data-key="font.key" @click.prevent="selectFont" class="block px-4 py-2 text-sm" :class="font.cls" role="menuitem" x-text="font.name"></a>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script nonce="{{ request.state.csp_nonce }}">
+        document.addEventListener('DOMContentLoaded', () => {
+            const confirmForms = Array.from(document.querySelectorAll('.js-confirm-form'));
+            for (const form of confirmForms) {
+                form.addEventListener('submit', (event) => {
+                    let message = '';
+                    const rawMessage = form.dataset.confirmMessage;
+                    try {
+                        message = rawMessage ? JSON.parse(rawMessage) : '';
+                    } catch (e) {
+                        message = rawMessage || '';
+                    }
+                    if (!window.confirm(message)) {
+                        event.preventDefault();
+                    }
+                });
+            }
+        });
+    </script>
+    <script nonce="{{ request.state.csp_nonce }}">
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!document.querySelector('input[name="csrf_token"]')) return;
+            const refreshMs = {{ (settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60 * 0.75 * 1000)|int }};
+            async function refreshCsrf() {
+                try {
+                    const r = await fetch('{{ url_for("ui_csrf_refresh") }}', {credentials: 'same-origin'});
+                    if (r.ok) {
+                        const d = await r.json();
+                        document.querySelectorAll('input[name="csrf_token"]').forEach(el => { el.value = d.csrf_token; });
+                        setTimeout(refreshCsrf, refreshMs);
+                    }
+                } catch (_) {}
+            }
+            setTimeout(refreshCsrf, refreshMs);
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

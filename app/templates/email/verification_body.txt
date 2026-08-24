@@ -1,0 +1,17 @@
+{{ _('Welcome to PyOVMS!') }}
+
+{{ _('Hello %(name)s,') % {'name': display_name} }}
+
+{{ _('Thank you for registering. Please click the link below to activate your account and get started.') }}
+
+{{ verification_link }}
+
+{{ _("This verification link is valid for %(valid_hours)s hours. If it has expired, you may need to register again.") % {'valid_hours': valid_hours} }}
+
+{{ _('If you did not register for an account, please ignore this email.') }}
+
+
+{{ _('Thanks,') }}
+{{ _('The PyOVMS Team') }}
+
+{{ _('PyOVMS Control Server') }} | {{ server_base_url }}

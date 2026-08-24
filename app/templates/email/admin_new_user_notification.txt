@@ -1,0 +1,15 @@
+{{ _('New User Registration') }}
+
+{{ _('Hello %(name)s,') % {'name': admin_display_name} }}
+
+{{ _('A new user has just registered an account on the PyOVMS server. Their account is currently inactive pending email verification.') }}
+
+{{ _('Username') }}: {{ new_user_username }}
+{{ _('Email') }}: {{ new_user_email }}
+{{ _('Registration Time') }}: {{ registration_time }}
+
+{{ _('You can manage all server users from the User Management page.') }}
+
+{{ _('Manage Users') }}: {{ user_management_url }}
+
+{{ _('PyOVMS Control Server') }} | {{ server_base_url }}

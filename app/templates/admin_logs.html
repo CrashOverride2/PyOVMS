@@ -1,0 +1,453 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block head_extra_styles %}
+<style nonce="{{ request.state.csp_nonce }}">
+    .log-line {
+        transition: background-color 0.5s ease;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        margin-bottom: 0.125rem;
+    }
+    .log-line.new {
+        background-color: #39FF1420;
+        animation: fadeIn 0.5s ease-in;
+    }
+    @keyframes fadeIn {
+        from { background-color: #39FF1440; }
+        to { background-color: #39FF1420; }
+    }
+    .log-line.level-INFO { color: #00c6ff; }
+    .log-line.level-WARNING { color: #FFF01F; }
+    .log-line.level-ERROR { color: #ff4d4d; }
+    .log-line.level-CRITICAL { color: #ff00ff; font-weight: bold; }
+    .log-line.level-DEBUG { color: #8b949e; opacity: 0.7; }
+
+    /* Virtual scrolling container */
+    .log-container {
+        position: relative;
+        height: 70vh;
+        overflow-y: auto;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.75rem;
+    }
+    .log-viewport {
+        position: relative;
+        padding: 0.75rem;
+    }
+    .log-spacer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 1px;
+        pointer-events: none;
+    }
+    .log-visible-content {
+        position: relative;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto" x-data="logViewer">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div class="flex items-center space-x-4">
+            <a href="{{ url_for('ui_admin_dashboard') }}" class="px-4 py-2 text-sm font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">
+                ← {{ _('Admin Dashboard') }}
+            </a>
+            <h1 class="text-2xl md:text-3xl font-bold text-neon-yellow">{{ page_title }}</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <span class="text-sm font-medium text-text-secondary">{{ _('Status:') }}
+                <span x-text="status" :class="statusClass"></span>
+            </span>
+            <span class="text-sm font-medium text-text-secondary">
+                <span x-text="logLines.length"></span> {{ _('lines') }}
+                <span x-show="maxLinesReached" class="text-yellow-400 ml-2">(max)</span>
+            </span>
+            <button @click="togglePolling"
+                    class="px-3 py-1.5 text-sm font-medium border rounded-md transition-colors"
+                    :class="streamButtonClass">
+                <span x-text="streamButtonText"></span>
+            </button>
+            <button @click="toggleAutoScroll"
+                    class="px-3 py-1.5 text-sm font-medium border rounded-md transition-colors"
+                    :class="autoScrollButtonClass">
+                <span x-text="autoScrollButtonText"></span>
+            </button>
+            <button @click="clearLogs"
+                    class="px-3 py-1.5 text-sm font-medium text-red-400 border border-red-400/50 rounded-md hover:bg-red-400/20 transition-colors">
+                {{ _('Clear') }}
+            </button>
+            <button x-show="isStreaming" @click="togglePolling"
+                    class="px-3 py-1.5 text-sm font-medium text-yellow-400 border border-yellow-400/50 rounded-md hover:bg-yellow-400/20 transition-colors"
+                    title="{{ _('Disconnect') }}">
+                {{ _('Disconnect') }}
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        <div class="bg-card-bg p-4 rounded-lg border border-border-color shadow-md">
+            <p class="text-xs font-medium text-text-secondary mb-1">{{ _('Total Lines') }}</p>
+            <p class="text-2xl font-bold text-neon-blue" x-text="logLines.length"></p>
+        </div>
+        <div class="bg-card-bg p-4 rounded-lg border border-blue-500/50 shadow-md">
+            <p class="text-xs font-medium text-text-secondary mb-1">{{ _('INFO') }}</p>
+            <p class="text-2xl font-bold text-blue-400" x-text="logStats.info"></p>
+        </div>
+        <div class="bg-card-bg p-4 rounded-lg border border-yellow-500/50 shadow-md">
+            <p class="text-xs font-medium text-text-secondary mb-1">{{ _('WARNING') }}</p>
+            <p class="text-2xl font-bold text-yellow-400" x-text="logStats.warning"></p>
+        </div>
+        <div class="bg-card-bg p-4 rounded-lg border border-red-500/50 shadow-md">
+            <p class="text-xs font-medium text-text-secondary mb-1">{{ _('ERROR') }}</p>
+            <p class="text-2xl font-bold text-red-400" x-text="logStats.error"></p>
+        </div>
+        <div class="bg-card-bg p-4 rounded-lg border border-neon-red/50 shadow-md">
+            <p class="text-xs font-medium text-text-secondary mb-1">{{ _('CRITICAL') }}</p>
+            <p class="text-2xl font-bold text-neon-red" x-text="logStats.critical"></p>
+        </div>
+    </div>
+
+    <!-- Log Container with Virtual Scrolling -->
+    <div class="bg-card-bg rounded-lg border border-border-color shadow-lg">
+        <div x-ref="logContainer"
+             @scroll="handleScroll"
+             class="log-container custom-scrollbar">
+            <div class="log-viewport">
+                <!-- Spacer to maintain scroll height -->
+                <div class="log-spacer" :style="spacerStyle"></div>
+
+                <!-- Only render visible lines -->
+                <div class="log-visible-content" :style="contentTransformStyle">
+                    <template x-for="line in visibleLines" :key="line.absoluteIndex">
+                        <div class="log-line" :class="line.levelClass" x-text="line.text"></div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ request.state.csp_nonce }}">
+const logViewerTranslations = {
+    streaming: {{ _('Streaming logs...') | tojson | safe }},
+    paused: {{ _('Streaming Paused') | tojson | safe }},
+    connecting: {{ _('Connecting...') | tojson | safe }},
+    error: {{ _('Error') | tojson | safe }},
+    pause: {{ _('Pause Stream') | tojson | safe }},
+    resume: {{ _('Resume Stream') | tojson | safe }},
+    autoScrollOn: {{ _('Auto-scroll: ON') | tojson | safe }},
+    autoScrollOff: {{ _('Auto-scroll: OFF') | tojson | safe }}
+};
+
+document.addEventListener('alpine:init', () => {
+    Alpine.data('logViewer', () => ({
+        t: logViewerTranslations,
+        logLines: [],  // All log lines in memory
+        status: logViewerTranslations.connecting,
+        isStreaming: true,
+        autoScroll: true,
+        ws: null,
+        maxLines: 5000,  // Increased limit since we're only rendering visible lines
+        maxLinesReached: false,
+        logStats: {
+            info: 0,
+            warning: 0,
+            error: 0,
+            critical: 0,
+            debug: 0
+        },
+
+        // Virtual scrolling properties
+        lineHeight: 20,  // Approximate height per line in pixels
+        visibleLines: [],
+        totalHeight: 0,
+        offsetY: 0,
+        startIndex: 0,
+        endIndex: 0,
+        overscan: 10,  // Extra lines to render above/below viewport
+        initialized: false,
+        statusClass: 'text-neon-green',
+        streamButtonClass: 'bg-neon-green text-dark-bg border-neon-green',
+        streamButtonText: logViewerTranslations.pause,
+        autoScrollButtonClass: 'bg-neon-blue text-dark-bg border-neon-blue',
+        autoScrollButtonText: logViewerTranslations.autoScrollOn,
+        spacerStyle: { height: '0px' },
+        contentTransformStyle: { transform: 'translateY(0px)' },
+
+        init() {
+            this.startStreaming();
+
+            // Calculate visible lines after a small delay to ensure DOM is ready
+            this.$nextTick(() => {
+                this.initialized = true;
+                this.calculateVisibleLines();
+            });
+
+            // Clean up on page unload to allow server shutdown
+            window.addEventListener('beforeunload', () => {
+                this.stopStreaming();
+            });
+            this.refreshUiState();
+        },
+        refreshUiState() {
+            if (this.status === this.t.streaming || this.status === this.t.connecting) {
+                this.statusClass = 'text-neon-green';
+            } else if (this.status === this.t.paused) {
+                this.statusClass = 'text-yellow-400';
+            } else if (typeof this.status === 'string' && this.status.startsWith(this.t.error)) {
+                this.statusClass = 'text-red-400';
+            } else {
+                this.statusClass = 'text-text-secondary';
+            }
+            this.streamButtonClass = this.isStreaming
+                ? 'bg-neon-green text-dark-bg border-neon-green'
+                : 'text-neon-green border-neon-green/50 hover:bg-neon-green/20';
+            this.streamButtonText = this.isStreaming ? this.t.pause : this.t.resume;
+            this.autoScrollButtonClass = this.autoScroll
+                ? 'bg-neon-blue text-dark-bg border-neon-blue'
+                : 'text-neon-blue border-neon-blue/50 hover:bg-neon-blue/20';
+            this.autoScrollButtonText = this.autoScroll ? this.t.autoScrollOn : this.t.autoScrollOff;
+            this.spacerStyle = { height: `${this.totalHeight}px` };
+            this.contentTransformStyle = { transform: `translateY(${this.offsetY}px)` };
+        },
+        toggleAutoScroll() {
+            this.autoScroll = !this.autoScroll;
+            this.refreshUiState();
+        },
+
+        togglePolling() {
+            this.isStreaming = !this.isStreaming;
+            if (this.isStreaming) {
+                this.startStreaming();
+                this.status = this.t.streaming;
+            } else {
+                this.stopStreaming();
+                this.status = this.t.paused;
+            }
+            this.refreshUiState();
+        },
+
+        async startStreaming() {
+            if (this.ws) {
+                this.ws.close();
+                this.ws = null;
+            }
+
+            this.status = this.t.connecting;
+            this.refreshUiState();
+
+            try {
+                // Get WebSocket ticket
+                const response = await fetch("{{ url_for('api_get_ws_ticket') }}", { credentials: 'include' });
+                if (!response.ok) {
+                    throw new Error(`Failed to get ticket: ${response.status}`);
+                }
+                const ticketData = await response.json();
+
+                // Create WebSocket connection
+                const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsPath = "{{ url_for('websocket_logs_endpoint') }}";
+                const wsUrl = new URL(wsPath, `${wsProtocol}//${window.location.host}`);
+                wsUrl.searchParams.set('ticket', ticketData.app_ws_ticket);
+
+                this.ws = new WebSocket(wsUrl.toString());
+
+                this.ws.onopen = () => {
+                    this.status = this.t.streaming;
+                    this.refreshUiState();
+                    console.log('Log viewer WebSocket connected');
+                };
+
+                this.ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+
+                        if (data.type === 'initial' || data.type === 'reset') {
+                            // Initial load or log rotation
+                            this.logLines = data.lines || [];
+                            this.updateStats();
+                            this.calculateVisibleLines();
+                            this.$nextTick(() => {
+                                if (this.autoScroll) this.scrollToBottom();
+                            });
+                        } else if (data.type === 'update') {
+                            // New lines received
+                            const newLines = data.lines || [];
+                            newLines.forEach(line => this.addLogLine(line));
+                        } else if (data.type === 'error') {
+                            console.error('Stream error:', data.message);
+                            this.status = `${this.t.error}: ${data.message}`;
+                            this.refreshUiState();
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse WebSocket data:', e);
+                    }
+                };
+
+                this.ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    this.status = `${this.t.error}: Connection error`;
+                    this.refreshUiState();
+                };
+
+                this.ws.onclose = (event) => {
+                    console.log('WebSocket closed:', event.reason || 'No reason');
+                    this.status = this.t.paused;
+                    this.isStreaming = false;
+                    this.ws = null;
+                    this.refreshUiState();
+                };
+
+            } catch (error) {
+                console.error('Failed to connect WebSocket:', error);
+                this.status = `${this.t.error}: ${error.message}`;
+                this.isStreaming = false;
+                this.refreshUiState();
+            }
+        },
+
+        stopStreaming() {
+            if (this.ws) {
+                this.ws.close();
+                this.ws = null;
+            }
+        },
+
+        formatLogLine(line) {
+            if (line.includes(' - INFO - ')) return 'level-INFO';
+            if (line.includes(' - WARNING - ')) return 'level-WARNING';
+            if (line.includes(' - ERROR - ')) return 'level-ERROR';
+            if (line.includes(' - CRITICAL - ')) return 'level-CRITICAL';
+            if (line.includes(' - DEBUG - ')) return 'level-DEBUG';
+            return '';
+        },
+
+        addLogLine(line) {
+            this.logLines.push(line);
+
+            // Limit number of lines
+            if (this.logLines.length > this.maxLines) {
+                const removeCount = this.logLines.length - this.maxLines;
+                this.logLines.splice(0, removeCount);
+                this.maxLinesReached = true;
+            } else {
+                this.maxLinesReached = false;
+            }
+
+            // Update statistics
+            this.updateStatsForLine(line);
+
+            // Recalculate virtual scroll
+            this.totalHeight = this.logLines.length * this.lineHeight;
+            this.calculateVisibleLines();
+
+            this.$nextTick(() => {
+                if (this.autoScroll) {
+                    this.scrollToBottom();
+                }
+            });
+        },
+
+        handleScroll() {
+            // Recalculate which lines should be visible based on scroll position
+            if (this.initialized) {
+                this.calculateVisibleLines();
+            }
+        },
+
+        calculateVisibleLines() {
+            const container = this.$refs.logContainer;
+            if (!container || !this.initialized) return;
+
+            const scrollTop = container.scrollTop;
+            const containerHeight = container.clientHeight;
+
+            // Calculate which lines are visible
+            this.startIndex = Math.max(0, Math.floor(scrollTop / this.lineHeight) - this.overscan);
+            this.endIndex = Math.min(
+                this.logLines.length,
+                Math.ceil((scrollTop + containerHeight) / this.lineHeight) + this.overscan
+            );
+
+            // Update offset for proper positioning
+            this.offsetY = this.startIndex * this.lineHeight;
+
+            // Update total height
+            this.totalHeight = this.logLines.length * this.lineHeight;
+            this.refreshUiState();
+
+            this.visibleLines = this.logLines.slice(this.startIndex, this.endIndex).map((text, i) => ({
+                text: text,
+                levelClass: this.formatLogLine(text),
+                absoluteIndex: this.startIndex + i
+            }));
+        },
+
+        updateStats() {
+            // Recalculate all stats from scratch
+            this.logStats = {
+                info: 0,
+                warning: 0,
+                error: 0,
+                critical: 0,
+                debug: 0
+            };
+
+            this.logLines.forEach(line => {
+                this.updateStatsForLine(line);
+            });
+        },
+
+        updateStatsForLine(line) {
+            if (line.includes(' - INFO - ')) {
+                this.logStats.info++;
+            } else if (line.includes(' - WARNING - ')) {
+                this.logStats.warning++;
+            } else if (line.includes(' - ERROR - ')) {
+                this.logStats.error++;
+            } else if (line.includes(' - CRITICAL - ')) {
+                this.logStats.critical++;
+            } else if (line.includes(' - DEBUG - ')) {
+                this.logStats.debug++;
+            }
+        },
+
+        clearLogs() {
+            if (confirm('Clear all log lines from view?')) {
+                this.logLines = [];
+                this.logStats = {
+                    info: 0,
+                    warning: 0,
+                    error: 0,
+                    critical: 0,
+                    debug: 0
+                };
+                this.maxLinesReached = false;
+                this.calculateVisibleLines();
+                this.refreshUiState();
+            }
+        },
+
+        scrollToBottom() {
+            const container = this.$refs.logContainer;
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+    }));
+});
+</script>
+{% endblock %}

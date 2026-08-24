@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New User Registration</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .header { text-align: center; border-bottom: 1px solid #eeeeee; padding-bottom: 20px; margin-bottom: 20px; }
+        .header h1 { color: #333333; }
+        .content { color: #555555; line-height: 1.6; }
+        .details-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .details-table td { padding: 8px; border: 1px solid #dddddd; }
+        .details-table td:first-child { font-weight: bold; background-color: #f9f9f9; }
+        .button { display: block; width: fit-content; margin: 30px auto; padding: 15px 25px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; }
+        .footer { text-align: center; font-size: 12px; color: #999999; margin-top: 30px; border-top: 1px solid #eeeeee; padding-top: 20px; }
+        a { color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📢 {{ _('New User Registration') }}</h1>
+        </div>
+        <div class="content">
+            <p>{{ _('Hello %(name)s,') % {'name': admin_display_name} }}</p>
+            <p>{{ _('A new user has just registered an account on the PyOVMS server. Their account is currently inactive pending email verification.') }}</p>
+            
+            <table class="details-table">
+                <tr>
+                    <td>{{ _('Username') }}</td>
+                    <td>{{ new_user_username }}</td>
+                </tr>
+                <tr>
+                    <td>{{ _('Email') }}</td>
+                    <td>{{ new_user_email }}</td>
+                </tr>
+                <tr>
+                    <td>{{ _('Registration Time') }}</td>
+                    <td>{{ registration_time }}</td>
+                </tr>
+            </table>
+
+            <p>{{ _('You can manage all server users from the User Management page.') }}</p>
+            <a href="{{ user_management_url }}" class="button">{{ _('Manage Users') }}</a>
+        </div>
+        <div class="footer">
+            <p>{{ _('PyOVMS Control Server') }} | <a href="{{ server_base_url }}">{{ server_base_url }}</a></p>
+        </div>
+    </div>
+</body>
+</html>

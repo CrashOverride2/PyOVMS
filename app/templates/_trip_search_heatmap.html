@@ -1,0 +1,114 @@
+<div class="space-y-6">
+    <h2 class="text-xl font-semibold text-neon-blue mb-4">{{ _('Trip Search & Heatmap') }}</h2>
+    
+    <!-- Search Form and Actions -->
+    <div class="bg-gray-800/50 p-4 rounded-md border border-border-color/50">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <!-- Search Parameters Form -->
+            <form @submit.prevent="searchState.submitSearch" class="space-y-4">
+                <div>
+                    <label for="search-relation" class="block text-sm font-medium text-text-secondary">{{ _('Search Type') }}</label>
+                    <select id="search-relation" :value="searchState.form.relation" @change="searchState.setFormRelation($event.target.value)" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-blue focus:ring-1 focus:ring-neon-blue sm:text-sm">
+                        <option value="starts_within_radius">{{ _('Starts within radius') }}</option>
+                        <option value="ends_within_radius">{{ _('Ends within radius') }}</option>
+                        <option value="starts_within_bbox">{{ _('Starts within bounding box') }}</option>
+                        <option value="ends_within_bbox">{{ _('Ends within bounding box') }}</option>
+                    </select>
+                </div>
+
+                <div x-show="searchState.showRadiusInputs" class="space-y-3" x-transition>
+                    <div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="search-lat" class="block text-sm font-medium text-text-secondary">{{ _('Latitude') }}</label>
+                                <input type="text" id="search-lat" :value="searchState.form.lat" @input="searchState.setFormLat($event.target.value)" placeholder="e.g., 51.505" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-blue focus:ring-1 focus:ring-neon-blue sm:text-sm">
+                            </div>
+                            <div>
+                                <label for="search-lon" class="block text-sm font-medium text-text-secondary">{{ _('Longitude') }}</label>
+                                <input type="text" id="search-lon" :value="searchState.form.lon" @input="searchState.setFormLon($event.target.value)" placeholder="e.g., -0.09" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-blue focus:ring-1 focus:ring-neon-blue sm:text-sm">
+                            </div>
+                        </div>
+                        <p class="text-xs text-text-secondary mt-1">{{ _('Or click/drag a marker on the map to set coordinates.') }}</p>
+                    </div>
+                    <div>
+                        <label for="search-radius" class="block text-sm font-medium text-text-secondary">{{ _('Radius (meters)') }}</label>
+                        <input type="number" id="search-radius" :value="searchState.form.radius_m" @input="searchState.setFormRadiusM($event.target.value)" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-blue focus:ring-1 focus:ring-neon-blue sm:text-sm">
+                    </div>
+                </div>
+
+                <div x-show="searchState.showBboxInputs" class="space-y-3" x-transition>
+                     <div>
+                        <label for="search-bbox" class="block text-sm font-medium text-text-secondary">{{ _('Bounding Box') }}</label>
+                        <input type="text" id="search-bbox" :value="searchState.form.bbox" @input="searchState.setFormBbox($event.target.value)" placeholder="min_lon,min_lat,max_lon,max_lat" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-blue focus:ring-1 focus:ring-neon-blue sm:text-sm">
+                        <p class="text-xs text-text-secondary mt-1">{{ _('e.g., -0.5,51.3,0.3,51.7') }}</p>
+                    </div>
+                    <button type="button" @click="searchState.toggleDrawingBox" :class="searchState.drawBoxButtonClass" class="w-full px-4 py-2 text-sm font-medium text-dark-bg border border-transparent rounded-md transition-colors">
+                        <span x-show="searchState.showDrawBoxIdle">{{ _('Draw Box on Map') }}</span>
+                        <span x-show="searchState.showDrawingActive">{{ _('Cancel Drawing') }}</span>
+                    </button>
+                    <p x-show="searchState.showDrawPromptSetFirstCorner" class="text-xs text-neon-yellow text-center animate-pulse">{{ _('Click map to set first corner.') }}</p>
+                    <p x-show="searchState.showDrawPromptSetSecondCorner" class="text-xs text-neon-yellow text-center animate-pulse">{{ _('Click map to set second corner.') }}</p>
+                </div>
+                
+                <button type="submit" :disabled="searchState.isLoading" class="w-full px-4 py-2 text-sm font-medium text-dark-bg bg-neon-magenta border border-neon-magenta rounded-md hover:bg-neon-magenta-darker transition-colors disabled:bg-gray-600">
+                     {{ _('Search Trips') }}
+                </button>
+            </form>
+
+             <!-- Heatmap Actions -->
+            <div class="space-y-3">
+                 <p class="text-sm text-text-secondary">{{ _('Or, visualize all trip data for this vehicle.') }}</p>
+                 <button @click="searchState.fetchHeatmapAction" :disabled="searchState.isLoading" class="w-full px-4 py-2 text-sm font-medium text-dark-bg bg-neon-yellow border border-neon-yellow rounded-md hover:bg-neon-yellow-darker transition-colors disabled:bg-gray-600">
+                    {{ _('Show Heatmap') }}
+                </button>
+                 <button @click="searchState.clearMapAndSearch" :disabled="searchState.isLoading" class="w-full px-4 py-2 text-sm font-medium text-text-secondary border border-border-color rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50">
+                    {{ _('Clear Map & Search') }}
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Map Display -->
+    <div id="search-map" class="h-[400px] rounded-md border border-border-color bg-gray-700"></div>
+    <div x-show="searchState.isLoading" class="text-center py-4 text-text-secondary">{{ _('Loading...') }}</div>
+    <div x-show="searchState.error" class="p-3 text-center text-red-400 bg-red-900/40 border border-red-700/60 rounded-md">
+        <p x-text="searchState.error"></p>
+    </div>
+
+    <!-- Search Results -->
+    <div x-show="searchState.hasSearchResults" x-ref="searchResultsContainer">
+        <h3 class="text-lg font-semibold text-text-primary mb-3">{{ _('Search Results') }}</h3>
+        <div class="space-y-3">
+             <template x-for="trip in searchState.displaySearchResults" :key="trip.id">
+                <a :href="trip.detailHref" class="bg-gray-800/50 p-3 rounded-md border border-border-color/50 transition-all hover:border-neon-magenta/70 block">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="font-semibold text-text-primary" x-text="trip.startTimeText"></p>
+                            <p class="text-sm text-text-secondary" x-text="trip.distanceText"></p>
+                        </div>
+                        <div x-show="trip.showDistanceFromPoint" class="text-sm text-neon-magenta text-right">
+                           <p x-text="trip.distanceFromPointText"></p>
+                           <p class="text-xs text-text-secondary">{{ _('from search point') }}</p>
+                        </div>
+                    </div>
+                </a>
+            </template>
+        </div>
+        <!-- Pagination for Search -->
+        <nav x-show="searchState.hasPagination" class="flex items-center justify-between border-t border-border-color/50 px-4 sm:px-0 pt-3 mt-4">
+            <div class="flex-1 flex justify-start">
+                <button x-show="searchState.showPrevPage" @click="searchState.goToPreviousPage" :disabled="searchState.isLoading"
+                    class="relative inline-flex items-center px-4 py-2 border border-border-color text-sm font-medium rounded-md text-text-secondary bg-card-bg hover:bg-gray-800 disabled:opacity-50">
+                    {{ _('Previous') }}
+                </button>
+            </div>
+            <p class="text-sm text-text-secondary">{{ _('Page') }} <span x-text="searchState.currentPageText"></span> {{ _('of') }} <span x-text="searchState.totalPagesText"></span></p>
+            <div class="flex-1 flex justify-end">
+                <button x-show="searchState.showNextPage" @click="searchState.goToNextPage" :disabled="searchState.isLoading"
+                    class="ml-3 relative inline-flex items-center px-4 py-2 border border-border-color text-sm font-medium rounded-md text-text-secondary bg-card-bg hover:bg-gray-800 disabled:opacity-50">
+                    {{ _('Next') }}
+                </button>
+            </div>
+        </nav>
+    </div>
+</div>

@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _(page_title) }}{% endblock %}
+
+{% block head_extra_styles %}
+{% if version_stats %}
+<style nonce="{{ request.state.csp_nonce }}">
+{% for version, count in version_stats.items() %}
+.totp-bar-v{{ version }} { width: {{ (count / total_totp_users * 100) }}%; }
+{% endfor %}
+</style>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <div class="flex justify-start mb-6">
+        <a href="{{ url_for('ui_admin_dashboard') }}" class="px-4 py-2 text-sm font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">← {{ _('Admin Dashboard') }}</a>
+    </div>
+
+    <h1 class="text-2xl md:text-3xl font-bold mb-2 text-center text-neon-yellow">{{ _(page_title) }}</h1>
+    <p class="text-sm text-center text-text-secondary mb-8">{{ _('Manage TOTP encryption key rotation without requiring users to re-setup 2FA') }}</p>
+
+    <!-- Status Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-card-bg p-5 rounded-lg border border-border-color shadow-md">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-text-secondary">{{ _('Total TOTP Users') }}</p>
+                    <p class="text-3xl font-bold text-neon-blue">{{ total_totp_users }}</p>
+                </div>
+                <svg class="h-12 w-12 text-neon-blue/30" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clip-rule="evenodd" />
+                </svg>
+            </div>
+        </div>
+
+        <div class="bg-card-bg p-5 rounded-lg border border-border-color shadow-md">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-text-secondary">{{ _('Available Key Versions') }}</p>
+                    <p class="text-3xl font-bold text-neon-green">{{ available_keys | length }}</p>
+                </div>
+                <svg class="h-12 w-12 text-neon-green/30" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/>
+                    <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+        </div>
+
+        <div class="bg-card-bg p-5 rounded-lg border border-border-color shadow-md">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-text-secondary">{{ _('Key Versions in Use') }}</p>
+                    <p class="text-3xl font-bold text-neon-magenta">{{ version_stats | length }}</p>
+                </div>
+                <svg class="h-12 w-12 text-neon-magenta/30" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Version Distribution -->
+    {% if version_stats %}
+    <div class="bg-card-bg p-6 rounded-lg border border-border-color shadow-lg mb-8">
+        <h2 class="text-xl font-semibold text-neon-yellow mb-4">{{ _('Key Version Distribution') }}</h2>
+        <div class="space-y-3">
+            {% for version, count in version_stats.items() %}
+            <div class="flex items-center justify-between p-3 bg-input-bg/50 rounded-md">
+                <div class="flex items-center space-x-3">
+                    <span class="flex items-center justify-center w-8 h-8 rounded-full bg-neon-blue/20 text-neon-blue font-mono font-bold">
+                        v{{ version }}
+                    </span>
+                    <div>
+                        <p class="text-sm font-medium text-text-primary">{{ _('Version') }} {{ version }}</p>
+                        <p class="text-xs text-text-secondary">{{ count }} {{ _('users') if count != 1 else _('user') }}</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-lg font-bold text-neon-blue">{{ "%.1f" | format((count / total_totp_users * 100)) }}%</div>
+                    <div class="w-32 bg-gray-700 rounded-full h-2 mt-1">
+                        <div class="bg-neon-blue h-2 rounded-full totp-bar-v{{ version }}"></div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Rotation Actions -->
+    <div class="bg-card-bg p-6 rounded-lg border border-neon-yellow/70 shadow-lg mb-8" x-data="totpRotationManager">
+        <h2 class="text-xl font-semibold text-neon-yellow mb-4">{{ _('Key Rotation') }}</h2>
+
+        {% if available_keys | length < 2 %}
+        <div class="p-4 mb-4 bg-yellow-900/40 border border-yellow-700/60 rounded-md text-sm text-yellow-200">
+            <h3 class="font-semibold text-neon-yellow mb-2">{{ _('Setup Required') }}</h3>
+            <p>{{ _('To rotate encryption keys, you need to configure a second key version. Follow these steps:') }}</p>
+            <ol class="list-decimal list-inside mt-2 space-y-1 ml-3">
+                <li>{{ _('Generate a new encryption key using the button below') }}</li>
+                <li>{{ _('Add the new key to your .env file as TOTP_ENCRYPTION_KEY_V2=<new_key>') }}</li>
+                <li>{{ _('Restart the server') }}</li>
+                <li>{{ _('Return to this page to perform the rotation') }}</li>
+            </ol>
+        </div>
+
+        <button type="button" @click="generateNewKey"
+                :disabled="isGenerating"
+                class="px-4 py-2 text-sm font-medium text-dark-bg bg-neon-green border border-neon-green rounded-md hover:bg-neon-green-darker transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            <span x-show="showGenerateIdle">{{ _('Generate New Encryption Key') }}</span>
+            <span x-show="showGenerateLoading">{{ _('Generating...') }}</span>
+        </button>
+
+        <div x-show="newKeyGenerated" x-transition class="mt-4 p-4 bg-green-900/40 border border-green-700/60 rounded-md">
+            <h4 class="font-semibold text-green-400 mb-2">{{ _('New Key Generated') }}</h4>
+            <div class="space-y-2">
+                <div>
+                    <label class="text-xs font-bold uppercase text-text-secondary tracking-wider">{{ _('Encryption Key') }}</label>
+                    <div class="flex items-center mt-1">
+                        <code x-ref="newKeyValue" class="flex-grow p-2 bg-input-bg text-text-primary rounded-l-md font-mono text-xs break-all" x-text="newKeyValue"></code>
+                        <button type="button" @click="copyNewKey"
+                                class="px-3 py-2 bg-neon-blue text-dark-bg rounded-r-md hover:bg-neon-blue-darker transition-colors flex-shrink-0">
+                            <span x-text="newKeyCopyLabel"></span>
+                        </button>
+                    </div>
+                </div>
+                <p class="text-xs text-green-200 mt-2" x-text="newKeyInstructions"></p>
+            </div>
+        </div>
+
+        {% else %}
+        <p class="text-sm text-text-secondary mb-4">
+            {{ _('Rotate all users to a specific key version. The TOTP secret remains the same, only the encryption key changes.') }}
+        </p>
+
+        <div class="space-y-4">
+            <div>
+                <label for="target_version" class="block text-sm font-medium text-text-secondary mb-2">{{ _('Target Key Version') }}</label>
+                <select id="target_version" :value="targetVersion" @change="setTargetVersion($event.target.value)"
+                        class="block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-yellow focus:ring-1 focus:ring-neon-yellow sm:text-sm">
+                    {% for version in available_keys %}
+                    <option value="{{ version }}">{{ _('Version') }} {{ version }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="button" @click="rotateAllUsers"
+                    :disabled="isRotating"
+                    class="px-4 py-2 text-sm font-medium text-dark-bg bg-neon-yellow border border-neon-yellow rounded-md hover:bg-neon-yellow-darker transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <span x-show="showRotateIdle">{{ _('Rotate All Users to Selected Version') }}</span>
+                <span x-show="showRotateLoading">{{ _('Rotating...') }}</span>
+            </button>
+        </div>
+
+        <!-- Rotation Results -->
+        <div x-show="rotationComplete" x-transition class="mt-6 p-4 rounded-md" :class="rotationResultContainerClass">
+            <h4 class="font-semibold mb-2" :class="rotationResultTitleClass" x-text="rotationResultTitleText"></h4>
+            <div class="text-sm space-y-1" :class="rotationResultTextClass">
+                <p><strong>{{ _('Total users:') }}</strong> <span x-text="rotationStatsTotal"></span></p>
+                <p><strong>{{ _('Successfully rotated:') }}</strong> <span x-text="rotationStatsRotated"></span></p>
+                <p><strong>{{ _('Skipped:') }}</strong> <span x-text="rotationStatsSkipped"></span></p>
+                <p><strong>{{ _('Failed:') }}</strong> <span x-text="rotationStatsFailed"></span></p>
+                <div x-show="showRotationErrors" class="mt-3">
+                    <p class="font-semibold">{{ _('Errors:') }}</p>
+                    <ul class="list-disc list-inside ml-3 text-xs">
+                        <template x-for="error in rotationStats.errors" :key="error">
+                            <li x-text="error"></li>
+                        </template>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Important Notes -->
+    <div class="bg-blue-900/40 border border-blue-700/60 rounded-md p-4">
+        <h3 class="font-semibold text-neon-blue mb-2">{{ _('Important Notes') }}</h3>
+        <ul class="list-disc list-inside text-sm text-blue-200 space-y-1">
+            <li>{{ _('Users do NOT need to re-setup their 2FA. The rotation is transparent to them.') }}</li>
+            <li>{{ _('The TOTP secret itself never changes, only the encryption key protecting it.') }}</li>
+            <li>{{ _('Always test rotation in a development environment first.') }}</li>
+            <li>{{ _('Keep old encryption keys available until all users are migrated.') }}</li>
+            <li>{{ _('After successful rotation, update TOTP_ENCRYPTION_KEY in .env and restart.') }}</li>
+        </ul>
+    </div>
+</div>
+
+<script nonce="{{ request.state.csp_nonce }}">
+document.addEventListener('alpine:init', () => {
+    Alpine.data('totpRotationManager', () => ({
+        targetVersion: {{ available_keys[1] if available_keys|length > 1 else 1 }},
+        isRotating: false,
+        rotationComplete: false,
+        rotationSuccess: false,
+        rotationStats: {},
+        isGenerating: false,
+        newKeyGenerated: false,
+        newKeyValue: '',
+        newKeyInstructions: '',
+        showGenerateIdle: true,
+        showGenerateLoading: false,
+        showRotateIdle: true,
+        showRotateLoading: false,
+        newKeyCopyLabel: {{ _('Copy') | tojson | safe }},
+        rotationResultContainerClass: 'bg-red-900/40 border border-red-700/60',
+        rotationResultTitleClass: 'text-red-400',
+        rotationResultTextClass: 'text-red-200',
+        rotationResultTitleText: {{ _('Rotation Failed') | tojson | safe }},
+        showRotationErrors: false,
+        get rotationStatsTotal() { return this.rotationStats.total ?? 0; },
+        get rotationStatsRotated() { return this.rotationStats.rotated ?? 0; },
+        get rotationStatsSkipped() { return this.rotationStats.skipped ?? 0; },
+        get rotationStatsFailed() { return this.rotationStats.failed ?? 0; },
+
+        setTargetVersion(value) { this.targetVersion = Number(value); },
+
+        init() {
+            this.refreshUi();
+        },
+        refreshUi() {
+            this.showGenerateIdle = !this.isGenerating;
+            this.showGenerateLoading = this.isGenerating;
+            this.showRotateIdle = !this.isRotating;
+            this.showRotateLoading = this.isRotating;
+            this.rotationResultContainerClass = this.rotationSuccess
+                ? 'bg-green-900/40 border border-green-700/60'
+                : 'bg-red-900/40 border border-red-700/60';
+            this.rotationResultTitleClass = this.rotationSuccess ? 'text-green-400' : 'text-red-400';
+            this.rotationResultTextClass = this.rotationSuccess ? 'text-green-200' : 'text-red-200';
+            this.rotationResultTitleText = this.rotationSuccess
+                ? {{ _('Rotation Complete') | tojson | safe }}
+                : {{ _('Rotation Failed') | tojson | safe }};
+            this.showRotationErrors = !!(this.rotationStats.errors && this.rotationStats.errors.length > 0);
+        },
+
+        async generateNewKey() {
+            this.isGenerating = true;
+            this.refreshUi();
+            try {
+                const response = await fetch("{{ url_for('ui_totp_generate_key') }}");
+                const result = await response.json();
+                if (result.success) {
+                    this.newKeyValue = result.key;
+                    this.newKeyInstructions = result.instructions;
+                    this.newKeyGenerated = true;
+                } else {
+                    alert('{{ _('Failed to generate key') }}');
+                }
+            } catch (error) {
+                alert('{{ _('Error:') }} ' + error.message);
+            } finally {
+                this.isGenerating = false;
+                this.refreshUi();
+            }
+        },
+
+        async rotateAllUsers() {
+            if (!confirm('{{ _('Are you sure you want to rotate ALL users to version') }} ' + this.targetVersion + '?')) {
+                return;
+            }
+
+            this.isRotating = true;
+            this.rotationComplete = false;
+            this.refreshUi();
+
+            try {
+                const formData = new FormData();
+                formData.append('target_version', this.targetVersion);
+                formData.append('csrf_token', window.csrfToken || '{{ csrf_token }}');
+
+                const response = await fetch("{{ url_for('ui_totp_rotate_all') }}", {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                this.rotationStats = result.stats || {};
+                this.rotationSuccess = result.success;
+                this.rotationComplete = true;
+                this.refreshUi();
+
+                if (result.success) {
+                    // Reload page after 3 seconds to show updated stats
+                    setTimeout(() => window.location.reload(), 3000);
+                }
+            } catch (error) {
+                this.rotationSuccess = false;
+                this.rotationComplete = true;
+                this.rotationStats = { errors: [error.message] };
+                this.refreshUi();
+            } finally {
+                this.isRotating = false;
+                this.refreshUi();
+            }
+        },
+
+        copyNewKey() {
+            const text = this.newKeyValue || '';
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = this.newKeyCopyLabel;
+                this.newKeyCopyLabel = {{ _("Copied!") | tojson | safe }};
+                setTimeout(() => {
+                    this.newKeyCopyLabel = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+    }));
+});
+</script>
+{% endblock %}

@@ -1,0 +1,777 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Add New Vehicle') }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto" x-data="addVehicleWizard" x-cloak>
+
+    <div class="flex justify-start mb-6">
+        <a href="{{ url_for('ui_admin_dashboard') if is_admin else url_for('ui_dashboard') }}" class="px-4 py-2 text-sm font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">← {{ _('Back') }}</a>
+    </div>
+
+    <h1 class="text-2xl md:text-3xl font-bold mb-2 text-center text-neon-magenta">{{ _('Add New Vehicle') }}</h1>
+    <p class="text-center text-text-secondary mb-8 text-sm">{{ _("Let's get your OVMS module connected to this server.") }}</p>
+
+    <!-- Step indicator -->
+    <div class="flex items-center justify-center mb-8">
+        <template x-for="s in stepsData" :key="s.num">
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+                     :class="s.circleClass">
+                    <span x-show="s.showNum" x-text="s.num"></span>
+                    <span x-show="s.showCheck">✓</span>
+                </div>
+                <div x-show="s.showConnector" class="w-16 h-0.5 mx-1" :class="s.connectorClass"></div>
+            </div>
+        </template>
+    </div>
+
+    <form action="{{ form_action_url }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <!-- notification_preference defaults to v3; silent push defaults to true via FastAPI Form(True) -->
+
+        <!-- ══════════════════════════════════════════════════ -->
+        <!-- STEP 1: Protocol -->
+        <!-- ══════════════════════════════════════════════════ -->
+        <div x-show="isStep1">
+            <div class="bg-card-bg p-6 rounded-lg border border-border-color/70 shadow-lg mb-6">
+                <h2 class="text-xl font-semibold text-neon-magenta mb-1">{{ _('Step 1: Choose Protocol') }}</h2>
+                <p class="text-sm text-text-secondary mb-6">{{ _('Which protocol will your OVMS module use to connect to this server?') }}</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                    <!-- V2 -->
+                    <label class="rounded-lg border-2 p-5 flex flex-col cursor-pointer transition-colors"
+                           :class="v2LabelClass">
+                        <input type="radio" name="protocol" value="v2" class="sr-only" :checked="isV2" @change="setProtocol">
+                        <div class="text-3xl mb-3">🔌</div>
+                        <h3 class="font-bold text-lg text-text-primary mb-1">V2 <span class="text-xs font-normal text-text-secondary">(TCP)</span></h3>
+                        <p class="text-xs text-text-secondary flex-1">{{ _('Direct TCP connection. Classic OVMS protocol, works everywhere.') }}</p>
+                        <div class="mt-3 flex items-center gap-2">
+                            <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center"
+                                 :class="v2RadioClass">
+                                <div class="w-2 h-2 rounded-full bg-neon-blue" x-show="isV2"></div>
+                            </div>
+                            <span class="text-xs font-medium" :class="v2SelectTextClass">{{ _('Select') }}</span>
+                        </div>
+                    </label>
+
+                    <!-- V3 -->
+                    <label class="rounded-lg border-2 p-5 flex flex-col transition-colors"
+                           :class="v3LabelClass">
+                        <input type="radio" name="protocol" value="v3" class="sr-only" :checked="isV3" @change="setProtocol" :disabled="mqttNotConfigured">
+                        <div class="text-3xl mb-3">📡</div>
+                        <h3 class="font-bold text-lg text-text-primary mb-1">V3 <span class="text-xs font-normal text-text-secondary">(MQTT)</span></h3>
+                        <p class="text-xs text-text-secondary flex-1">{{ _('MQTT-based. More efficient, real-time metrics.') }}</p>
+                        <p class="text-xs text-neon-yellow mt-1" x-show="mqttNotConfigured">{{ _('MQTT not configured on this server.') }}</p>
+                        <div class="mt-3 flex items-center gap-2" x-show="mqttConfigured">
+                            <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center"
+                                 :class="v3RadioClass">
+                                <div class="w-2 h-2 rounded-full bg-neon-magenta" x-show="isV3"></div>
+                            </div>
+                            <span class="text-xs font-medium" :class="v3SelectTextClass">{{ _('Select') }}</span>
+                        </div>
+                    </label>
+
+                    <!-- Both -->
+                    <label class="rounded-lg border-2 p-5 flex flex-col transition-colors"
+                           :class="bothLabelClass">
+                        <input type="radio" name="protocol" value="both" class="sr-only" :checked="isBoth" @change="setProtocol" :disabled="mqttNotConfigured">
+                        <div class="flex items-start justify-between mb-3">
+                            <span class="text-3xl">⚡</span>
+                            <span class="text-xs font-medium border px-2 py-0.5 rounded-full" x-show="mqttConfigured"
+                                  :class="recommendedBadgeClass">
+                                {{ _('Recommended') }}
+                            </span>
+                        </div>
+                        <h3 class="font-bold text-lg text-text-primary mb-1">{{ _('Both') }}</h3>
+                        <p class="text-xs text-text-secondary flex-1">{{ _('V2 + V3 simultaneously. Best coverage and redundancy.') }}</p>
+                        <div class="mt-3 flex items-center gap-2" x-show="mqttConfigured">
+                            <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center"
+                                 :class="bothRadioClass">
+                                <div class="w-2 h-2 rounded-full bg-neon-yellow" x-show="isBoth"></div>
+                            </div>
+                            <span class="text-xs font-medium" :class="bothSelectTextClass">{{ _('Select') }}</span>
+                        </div>
+                    </label>
+
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="button" @click="goToStep2"
+                        class="px-6 py-2.5 text-sm font-medium text-dark-bg bg-neon-magenta border border-neon-magenta rounded-md hover:bg-neon-magenta-darker transition-all duration-200">
+                    {{ _('Next') }} →
+                </button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════ -->
+        <!-- STEP 2: Credentials -->
+        <!-- ══════════════════════════════════════════════════ -->
+        <div x-show="isStep2">
+            <div class="bg-card-bg p-6 rounded-lg border border-border-color/70 shadow-lg mb-6">
+                <h2 class="text-xl font-semibold text-neon-magenta mb-1">{{ _('Step 2: Module Credentials') }}</h2>
+                <p class="text-sm text-text-secondary mb-6">{{ _("We've generated a unique ID and password for your module. Feel free to change them.") }}</p>
+
+                <div class="space-y-5">
+
+                    <!-- Vehicle ID -->
+                    <div>
+                        <label class="block text-sm font-medium text-text-secondary mb-1">{{ _('Vehicle / Module ID') }}</label>
+                        <div class="flex gap-2">
+                            <input type="text" name="vehicle_id" id="vehicle_id"
+                                   :value="vehicleId" @input="updateVehicleId"
+                                   required maxlength="32"
+                                   class="flex-1 px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-magenta focus:ring-1 focus:ring-neon-magenta sm:text-sm font-mono"
+                                   placeholder="e.g. EV4821">
+                            <button type="button" @click="copyVehicleId"
+                                    class="px-3 py-2 bg-neon-blue text-dark-bg rounded-md text-sm hover:opacity-80 transition-opacity flex-shrink-0">{{ _('Copy') }}</button>
+                            <button type="button" @click="randomizeVehicleId"
+                                    class="px-3 py-2 bg-gray-700 text-text-primary rounded-md text-sm hover:bg-gray-600 transition-colors flex-shrink-0" title="{{ _('Generate new ID') }}">🔀</button>
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500">{{ _('Letters A–Z, digits, and hyphens only. Max 32 characters.') }}</p>
+                    </div>
+
+                    <!-- Server Password -->
+                    <div>
+                        <label class="block text-sm font-medium text-text-secondary mb-1">{{ _('Server Password') }}</label>
+                        <div class="flex gap-2">
+                            <input :type="passwordInputType"
+                                   name="server_password" id="server_password"
+                                   :value="serverPassword" @input="updateServerPassword"
+                                   required maxlength="64"
+                                   class="flex-1 px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-magenta focus:ring-1 focus:ring-neon-magenta sm:text-sm font-mono">
+                            <button type="button" @click="togglePassword"
+                                    class="px-3 py-2 bg-gray-700 text-text-primary rounded-md text-sm hover:bg-gray-600 transition-colors flex-shrink-0">
+                                <span x-text="passwordToggleIcon"></span>
+                            </button>
+                            <button type="button" @click="copyPassword"
+                                    class="px-3 py-2 bg-neon-blue text-dark-bg rounded-md text-sm hover:opacity-80 transition-opacity flex-shrink-0">{{ _('Copy') }}</button>
+                            <button type="button" @click="randomizePassword"
+                                    class="px-3 py-2 bg-gray-700 text-text-primary rounded-md text-sm hover:bg-gray-600 transition-colors flex-shrink-0" title="{{ _('Generate new password') }}">🔀</button>
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500">{{ _('Authenticates your module with this server. Store it securely.') }}</p>
+                    </div>
+
+                    <!-- Vehicle Name -->
+                    <div>
+                        <label class="block text-sm font-medium text-text-secondary mb-1">{{ _('Vehicle Name') }} <span class="text-gray-500 font-normal">({{ _('optional display name') }})</span></label>
+                        <input type="text" name="vehicle_name"
+                               :value="vehicleName" @input="updateVehicleName"
+                               class="w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-magenta focus:ring-1 focus:ring-neon-magenta sm:text-sm"
+                               placeholder="{{ _('e.g., My Renault Zoe') }}">
+                    </div>
+                </div>
+
+                <div class="mt-6 p-4 bg-neon-yellow/10 border border-neon-yellow/40 rounded-lg">
+                    <p class="text-sm font-semibold text-neon-yellow">💡 {{ _('Keep these values handy!') }}</p>
+                    <p class="text-sm text-text-secondary mt-1">{{ _("You'll need to enter the Vehicle ID and password into your module's web interface in the next step.") }}</p>
+                </div>
+            </div>
+
+            <div class="flex justify-between">
+                <button type="button" @click="goToStep1"
+                        class="px-6 py-2.5 text-sm font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-all duration-200">
+                    ← {{ _('Back') }}
+                </button>
+                <button type="button" @click="goToStep3"
+                        :disabled="cannotProceed"
+                        class="px-6 py-2.5 text-sm font-medium text-dark-bg bg-neon-magenta border border-neon-magenta rounded-md hover:bg-neon-magenta-darker transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    {{ _('Next') }} →
+                </button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════ -->
+        <!-- STEP 3: Module Setup Guide + Save -->
+        <!-- ══════════════════════════════════════════════════ -->
+        <div x-show="isStep3">
+            <div class="bg-card-bg p-6 rounded-lg border border-border-color/70 shadow-lg mb-6">
+                <h2 class="text-xl font-semibold text-neon-magenta mb-1">{{ _('Step 3: Configure Your Module') }}</h2>
+                <p class="text-sm text-text-secondary mb-6">{{ _('Open the web interface of your OVMS module (usually at 192.168.4.1 while connected to its Wi-Fi) and enter the highlighted values.') }}</p>
+
+                <!-- ─── V2 MODULE MOCKUP ─── -->
+                <div x-show="isV2OrBoth" class="mb-8">
+                    <p class="text-sm font-semibold text-neon-blue mb-3">
+                        {{ _('Navigate to:') }} <span class="font-mono bg-dark-bg px-2 py-0.5 rounded text-xs text-green-300">Config → Server V2 (MP)</span>
+                    </p>
+
+                    <div class="border border-gray-500 rounded-lg overflow-hidden shadow-xl">
+                        <!-- Navbar -->
+                        <div class="bg-gray-900 text-gray-100 flex items-center gap-4 px-4 py-2 text-xs select-none">
+                            <div class="w-7 h-7 bg-white rounded flex items-center justify-center flex-shrink-0">
+                                <span class="text-gray-900 font-black text-[8px] leading-none text-center">OV<br>MS</span>
+                            </div>
+                            <span class="text-gray-400">Status</span>
+                            <span class="text-gray-400">Shell</span>
+                            <span class="bg-gray-700 text-gray-100 px-3 py-1 rounded">Config ▾</span>
+                            <span class="ml-auto text-gray-400">Logout</span>
+                        </div>
+                        <!-- Section header -->
+                        <div class="bg-blue-700 text-white px-5 py-2 font-semibold text-sm select-none">Server V2 (MP) configuration</div>
+                        <!-- Form body -->
+                        <div class="bg-gray-50 text-gray-800 px-6 py-5 space-y-3 text-sm">
+
+                            <!-- Host -->
+                            <div class="flex items-start gap-4">
+                                <span class="w-36 text-right text-gray-600 font-medium pt-1.5 flex-shrink-0">Host:</span>
+                                <div class="flex-1">
+                                    <div class="group relative">
+                                        <div class="border-2 border-blue-500 bg-blue-50 rounded px-3 py-1.5 font-mono text-blue-900 shadow-sm shadow-blue-200" x-text="serverHost"></div>
+                                        <button type="button" @click="copyToClipboard(serverHost)" class="absolute right-2 top-1.5 p-1 text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity" title="{{ _('Copy') }}">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                        </button>
+                                    </div>
+                                    <div class="mt-1 text-xs text-gray-500">Public OVMS V2 servers: <span class="text-blue-600">api.openvehicles.com</span> · <span class="text-blue-600">ovms.dexters-web.de</span></div>
+                                </div>
+                            </div>
+
+                            <!-- Port -->
+                            <div class="flex items-center gap-4">
+                                <span class="w-36 text-right text-gray-600 font-medium flex-shrink-0">Port:</span>
+                                <div class="group relative">
+                                    <div class="border-2 border-blue-500 bg-blue-50 rounded px-3 py-1.5 font-mono text-blue-900 w-28 shadow-sm shadow-blue-200" x-text="tcpPort"></div>
+                                    <button type="button" @click="copyToClipboard(tcpPort.toString())" class="absolute right-2 top-1.5 p-1 text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity" title="{{ _('Copy') }}">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    </button>
+                                </div>
+                                <span class="text-xs text-gray-400">(TLS)</span>
+                            </div>
+
+                            <!-- Vehicle ID -->
+                            <div class="flex items-center gap-4">
+                                <span class="w-36 text-right text-gray-600 font-medium flex-shrink-0">Vehicle ID:</span>
+                                <div class="group relative flex-1">
+                                    <div class="border-2 border-blue-500 bg-blue-50 rounded px-3 py-1.5 font-mono text-blue-900 shadow-sm shadow-blue-200" x-text="vehicleIdUpper"></div>
+                                    <button type="button" @click="copyToClipboard(vehicleIdUpper)" class="absolute right-2 top-1.5 p-1 text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity" title="{{ _('Copy') }}">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Vehicle password -->
+                            <div class="flex items-start gap-4">
+                                <span class="w-36 text-right text-gray-600 font-medium flex-shrink-0 pt-1.5">Vehicle password:</span>
+                                <div class="flex-1">
+                                    <div class="group relative">
+                                        <div class="border-2 border-blue-500 bg-blue-50 rounded px-3 py-1.5 font-mono text-blue-900 shadow-sm shadow-blue-200"
+                                             x-text="maskedPassword"></div>
+                                        <button type="button" @click="copyToClipboard(serverPassword)" class="absolute right-2 top-1.5 p-1 text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity" title="{{ _('Copy') }}">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                        </button>
+                                    </div>
+                                    <div class="mt-1 text-xs text-gray-500">Note: enter the password for the <strong>vehicle ID account</strong>, <em>not</em> your user account password</div>
+                                </div>
+                            </div>
+
+                            <!-- Update intervals (cosmetic) -->
+                            <div class="pt-3 border-t border-gray-200">
+                                <div class="text-base font-semibold text-gray-700 mb-2">Update intervals</div>
+                                <div class="space-y-2">
+                                    <div class="flex items-center gap-4">
+                                        <span class="w-36 text-right text-gray-400 flex-shrink-0">...connected:</span>
+                                        <div class="border border-gray-300 rounded px-3 py-1.5 text-gray-400 text-xs italic w-56">optional, in seconds, default: 60</div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <span class="w-36 text-right text-gray-400 flex-shrink-0">...idle:</span>
+                                        <div class="border border-gray-300 rounded px-3 py-1.5 text-gray-400 text-xs italic w-56">optional, in seconds, default: 600</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Save button -->
+                            <div class="pt-2">
+                                <div class="ml-40 inline-block px-5 py-1.5 bg-gray-200 border border-gray-400 rounded text-gray-700 cursor-default">Save</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 flex items-start gap-2 p-3 bg-blue-950/50 border border-blue-700/50 rounded-lg">
+                        <span class="text-blue-400 flex-shrink-0">ℹ</span>
+                        <p class="text-xs text-blue-300">{{ _('The blue-highlighted fields contain your values. After saving, also enable "Start server V2" in Auto start configuration (see below).') }}</p>
+                    </div>
+                </div>
+
+                <!-- ─── V3 MODULE MOCKUP ─── -->
+                <div x-show="isV3OrBoth" class="mb-8">
+                    <p class="text-sm font-semibold text-neon-magenta mb-3">
+                        {{ _('Navigate to:') }} <span class="font-mono bg-dark-bg px-2 py-0.5 rounded text-xs text-green-300">Config → Server V3 (MQTT)</span>
+                    </p>
+
+                    <div class="border border-gray-500 rounded-lg overflow-hidden shadow-xl">
+                        <!-- Navbar (V3 style matches screenshot 1 with more items) -->
+                        <div class="bg-gray-900 text-gray-100 flex items-center gap-3 px-4 py-2 text-xs overflow-x-auto select-none">
+                            <div class="w-7 h-7 bg-white rounded flex items-center justify-center flex-shrink-0">
+                                <span class="text-gray-900 font-black text-[8px] leading-none text-center">OV<br>MS</span>
+                            </div>
+                            <span class="text-gray-400 whitespace-nowrap">Dashboard</span>
+                            <span class="text-gray-400 whitespace-nowrap">Status</span>
+                            <span class="text-gray-400 whitespace-nowrap">Tools ▾</span>
+                            <span class="text-gray-400 whitespace-nowrap">Vehicle ▾</span>
+                            <span class="bg-gray-700 text-gray-100 px-3 py-1 rounded whitespace-nowrap">Config ▾</span>
+                        </div>
+                        <!-- Section header -->
+                        <div class="bg-blue-700 text-white px-5 py-2 font-semibold text-sm select-none">Server V3 (MQTT) configuration</div>
+                        <!-- Form body -->
+                        <div class="bg-gray-50 text-gray-800 px-6 py-5 space-y-3 text-sm">
+
+                            <!-- Server -->
+                            <div class="flex items-start gap-4">
+                                <span class="w-28 text-right text-gray-600 font-medium pt-1.5 flex-shrink-0">Server:</span>
+                                <div class="flex-1">
+                                    <div class="group relative">
+                                        <div class="border-2 border-blue-500 bg-blue-50 rounded px-3 py-1.5 font-mono text-blue-900 shadow-sm shadow-blue-200" x-text="mqttHost"></div>
+                                        <button type="button" @click="copyToClipboard(mqttHost)" class="absolute right-2 top-1.5 p-1 text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity" title="{{ _('Copy') }}">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                        </button>
+                                    </div>
+                                    <div class="mt-1 text-xs text-gray-500">Public OVMS V3 servers (MQTT brokers): <span class="text-blue-600">io.adafruit.com</span> Registration · <span class="text-blue-600">More public MQTT brokers</span></div>
+                                </div>
+                            </div>
+
+                            <!-- Enable TLS -->
+                            <div class="flex items-center gap-3 ml-32">
+                                <div class="w-4 h-4 border-2 border-blue-600 bg-blue-600 rounded flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                </div>
+                                <span class="font-medium text-blue-800">Enable TLS</span>
+                                <span class="text-xs text-gray-400">— enable transport layer security (encryption)</span>
+                            </div>
+
+                            <!-- Port -->
+                            <div class="flex items-center gap-4">
+                                <span class="w-28 text-right text-gray-600 font-medium flex-shrink-0">Port:</span>
+                                <div class="group relative">
+                                    <div class="border-2 border-blue-500 bg-blue-50 rounded px-3 py-1.5 font-mono text-blue-900 w-28 shadow-sm shadow-blue-200">8883</div>
+                                    <button type="button" @click="copyToClipboard('8883')" class="absolute right-2 top-1.5 p-1 text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity" title="{{ _('Copy') }}">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    </button>
+                                </div>
+                                <span class="text-xs text-gray-400">(TLS)</span>
+                            </div>
+
+                            <!-- Username -->
+                            <div class="flex items-center gap-4">
+                                <span class="w-28 text-right text-gray-600 font-medium flex-shrink-0">Username:</span>
+                                <div class="group relative flex-1">
+                                    <div class="border-2 border-blue-500 bg-blue-50 rounded px-3 py-1.5 font-mono text-blue-900 shadow-sm shadow-blue-200" x-text="vehicleIdUpper"></div>
+                                    <button type="button" @click="copyToClipboard(vehicleIdUpper)" class="absolute right-2 top-1.5 p-1 text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity" title="{{ _('Copy') }}">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Password -->
+                            <div class="flex items-center gap-4">
+                                <span class="w-28 text-right text-gray-600 font-medium flex-shrink-0">Password:</span>
+                                <div class="group relative flex-1">
+                                    <div class="border-2 border-blue-500 bg-blue-50 rounded px-3 py-1.5 font-mono text-blue-900 shadow-sm shadow-blue-200"
+                                         x-text="maskedPassword"></div>
+                                    <button type="button" @click="copyToClipboard(serverPassword)" class="absolute right-2 top-1.5 p-1 text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity" title="{{ _('Copy') }}">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Topic Prefix -->
+                            <div class="flex items-start gap-4">
+                                <span class="w-28 text-right text-gray-600 font-medium flex-shrink-0 pt-1.5">Topic Prefix:</span>
+                                <div class="flex-1">
+                                    <div class="group relative">
+                                        <div class="border-2 border-blue-500 bg-blue-50 rounded px-3 py-1.5 font-mono text-blue-900 break-all shadow-sm shadow-blue-200" x-text="topicPrefix"></div>
+                                        <button type="button" @click="copyToClipboard(topicPrefix)" class="absolute right-2 top-1.5 p-1 text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity" title="{{ _('Copy') }}">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                        </button>
+                                    </div>
+                                    <p class="mt-1 text-xs text-orange-600 font-medium">⚠ The trailing slash (/) is required!</p>
+                                </div>
+                            </div>
+
+                            <!-- Save button -->
+                            <div class="pt-2">
+                                <div class="ml-32 inline-block px-5 py-1.5 bg-gray-200 border border-gray-400 rounded text-gray-700 cursor-default">Save</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 flex items-start gap-2 p-3 bg-purple-950/50 border border-purple-700/50 rounded-lg">
+                        <span class="text-purple-400 flex-shrink-0">ℹ</span>
+                        <p class="text-xs text-purple-300">{{ _('The blue-highlighted fields contain your values. After saving, also enable "Start server V3" in Auto start configuration (see below).') }}</p>
+                    </div>
+                </div>
+
+                <!-- ─── AUTO START MODULE MOCKUP ─── -->
+                <div class="mb-8">
+                    <p class="text-sm font-semibold text-neon-yellow mb-3">
+                        {{ _('Navigate to:') }} <span class="font-mono bg-dark-bg px-2 py-0.5 rounded text-xs text-green-300">Config → Auto start</span>
+                    </p>
+
+                    <div class="border border-gray-500 rounded-lg overflow-hidden shadow-xl select-none">
+                        <!-- Navbar -->
+                        <div class="bg-gray-900 text-gray-100 flex items-center gap-4 px-4 py-2 text-xs">
+                            <div class="w-7 h-7 bg-white rounded flex items-center justify-center flex-shrink-0">
+                                <span class="text-gray-900 font-black text-[8px] leading-none text-center">OV<br>MS</span>
+                            </div>
+                            <span class="text-gray-400">Status</span>
+                            <span class="text-gray-400">Shell</span>
+                            <span class="bg-gray-700 text-gray-100 px-3 py-1 rounded">Config ▾</span>
+                            <span class="ml-auto text-gray-400">Logout</span>
+                        </div>
+                        <!-- Section header -->
+                        <div class="bg-blue-700 text-white px-5 py-2 font-semibold text-sm">Auto start configuration</div>
+                        <!-- Form body -->
+                        <div class="bg-gray-50 text-gray-800 px-6 py-5 space-y-3 text-sm">
+
+                            <!-- Enable auto start -->
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 border-2 border-gray-500 bg-blue-600 rounded flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                </div>
+                                <span class="font-medium">Enable auto start</span>
+                            </div>
+                            <div class="ml-6 text-xs text-gray-500 max-w-lg">Note: if a crash or reboot occurs within 10 seconds of powering on, this option will be automatically disabled and must be re-enabled manually.</div>
+
+                            <!-- Wifi mode (cosmetic) -->
+                            <div class="flex items-center gap-4 pt-2">
+                                <span class="w-44 text-right text-gray-600 font-medium flex-shrink-0">Wifi mode:</span>
+                                <div class="border border-gray-300 bg-white rounded px-3 py-1.5 text-gray-600 w-44 flex justify-between items-center">Access point <span>▾</span></div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="w-44 text-right text-gray-400 flex-shrink-0">... access point SSID:</span>
+                                <div class="border border-gray-300 bg-white rounded px-3 py-1.5 text-gray-600 w-44 flex justify-between items-center">OVMS <span>▾</span></div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="w-44 text-right text-gray-600 font-medium flex-shrink-0">Vehicle type:</span>
+                                <div class="border border-gray-300 bg-white rounded px-3 py-1.5 text-gray-400 w-44 flex justify-between items-center">— <span>▾</span></div>
+                            </div>
+
+                            <!-- Start server V2 -->
+                            <div class="flex items-center gap-2 pt-1">
+                                <div class="w-4 h-4 border-2 rounded flex items-center justify-center flex-shrink-0 transition-colors"
+                                     :class="v2CheckboxClass">
+                                    <svg x-show="isV2OrBoth" class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                </div>
+                                <span class="font-medium px-2 py-0.5 rounded transition-colors"
+                                      :class="v2StartLabelClass">
+                                    Start server V2
+                                </span>
+                                <span class="text-xs text-gray-400" x-show="isV3">(leave unchecked for V3-only)</span>
+                            </div>
+
+                            <!-- Start server V3 -->
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 border-2 rounded flex items-center justify-center flex-shrink-0 transition-colors"
+                                     :class="v3CheckboxClass">
+                                    <svg x-show="isV3OrBoth" class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                </div>
+                                <span class="font-medium px-2 py-0.5 rounded transition-colors"
+                                      :class="v3StartLabelClass">
+                                    Start server V3
+                                </span>
+                                <span class="text-xs text-gray-400" x-show="isV2">(leave unchecked for V2-only)</span>
+                            </div>
+
+                            <!-- Save / Save & reboot buttons -->
+                            <div class="pt-3 flex gap-2">
+                                <div class="inline-block px-5 py-1.5 bg-gray-200 border border-gray-400 rounded text-gray-700 cursor-default">Save</div>
+                                <div class="inline-block px-5 py-1.5 bg-gray-200 border border-gray-400 rounded text-gray-700 cursor-default">Save &amp; reboot</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ─── CLI Helper (collapsible) ─── -->
+                <div class="border-t border-border-color/30 pt-4">
+                    <details>
+                        <summary class="flex justify-between items-center w-full text-left py-2 cursor-pointer">
+                            <span class="text-base font-semibold text-neon-yellow">{{ _('Module CLI Helper') }}</span>
+                            <svg class="w-5 h-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                        </summary>
+                        <div class="mt-2 space-y-4 border-l-2 border-neon-yellow/50 pl-4 py-2">
+                            <p class="text-xs text-text-secondary">{{ _("Alternatively, use your module's terminal (Shell tab) to configure the server connection with these commands. Values update as you edit your credentials.") }}</p>
+
+                            <div x-show="isV2OrBoth">
+                                <div class="flex justify-between items-center mb-1">
+                                    <h4 class="text-sm font-semibold text-neon-blue">{{ _('V2 Server CLI Configuration') }}</h4>
+                                    <button type="button" @click="copyV2CliText" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">{{ _('Copy') }}</button>
+                                </div>
+                                <pre class="bg-black p-3 rounded text-sm text-green-300 font-mono overflow-x-auto custom-scrollbar" x-text="v2CliText"></pre>
+                            </div>
+
+                            <div x-show="isV3OrBoth">
+                                <div class="flex justify-between items-center mb-1">
+                                    <h4 class="text-sm font-semibold text-neon-magenta">{{ _('V3 Server CLI Configuration') }}</h4>
+                                    <button type="button" @click="copyV3CliText" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">{{ _('Copy') }}</button>
+                                </div>
+                                <pre class="bg-black p-3 rounded text-sm text-green-300 font-mono overflow-x-auto custom-scrollbar" x-text="v3CliText"></pre>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+
+                <!-- ─── Additional Settings (collapsible) ─── -->
+                <div class="border-t border-border-color/30 pt-4 mt-2">
+                    <details {% if is_admin %}open{% endif %}>
+                        <summary class="flex justify-between items-center w-full text-left py-2 cursor-pointer">
+                            <span class="text-base font-semibold text-text-secondary">{{ _('Additional Settings') }} <span class="text-xs font-normal text-gray-500">({{ _('optional') }})</span></span>
+                            <svg class="w-5 h-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                        </summary>
+                        <div class="mt-4 space-y-6 border-l-2 border-border-color/40 pl-4 py-2">
+
+                            {% if is_admin %}
+                                <div>
+                                    <label for="owner_id" class="block text-sm font-medium text-text-secondary">{{ _('Vehicle Owner') }}</label>
+                                    <select id="owner_id" name="owner_id" required class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-magenta focus:ring-1 focus:ring-neon-magenta sm:text-sm">
+                                        <option value="" selected disabled>{{ _('Select a user…') }}</option>
+                                        {% for user in all_users %}
+                                        <option value="{{ user.id }}">
+                                            {{ user.username }} — {{ user.full_name or user.email }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <p class="mt-1 text-xs text-gray-500">{{ _('Assign this vehicle to a registered user. Administrators cannot own vehicles.') }}</p>
+                                </div>
+                            {% endif %}
+
+                            <p class="text-sm text-text-secondary">{{ _('Notification recipients (ntfy, email, push) can be configured from the vehicle detail page after saving.') }}</p>
+
+                            <div>
+                                <label class="block text-sm font-medium text-text-secondary mb-2">{{ _('Optional Services') }}</label>
+                                <div class="space-y-2">
+                                    {% if settings.ENABLE_KARTO_TRIP_TRACKING %}
+                                    <label class="flex items-center gap-2 cursor-pointer" x-show="isNotV2">
+                                        <input id="enable_trip_tracking" name="enable_trip_tracking" type="checkbox" value="true" class="h-4 w-4 text-neon-blue border-gray-500 rounded focus:ring-neon-blue">
+                                        <span class="text-sm text-text-primary">{{ _('Enable Trip Tracking') }}</span>
+                                    </label>
+                                    {% endif %}
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input id="enable_charge_logging" name="enable_charge_logging" type="checkbox" value="true" class="h-4 w-4 text-neon-blue border-gray-500 rounded focus:ring-neon-blue">
+                                        <span class="text-sm text-text-primary">{{ _('Enable Charge Logging') }}</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                        </div>
+                    </details>
+                </div>
+            </div>
+
+            <!-- Navigation + Submit -->
+            <div class="flex justify-between items-center">
+                <button type="button" @click="goToStep2"
+                        class="px-6 py-2.5 text-sm font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-all duration-200">
+                    ← {{ _('Back') }}
+                </button>
+                <button type="submit"
+                        class="px-8 py-2.5 text-sm font-medium text-dark-bg bg-neon-magenta border border-neon-magenta rounded-md hover:bg-neon-magenta-darker hover:shadow-lg hover:shadow-neon-magenta/40 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    ✓ {{ _('Save Vehicle') }}
+                </button>
+            </div>
+        </div>
+
+        <!-- Hidden defaults for optional fields not shown in wizard -->
+        <input type="hidden" name="notification_preference" value="v3">
+
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script nonce="{{ request.state.csp_nonce }}">
+(function () {
+    const _mqttConfigured = {{ is_mqtt_configured | lower }};
+    const _serverBaseUrl = {{ settings.SERVER_BASE_URL | tojson }};
+    const _mqttBrokerHost = {{ (settings.MQTT_BROKER_HOST or '') | tojson }};
+    const _tcpSslPort = {{ settings.TCP_SSL_PORT }};
+    const _username = {{ current_user.username | tojson }};
+
+    function _extractHostname(url) {
+        try { return new URL(url).hostname; } catch (e) { return url; }
+    }
+
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('addVehicleWizard', () => ({
+            currentStep: 1,
+            selectedProtocol: _mqttConfigured ? 'both' : 'v2',
+            vehicleId: '',
+            serverPassword: '',
+            vehicleName: '',
+            showPassword: true,
+            mqttConfigured: _mqttConfigured,
+            serverHost: _extractHostname(_serverBaseUrl),
+            mqttHost: (_mqttBrokerHost && _mqttBrokerHost !== 'localhost') ? _mqttBrokerHost : _extractHostname(_serverBaseUrl),
+            tcpPort: _tcpSslPort,
+            username: _username,
+
+            get stepsData() {
+                const cs = this.currentStep;
+                return [
+                    {
+                        num: 1,
+                        showNum: cs <= 1,
+                        showCheck: cs > 1,
+                        showConnector: true,
+                        circleClass: cs === 1 ? 'bg-neon-magenta text-dark-bg' : (cs > 1 ? 'bg-green-600 text-white' : 'bg-card-bg text-text-secondary border border-border-color'),
+                        connectorClass: cs > 1 ? 'bg-green-600' : 'bg-border-color'
+                    },
+                    {
+                        num: 2,
+                        showNum: cs <= 2,
+                        showCheck: cs > 2,
+                        showConnector: true,
+                        circleClass: cs === 2 ? 'bg-neon-magenta text-dark-bg' : (cs > 2 ? 'bg-green-600 text-white' : 'bg-card-bg text-text-secondary border border-border-color'),
+                        connectorClass: cs > 2 ? 'bg-green-600' : 'bg-border-color'
+                    },
+                    {
+                        num: 3,
+                        showNum: true,
+                        showCheck: false,
+                        showConnector: false,
+                        circleClass: cs === 3 ? 'bg-neon-magenta text-dark-bg' : 'bg-card-bg text-text-secondary border border-border-color',
+                        connectorClass: ''
+                    }
+                ];
+            },
+
+            get isStep1() { return this.currentStep === 1; },
+            get isStep2() { return this.currentStep === 2; },
+            get isStep3() { return this.currentStep === 3; },
+
+            get isV2() { return this.selectedProtocol === 'v2'; },
+            get isV3() { return this.selectedProtocol === 'v3'; },
+            get isBoth() { return this.selectedProtocol === 'both'; },
+            get isV2OrBoth() { return this.selectedProtocol === 'v2' || this.selectedProtocol === 'both'; },
+            get isV3OrBoth() { return this.selectedProtocol === 'v3' || this.selectedProtocol === 'both'; },
+            get isNotV2() { return this.selectedProtocol !== 'v2'; },
+            get mqttNotConfigured() { return !this.mqttConfigured; },
+
+            get v2LabelClass() {
+                return this.selectedProtocol === 'v2' ? 'border-neon-blue bg-neon-blue/10' : 'border-border-color hover:border-gray-400';
+            },
+            get v3LabelClass() {
+                return !this.mqttConfigured ? 'cursor-not-allowed opacity-50 border-border-color' :
+                       (this.selectedProtocol === 'v3' ? 'cursor-pointer border-neon-magenta bg-neon-magenta/10' : 'cursor-pointer border-border-color hover:border-gray-400');
+            },
+            get bothLabelClass() {
+                return !this.mqttConfigured ? 'cursor-not-allowed opacity-50 border-border-color' :
+                       (this.selectedProtocol === 'both' ? 'cursor-pointer border-neon-yellow bg-neon-yellow/10' : 'cursor-pointer border-border-color hover:border-gray-400');
+            },
+            get v2RadioClass() { return this.selectedProtocol === 'v2' ? 'border-neon-blue' : 'border-gray-500'; },
+            get v3RadioClass() { return this.selectedProtocol === 'v3' ? 'border-neon-magenta' : 'border-gray-500'; },
+            get bothRadioClass() { return this.selectedProtocol === 'both' ? 'border-neon-yellow' : 'border-gray-500'; },
+            get v2SelectTextClass() { return this.selectedProtocol === 'v2' ? 'text-neon-blue' : 'text-text-secondary'; },
+            get v3SelectTextClass() { return this.selectedProtocol === 'v3' ? 'text-neon-magenta' : 'text-text-secondary'; },
+            get bothSelectTextClass() { return this.selectedProtocol === 'both' ? 'text-neon-yellow' : 'text-text-secondary'; },
+            get recommendedBadgeClass() {
+                return this.selectedProtocol === 'both' ? 'bg-neon-yellow/20 text-neon-yellow border-neon-yellow/50' : 'bg-gray-700/50 text-gray-400 border-gray-600';
+            },
+
+            get maskedPassword() { return this.showPassword ? this.serverPassword : '••••••••••••••••'; },
+            get passwordInputType() { return this.showPassword ? 'text' : 'password'; },
+            get passwordToggleIcon() { return this.showPassword ? '🙈' : '👁'; },
+            get cannotProceed() { return !this.vehicleId.trim() || !this.serverPassword.trim(); },
+
+            get v2CheckboxClass() {
+                return this.isV2OrBoth ? 'border-gray-500 bg-blue-600' : 'border-gray-300 bg-white';
+            },
+            get v3CheckboxClass() {
+                return this.isV3OrBoth ? 'border-gray-500 bg-blue-600' : 'border-gray-300 bg-white';
+            },
+            get v2StartLabelClass() {
+                return this.isV2OrBoth ? 'text-blue-800 bg-blue-100 ring-1 ring-blue-400' : 'text-gray-400';
+            },
+            get v3StartLabelClass() {
+                return this.isV3OrBoth ? 'text-purple-800 bg-purple-100 ring-1 ring-purple-400' : 'text-gray-400';
+            },
+
+            get vehicleIdUpper() {
+                return this.vehicleId.trim().toUpperCase() || '<VEHICLE ID>';
+            },
+            get topicPrefix() {
+                return 'ovms/' + this.username + '/' + this.vehicleIdUpper + '/';
+            },
+            get v2CliText() {
+                const pwd = this.serverPassword || '<Server Password>';
+                return 'config set auto server.v2 yes\n' +
+                    'config set server.v2 port ' + this.tcpPort + '\n' +
+                    'config set server.v2 server ' + this.serverHost + '\n' +
+                    'config set server.v2 tls yes\n' +
+                    'config set password server.v2 ' + pwd + '\n\n' +
+                    'server v2 start';
+            },
+            get v3CliText() {
+                const vid = this.vehicleIdUpper;
+                const pwd = this.serverPassword || '<Server Password>';
+                return 'config set auto server.v3 yes\n' +
+                    'config set password server.v3 ' + pwd + '\n' +
+                    'config set server.v3 port 8883\n' +
+                    'config set server.v3 tls yes\n' +
+                    'config set server.v3 server ' + this.mqttHost + '\n' +
+                    'config set server.v3 user ' + vid + '\n' +
+                    'config set server.v3 topic.prefix ovms/' + this.username + '/' + vid + '/\n\n' +
+                    'server v3 start';
+            },
+
+            async init() {
+                this.vehicleId = await this.generateVehicleId();
+                this.serverPassword = this.generatePassword();
+            },
+
+            setProtocol(event) { this.selectedProtocol = event.target.value; },
+            updateVehicleId(event) {
+                const sanitized = event.target.value.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
+                event.target.value = sanitized;
+                this.vehicleId = sanitized;
+            },
+            updateServerPassword(event) { this.serverPassword = event.target.value; },
+            updateVehicleName(event) { this.vehicleName = event.target.value; },
+
+            goToStep1() { this.currentStep = 1; },
+            goToStep2() { this.currentStep = 2; },
+            goToStep3() { this.currentStep = 3; },
+            togglePassword() { this.showPassword = !this.showPassword; },
+            async randomizeVehicleId() { this.vehicleId = await this.generateVehicleId(); },
+            randomizePassword() { this.serverPassword = this.generatePassword(); },
+            copyVehicleId() { this.copyToClipboard(this.vehicleIdUpper); },
+            copyPassword() { this.copyToClipboard(this.serverPassword); },
+            copyV2CliText() { this.copyToClipboard(this.v2CliText); },
+            copyV3CliText() { this.copyToClipboard(this.v3CliText); },
+
+            async generateVehicleId() {
+                try {
+                    const resp = await fetch('{{ request.url_for("ui_suggest_vehicle_id") }}');
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        return data.vehicle_id;
+                    }
+                } catch (_) { /* fall through to local fallback */ }
+                const arr = new Uint16Array(1);
+                crypto.getRandomValues(arr);
+                const prefixes = ['EV', 'CAR', 'VEH', 'MOD'];
+                return prefixes[arr[0] % 4] + String(1000 + (arr[0] % 9000));
+            },
+            generatePassword() {
+                const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+                const arr = new Uint8Array(16);
+                crypto.getRandomValues(arr);
+                return Array.from(arr, function(b) { return chars[b % chars.length]; }).join('');
+            },
+            async copyToClipboard(text) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    // Simple visual feedback
+                    const toast = document.createElement('div');
+                    toast.className = 'fixed bottom-4 right-4 bg-neon-blue text-dark-bg px-4 py-2 rounded-md shadow-lg z-50 text-sm font-bold animate-pulse';
+                    toast.innerText = '{{ _("Copied to clipboard!") }}';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 2000);
+                } catch (e) {
+                    console.error('Clipboard copy failed:', e);
+                }
+            }
+        }));
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,115 @@
+# Ruff configuration.
+#
+# Before this file existed there was none, so the rule set was whatever the locally
+# installed ruff happened to default to — which changes between releases. Two developers
+# on different versions got different answers about the same code, and CI got a third.
+# Pinning the selection here is the point; the specific rules matter less than the fact
+# that everyone now runs the same ones.
+#
+# The CI gate in .forgejo/workflows/tests.yml runs `ruff check app/` with no --select, so
+# it uses exactly this file. Everything selected below is clean as of this commit — a red
+# lint job means new code, not a backlog.
+
+target-version = "py312"   # matches requirements.txt, the Dockerfile and install.sh
+line-length = 120
+
+[lint]
+select = [
+    "F",      # pyflakes — undefined names, unused imports, shadowed definitions
+    "E4",     # import formatting
+    "E722",   # bare `except:` — also catches CancelledError and KeyboardInterrupt
+    "E9",     # syntax and IO errors
+    "ASYNC",  # blocking calls inside async functions
+    "B",      # bugbear — mutable defaults, loop-variable capture, silent except
+    "C4",     # redundant comprehensions and casts
+    "PIE",    # small dead constructs
+    "LOG",    # logging misuse
+    "DTZ",    # naive datetimes
+]
+
+ignore = [
+    # ---- Deliberate, permanent ----
+
+    # B008: function call in a default argument. This is the FastAPI idiom —
+    # `db: Session = Depends(get_db)` — and every route in the codebase uses it. See
+    # extend-immutable-calls below, which is the narrower half of the same exemption.
+    "B008",
+
+    # E402: import below other code. 32 sites, and app/main.py is the reason: it calls
+    # logging.config.dictConfig() before importing anything that logs, so the handlers
+    # exist by the time a module logs at import time. Moving those imports up would break
+    # that ordering. E401 from the same family stays on.
+    "E402",
+
+    # ---- Not yet clean; each is its own piece of work ----
+
+    # B904: `raise ... from err` inside an except clause. 26 sites. Worth doing — it is
+    # the difference between a traceback that names the original failure and one that
+    # does not — but each needs the right exception variable, so it is not a sed job.
+    "B904",
+
+    # DTZ007: strptime without %z. 4 sites, all parsing V2 protocol timestamps, which the
+    # protocol defines as UTC. Fixing this means deciding where the timezone is attached
+    # (parser or caller) and changing both, so it is a real change, not a lint fix.
+    "DTZ007",
+
+    # DTZ901: datetime.min used as a sort sentinel in notifications.py. Harmless where it
+    # is; would need a tz-aware sentinel and a check of every comparison against it.
+    "DTZ901",
+
+    # ASYNC240: pathlib in an async function. 9 sites, all local stat/exists calls in the
+    # microsecond range. The rule is aimed at network filesystems; here it is noise. The
+    # ASYNC rules that matter — blocking sleep, subprocess, open, HTTP — stay on.
+    "ASYNC240",
+]
+
+# E7 is picked apart rather than selected wholesale: E722 above is a defect, the rest of
+# the family is style this codebase does not follow, and two of them would be actively
+# wrong here —
+#   E712 (30x) `== True` and E711 (5x) `== None` are SQLAlchemy filter expressions
+#        (`.filter(WebAuthnCredential.is_active == True)`). Rewriting those to `is True`
+#        evaluates the column in Python instead of emitting SQL and silently changes what
+#        the query returns. Never "fix" these.
+#   E701/E702 (71x) `if x: return` on one line — pervasive and deliberate.
+#   E402 (32x) imports below code — app/main.py configures logging before importing
+#        anything that logs, which is the correct order.
+#   E731 (8x) assigned lambdas.
+#
+# Rule families still carrying findings, roughly by value, for whoever widens this next:
+#   TRY  (180)  exception-handling structure
+#   G    (537)  logging call format — mostly f-strings in log calls
+#   BLE  (108)  blind `except Exception`
+#   S    (51)   bandit; overlaps with the dedicated security tests in tests/
+#   UP   (800+) pep585/604 annotation syntax; large but purely mechanical
+#   I    (92)   import sorting — cheap, but produces a huge one-off diff
+
+[lint.flake8-bugbear]
+# FastAPI evaluates these once at import and injects per request; they are not the
+# mutable-default trap B008 exists to catch.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Form",
+    "fastapi.File",
+    "fastapi.Header",
+    "fastapi.Cookie",
+    "fastapi.Security",
+]
+
+[lint.per-file-ignores]
+# Alembic migrations are generated; their shape is the tool's business, not ours.
+"alembic/versions/*" = ["F", "E", "B", "C4", "PIE", "LOG", "DTZ"]
+
+# alembic/env.py imports the model modules for their side effect: defining a class that
+# inherits from Base is what puts a table on Base.metadata, which is the target_metadata
+# autogenerate diffs the database against. They are unused *names* on purpose. `ruff --fix`
+# did remove the identical pair in app/database.py, which emptied the metadata; here it
+# would make `alembic revision --autogenerate` propose dropping every table.
+"alembic/env.py" = ["F401"]
+
+# Test modules assert on blind `Exception` in three places where the point is that the
+# call fails at all, not how. Tightening those needs the real exception type from each
+# call site — worth doing, not a lint fix.
+"tests/*" = ["B017"]

@@ -1,0 +1,19 @@
+{{ _('Hello %(name)s,') % {'name': display_name} }}
+
+{{ _('This is an automated notice from your PyOVMS server.') }}
+
+{{ _('Your vehicle %(vehicle_id)s has not communicated with the server for more than 12 months.') % {'vehicle_id': vehicle_id} }}
+
+{% if vehicle_name %}{{ _('Vehicle name') }}: {{ vehicle_name }}{% endif %}
+{{ _('Vehicle ID') }}: {{ vehicle_id }}
+{{ _('Last seen') }}: {{ last_seen }}
+
+{{ _('If this vehicle is still in use, please ensure it is configured correctly and can reach the server.') }}
+
+{{ _('If no communication is received within 7 days, the vehicle will be automatically removed from the server to free up resources.') }}
+
+{{ _('To prevent deletion, log in and verify the vehicle connection at:') }}
+{{ server_base_url }}
+
+{{ _('PyOVMS Control Server') }}
+{{ server_base_url }}

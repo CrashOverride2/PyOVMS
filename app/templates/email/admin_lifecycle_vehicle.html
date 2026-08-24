@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Lifecycle Notification</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .header { text-align: center; border-bottom: 1px solid #eeeeee; padding-bottom: 20px; margin-bottom: 20px; }
+        .header h1 { color: #333333; margin: 0; font-size: 20px; }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
+        .badge-warning { background-color: #fef9e7; color: #e67e22; border: 1px solid #f39c12; }
+        .badge-deleted { background-color: #fdedec; color: #c0392b; border: 1px solid #e74c3c; }
+        .content { color: #555555; line-height: 1.6; }
+        .details-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .details-table td { padding: 8px; border: 1px solid #dddddd; }
+        .details-table td:first-child { font-weight: bold; background-color: #f9f9f9; width: 35%; }
+        .button { display: block; width: fit-content; margin: 30px auto; padding: 12px 20px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; }
+        .footer { text-align: center; font-size: 12px; color: #999999; margin-top: 30px; border-top: 1px solid #eeeeee; padding-top: 20px; }
+        a { color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            {% if event_type == 'unused_vehicle_warning' %}
+            <span class="badge badge-warning">⚠️ {{ _('Inactivity Warning Sent') }}</span>
+            <h1>{{ _('Unused Vehicle Notice') }}</h1>
+            {% elif event_type == 'vehicle_auto_deleted' %}
+            <span class="badge badge-deleted">🗑️ {{ _('Auto-Deleted') }}</span>
+            <h1>{{ _('Vehicle Automatically Deleted') }}</h1>
+            {% endif %}
+        </div>
+        <div class="content">
+            <p>{{ _('Hello %(name)s,') % {'name': admin_display_name} }}</p>
+
+            {% if event_type == 'unused_vehicle_warning' %}
+            <p>{{ _('An inactivity warning email has been sent to a vehicle owner because their vehicle has not communicated with the server for more than 12 months. The vehicle will be automatically deleted in 7 days if no communication is received.') }}</p>
+            {% elif event_type == 'vehicle_auto_deleted' %}
+            <p>{{ _('A vehicle has been automatically deleted due to more than 12 months of inactivity. All associated data has been removed.') }}</p>
+            {% endif %}
+
+            <table class="details-table">
+                <tr>
+                    <td>{{ _('Vehicle ID') }}</td>
+                    <td>{{ vehicle_id }}</td>
+                </tr>
+                {% if vehicle_name %}
+                <tr>
+                    <td>{{ _('Vehicle Name') }}</td>
+                    <td>{{ vehicle_name }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td>{{ _('Owner') }}</td>
+                    <td>{{ owner_username }}</td>
+                </tr>
+                <tr>
+                    <td>{{ _('Owner Email') }}</td>
+                    <td>{{ owner_email }}</td>
+                </tr>
+                {% if last_seen is defined %}
+                <tr>
+                    <td>{{ _('Last Seen') }}</td>
+                    <td>{{ last_seen }}</td>
+                </tr>
+                {% endif %}
+            </table>
+
+            <a href="{{ user_management_url }}" class="button">{{ _('Manage Users') }}</a>
+        </div>
+        <div class="footer">
+            <p>{{ _('PyOVMS Control Server') }} | <a href="{{ server_base_url }}">{{ server_base_url }}</a></p>
+        </div>
+    </div>
+</body>
+</html>

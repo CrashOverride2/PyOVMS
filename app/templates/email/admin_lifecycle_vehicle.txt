@@ -1,0 +1,29 @@
+{{ _('Hello %(name)s,') % {'name': admin_display_name} }}
+
+{% if event_type == 'unused_vehicle_warning' %}
+{{ _('[Lifecycle] Unused vehicle warning sent') }}
+
+{{ _('An inactivity warning email has been sent to a vehicle owner because their vehicle has not communicated for more than 12 months.') }}
+
+{{ _('Vehicle ID') }}: {{ vehicle_id }}
+{% if vehicle_name %}{{ _('Vehicle Name') }}: {{ vehicle_name }}{% endif %}
+{{ _('Owner') }}: {{ owner_username }} ({{ owner_email }})
+{{ _('Last seen') }}: {{ last_seen }}
+
+{{ _('The vehicle will be automatically deleted in 7 days if no communication is received.') }}
+{% elif event_type == 'vehicle_auto_deleted' %}
+{{ _('[Lifecycle] Vehicle automatically deleted') }}
+
+{{ _('A vehicle has been automatically deleted due to 12+ months of inactivity.') }}
+
+{{ _('Vehicle ID') }}: {{ vehicle_id }}
+{% if vehicle_name %}{{ _('Vehicle Name') }}: {{ vehicle_name }}{% endif %}
+{{ _('Owner') }}: {{ owner_username }} ({{ owner_email }})
+
+{{ _('All associated data (charge logs, trip records, historical data) has been deleted.') }}
+{% endif %}
+
+{{ _('Manage Users') }}: {{ user_management_url }}
+
+{{ _('PyOVMS Control Server') }}
+{{ server_base_url }}

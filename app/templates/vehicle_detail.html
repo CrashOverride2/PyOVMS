@@ -1,0 +1,2332 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _(page_title) }}{% endblock %}
+
+{% block head_extra_styles %}
+<style nonce="{{ request.state.csp_nonce }}">
+    /* Hide all tab content until Alpine.js initializes to prevent FOUC */
+    [x-cloak] {
+        visibility: hidden !important;
+    }
+    /* Ensure only one tab is visible at a time - no overlap during transitions */
+    .tab-content-wrapper {
+        position: relative;
+        min-height: 200px;
+    }
+    .tab-content {
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto bg-card-bg p-6 rounded-lg shadow-xl border border-neon-blue/50"
+    x-data="vehicleDetailPageData"
+    x-cloak
+    @beforeunload.window="disconnect">
+
+    <div class="flex justify-between items-center mb-6">
+        <a href="{{ url_for('ui_dashboard') }}"
+            class="px-4 py-2 text-sm font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">←
+            {{ _('Dashboard') }}</a>
+        {% if vehicle.id %}
+        <a href="{{ url_for('ui_edit_vehicle_form', vehicle_db_id=vehicle.id) }}"
+            class="px-4 py-2 text-sm font-medium text-neon-magenta border border-neon-magenta rounded-md hover:bg-neon-magenta hover:text-dark-bg transition-colors duration-200">
+            {{ _('Edit Vehicle') }}
+        </a>
+        {% endif %}
+    </div>
+    <h1 class="text-3xl md:text-4xl font-bold mb-2 text-center text-neon-blue">{{ vehicle.vehicle_name or
+        vehicle.vehicle_id }}</h1>
+    <p class="text-center text-text-secondary mb-1 -mt-1">{{ _('Module ID:') }} {{ vehicle.vehicle_id }}</p>
+    {% if is_admin %}
+    <p class="text-sm text-center text-text-secondary mb-6">{{ _('Owner:') }} {{ vehicle.owner_username or 'N/A' }}</p>
+    {% else %}
+    <p class="text-sm text-center text-text-secondary mb-6"> </p> 
+    {% endif %}
+
+    <div class="mb-6 border-b border-border-color overflow-hidden">
+        <div class="overflow-x-auto pb-2 custom-scrollbar">
+            <nav class="-mb-px flex space-x-6 min-w-max" aria-label="Tabs">
+                <button @click="activateOverviewTab"
+                    :class="tabClasses.overview"
+                    class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors">
+                    {{ _('Overview') }}
+                </button>
+                {% if settings.ENABLE_KARTO_TRIP_TRACKING and vehicle.enable_trip_tracking %}
+                <button @click="activateTripsTab"
+                    :class="tabClasses.trips"
+                    class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors">
+                    {{ _('Trips') }}
+                </button>
+                <button @click="activateSearchTab"
+                    :class="tabClasses.search"
+                    class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors">
+                    {{ _('Search & Heatmap') }}
+                </button>
+                {% endif %}
+                {% if vehicle.enable_charge_logging %}
+                <button @click="activateChargesTab"
+                    :class="tabClasses.charges"
+                    class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors">
+                    {{ _('Charges') }}
+                </button>
+                {% endif %}
+                <button @click="activateTerminalTab"
+                    :class="tabClasses.terminal"
+                    class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors">
+                    {{ _('Terminal') }}
+                </button>
+                <button :class="cellStatsTabButtonClass"
+                    @click="activateCellStatsTab"
+                    :disabled="cellStatsTabDisabled"
+                    class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors">
+                    {{ _('Cell Stats') }}
+                </button>
+                <button @click="activateMetricsTab"
+                    :class="tabClasses.metrics"
+                    class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors">
+                    {{ _('All Metrics') }}
+                </button>
+                <button @click="activateLogsTab"
+                    :class="tabClasses.logs"
+                    class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors">
+                    {{ _('Logs') }}
+                </button>
+                <button @click="activateNotificationsTab"
+                    :class="tabClasses.notifications"
+                    class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors">
+                    {{ _('Notifications') }}
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <template x-teleport="body">
+        <div x-show="tripsState.tripToDelete" x-cloak
+            class="fixed inset-0 z-60 flex items-center justify-center bg-black bg-opacity-75 backdrop-blur-sm"
+            x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
+            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+            <div @click.away="tripsState.clearTripToDelete"
+                class="bg-card-bg rounded-lg shadow-xl border border-red-500/50 p-6 w-full max-w-md mx-4"
+                x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100" x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
+                
+                <h3 class="text-xl font-bold text-red-400 mb-4">{{ _('Confirm Deletion') }}</h3>
+                <p class="text-text-primary mb-4">{{ _('Are you sure you want to permanently delete this trip? This action cannot be undone.') }}</p>
+                
+                <template x-if="tripsState.tripToDelete">
+                    <div class="text-sm bg-input-bg p-3 rounded border border-border-color text-text-secondary space-y-1">
+                        <p><strong>{{ _('Start Time:') }}</strong> <span x-text="tripDeletePreview.startTimeText"></span></p>
+                        <p><strong>{{ _('Distance:') }}</strong> <span x-text="tripDeletePreview.distanceText"></span></p>
+                    </div>
+                </template>
+                
+                <div class="flex justify-end space-x-4 mt-6">
+                    <button @click="tripsState.clearTripToDelete" class="px-4 py-2 text-sm font-medium text-text-secondary border border-border-color rounded-md hover:bg-border-color hover:text-text-primary transition-colors">
+                        {{ _('Cancel') }}
+                    </button>
+                    <button @click="tripsState.confirmDeleteTrip" class="px-4 py-2 text-sm font-medium text-dark-bg bg-red-600 border border-red-500 rounded-md hover:bg-red-700 transition-colors">
+                        {{ _('Yes, Delete Trip') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template x-teleport="body">
+        <div x-show="chargeLogState.chargeToDelete" x-cloak
+            class="fixed inset-0 z-60 flex items-center justify-center bg-black bg-opacity-75 backdrop-blur-sm"
+            x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
+            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+            <div @click.away="chargeLogState.clearChargeToDelete"
+                class="bg-card-bg rounded-lg shadow-xl border border-red-500/50 p-6 w-full max-w-md mx-4"
+                x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100" x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
+                
+                <h3 class="text-xl font-bold text-red-400 mb-4">{{ _('Confirm Deletion') }}</h3>
+                <p class="text-text-primary mb-4">{{ _('Are you sure you want to permanently delete this charge session? This action cannot be undone.') }}</p>
+                
+                <template x-if="chargeLogState.chargeToDelete">
+                    <div class="text-sm bg-input-bg p-3 rounded border border-border-color text-text-secondary space-y-1">
+                        <p><strong>{{ _('Start Time:') }}</strong> <span x-text="chargeDeletePreview.startTimeText"></span></p>
+                        <p><strong>{{ _('Energy Charged:') }}</strong> <span x-text="chargeDeletePreview.energyText"></span></p>
+                    </div>
+                </template>
+                
+                <div class="flex justify-end space-x-4 mt-6">
+                    <button @click="chargeLogState.clearChargeToDelete" class="px-4 py-2 text-sm font-medium text-text-secondary border border-border-color rounded-md hover:bg-border-color hover:text-text-primary transition-colors">
+                        {{ _('Cancel') }}
+                    </button>
+                    <button @click="chargeLogState.confirmDeleteCharge" class="px-4 py-2 text-sm font-medium text-dark-bg bg-red-600 border border-red-500 rounded-md hover:bg-red-700 transition-colors">
+                        {{ _('Yes, Delete Charge') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template x-if="tabVisibility.overview">
+        <div class="tab-content">
+            {% include '_vehicle_overview.html' %}
+        </div>
+    </template>
+
+    <template x-if="tabVisibility.trips">
+        <div class="tab-content">
+            {% include '_vehicle_trips.html' %}
+        </div>
+    </template>
+
+    <template x-if="tabVisibility.search">
+        <div class="tab-content">
+            {% include '_vehicle_search.html' %}
+        </div>
+    </template>
+
+    <template x-if="tabVisibility.charges">
+        <div class="tab-content">
+            {% include '_vehicle_charges.html' %}
+        </div>
+    </template>
+
+    <template x-if="tabVisibility.cell_stats">
+        <div class="tab-content">
+            {% include '_vehicle_cell_stats.html' %}
+        </div>
+    </template>
+
+    <template x-if="tabVisibility.terminal">
+        <div class="tab-content">
+            {% include '_vehicle_terminal.html' %}
+        </div>
+    </template>
+
+    <template x-if="tabVisibility.metrics">
+        <div class="tab-content">
+            {% include '_vehicle_metrics.html' %}
+        </div>
+    </template>
+
+    <template x-if="tabVisibility.logs">
+        <div class="tab-content">
+            {% include '_vehicle_logs.html' %}
+        </div>
+    </template>
+
+    <template x-if="tabVisibility.notifications">
+        <div class="tab-content">
+            {% include '_vehicle_notifications.html' %}
+        </div>
+    </template>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script nonce="{{ request.state.csp_nonce }}">
+    const vehicleDetailTranslations = {
+        ws_connecting: {{ _("Connecting...") | tojson | safe }},
+        ws_connected: {{ _("Connected") | tojson | safe }},
+        ws_error: {{ _("Error") | tojson | safe }},
+        ws_disconnected: {{ _("Disconnected: ") | tojson | safe }},
+        ws_conn_lost: {{ _("Connection lost") | tojson | safe }},
+        ws_reconnecting: {{ _("Disconnected. Reconnecting in ") | tojson | safe }},
+        labels: {
+            alert: {{ _('Alert:') | tojson | safe }},
+            health: {{ _('Health:') | tojson | safe }},
+            detailsFor: {{ _('Details for') | tojson | safe }},
+            dayNames: {
+                'Monday':    {{ _('Monday')    | tojson | safe }},
+                'Tuesday':   {{ _('Tuesday')   | tojson | safe }},
+                'Wednesday': {{ _('Wednesday') | tojson | safe }},
+                'Thursday':  {{ _('Thursday')  | tojson | safe }},
+                'Friday':    {{ _('Friday')    | tojson | safe }},
+                'Saturday':  {{ _('Saturday')  | tojson | safe }},
+                'Sunday':    {{ _('Sunday')    | tojson | safe }},
+            },
+        },
+        placeholders: {
+            online: {{ _('Enter command (e.g., wakeup or metrics list)') | tojson | safe }},
+            v2_offline: {{ _('V2 Offline') | tojson | safe }},
+            v3_offline: {{ _('V3 Offline/Not Connected') | tojson | safe }}
+        },
+        errors: {
+            failed_to_load_data: {{ _('Failed to load data (Status: ') | tojson | safe }},
+            service_unavailable: {{ _('Service unavailable. Server sent an unexpected response (Status: ') | tojson | safe }}
+        }
+    };
+
+    const initialLiveData = {{ initial_live_data | tojson | safe }};
+    const vehicleDetailConfig = {
+        vehicleId: {{ vehicle.vehicle_id | tojson | safe }},
+        userTimezone: {{ user_timezone | tojson | safe }},
+        vehicleProtocol: {{ vehicle.protocol | tojson | safe }},
+        preferV3Terminal: {{ is_v3_online | lower }} && {{ is_mqtt_configured | lower }},
+        hasV2Online: {{ is_v2_online | lower }},
+        hasV3Metrics: {{ (v3_metrics_grouped | length > 0) | lower }},
+        userPrefersImperial: {{ user_prefers_imperial | lower }}
+    };
+    const KM_TO_MI = 0.621371;
+    const MI_TO_KM = 1.60934;
+
+    function createStatsState() {
+        return {
+            hasBeenInitialized: false,
+            isLoading: true,
+            error: null,
+            stats: null,
+            vehicleId: null,
+            userTimezone: 'UTC',
+            currentView: 'daily',
+            selectedPeriod: null,
+            showLoading: true,
+            showError: false,
+            hasStats: false,
+            displayPeriods: [],
+            hasDisplayPeriods: false,
+            noDisplayPeriods: true,
+            viewButtonClasses: {
+                daily: 'px-2 py-1 rounded-md transition-colors',
+                weekly: 'px-2 py-1 rounded-md transition-colors',
+                monthly: 'px-2 py-1 rounded-md transition-colors'
+            },
+            lifetimeTotalDistanceText: 'N/A',
+            lifetimeTotalDurationText: 'N/A',
+            lifetimeTotalTripsText: '0',
+            lifetimeTotalEnergyText: null,
+            lifetimeTotalSocUsedText: null,
+            lifetimeLongestTripText: 'N/A',
+            lifetimeShortestTripText: 'N/A',
+            lifetimeBusiestDayText: 'N/A',
+            selectedPeriodDetailVisible: false,
+            selectedPeriodPromptVisible: true,
+            selectedPeriodTitleText: '',
+            selectedPeriodTotalDistanceText: 'N/A',
+            selectedPeriodTotalDurationText: 'N/A',
+            selectedPeriodTripCountText: '0',
+            selectedPeriodAvgSpeedText: 'N/A',
+            selectedPeriodEnergyText: null,
+            selectedPeriodSocUsedText: null,
+            selectedPeriodLongestTripText: 'N/A',
+            selectedPeriodShortestTripText: 'N/A',
+            selectedPeriodBusiestDayText: 'N/A',
+            showSelectedPeriodBusiestDay: false,
+
+            init(vehicleId, userTimezone) {
+                if (this.hasBeenInitialized || !vehicleId) return;
+                this.hasBeenInitialized = true;
+                this.vehicleId = vehicleId;
+                this.userTimezone = userTimezone;
+                this.fetchStats();
+            },
+
+            async fetchStats() {
+                if (!this.vehicleId) {
+                    this.error = "Invalid Vehicle ID for stats.";
+                    this.isLoading = false;
+                    this.refreshViewState();
+                    return;
+                }
+                this.isLoading = true;
+                this.error = null;
+                this.selectedPeriod = null;
+                this.refreshViewState();
+                try {
+                    const response = await fetch(`/api/karto/v1/vehicles/${this.vehicleId}/stats`, { credentials: 'include' });
+                    if (!response.ok) {
+                        const contentType = response.headers.get("content-type");
+                        if (contentType && contentType.includes("application/json")) {
+                            const err = await response.json();
+                            throw new Error(err.detail || `${vehicleDetailTranslations.errors.failed_to_load_data}${response.status})`);
+                        } else {
+                            throw new Error(`${vehicleDetailTranslations.errors.service_unavailable}${response.status})`);
+                        }
+                    }
+                    this.stats = await response.json();
+                    this.buildDisplayState();
+                } catch (err) {
+                    this.error = err.message;
+                    this.stats = null;
+                    this.buildDisplayState();
+                } finally {
+                    this.isLoading = false;
+                    this.refreshViewState();
+                }
+            },
+
+            refreshViewState() {
+                this.showLoading = this.isLoading;
+                this.showError = !!this.error;
+                this.hasStats = !!this.stats;
+                const activeClass = 'px-2 py-1 rounded-md transition-colors bg-neon-blue text-dark-bg';
+                const inactiveClass = 'px-2 py-1 rounded-md transition-colors';
+                this.viewButtonClasses.daily = this.currentView === 'daily' ? activeClass : inactiveClass;
+                this.viewButtonClasses.weekly = this.currentView === 'weekly' ? activeClass : inactiveClass;
+                this.viewButtonClasses.monthly = this.currentView === 'monthly' ? activeClass : inactiveClass;
+            },
+
+            setView(view) {
+                if (this.currentView === view) return;
+                this.currentView = view;
+                this.selectedPeriod = null;
+                this.buildDisplayState();
+                this.refreshViewState();
+            },
+            setViewDaily() { this.setView('daily'); },
+            setViewWeekly() { this.setView('weekly'); },
+            setViewMonthly() { this.setView('monthly'); },
+
+            buildDisplayState() {
+                if (!this.stats || !this.stats.total) {
+                    this.displayPeriods = [];
+                    this.hasDisplayPeriods = false;
+                    this.noDisplayPeriods = true;
+                    this.selectedPeriod = null;
+                    this.updateSelectedPeriodDisplay();
+                    this.lifetimeTotalDistanceText = 'N/A';
+                    this.lifetimeTotalDurationText = 'N/A';
+                    this.lifetimeTotalTripsText = '0';
+                    this.lifetimeTotalEnergyText = null;
+                    this.lifetimeTotalSocUsedText = null;
+                    this.lifetimeLongestTripText = 'N/A';
+                    this.lifetimeShortestTripText = 'N/A';
+                    this.lifetimeBusiestDayText = 'N/A';
+                    return;
+                }
+
+                const statsForView = Array.isArray(this.stats[this.currentView]) ? this.stats[this.currentView] : [];
+                const maxDistance = statsForView.length > 0
+                    ? Math.max(...statsForView.map((p) => Number(p.total_distance_km) || 0), 1)
+                    : 1;
+                this.displayPeriods = statsForView.map((period, index) => {
+                    const totalDistance = Number(period.total_distance_km) || 0;
+                    const height = totalDistance <= 0 ? 0 : Math.max(1, (totalDistance / maxDistance) * 100);
+                    const totalEnergy = period.total_energy_used_kwh != null ? Number(period.total_energy_used_kwh) : null;
+                    const totalSocUsed = period.total_soc_used != null ? Number(period.total_soc_used) : null;
+                    return {
+                        id: `${this.currentView}-${index}`,
+                        index,
+                        period: period.period,
+                        totalDistanceKm: totalDistance,
+                        totalDurationSeconds: Number(period.total_duration_seconds) || 0,
+                        tripCount: Number(period.trip_count) || 0,
+                        overallAverageSpeedKph: Number(period.overall_average_speed_kph) || 0,
+                        longestTripKm: Number(period.longest_trip_km) || 0,
+                        shortestTripKm: Number(period.shortest_trip_km) || 0,
+                        mostActiveDayOfWeek: period.most_active_day_of_week || '',
+                        totalEnergyKwh: totalEnergy,
+                        totalSocUsed: totalSocUsed,
+                        distanceText: this.formatDistance(totalDistance),
+                        periodLabelText: this.formatPeriodLabel(period.period),
+                        barStyle: { height: `${height}%` }
+                    };
+                });
+                this.hasDisplayPeriods = this.displayPeriods.length > 0;
+                this.noDisplayPeriods = !this.hasDisplayPeriods;
+
+                const total = this.stats.total;
+                this.lifetimeTotalDistanceText = this.formatDistance(total.total_distance_km);
+                this.lifetimeTotalDurationText = this.formatDuration(total.total_duration_seconds);
+                this.lifetimeTotalTripsText = String(total.total_trips ?? 0);
+                this.lifetimeTotalEnergyText = total.total_energy_used_kwh != null ? `${Number(total.total_energy_used_kwh).toFixed(2)} kWh` : null;
+                this.lifetimeTotalSocUsedText = total.total_soc_used != null ? `${Number(total.total_soc_used).toFixed(1)} %` : null;
+                this.lifetimeLongestTripText = this.formatDistance(total.longest_trip_km);
+                this.lifetimeShortestTripText = this.formatDistance(total.shortest_trip_km);
+                this.lifetimeBusiestDayText = this.formatDayOfWeek(total.most_active_day_of_week);
+
+                this.updateSelectedPeriodDisplay();
+            },
+
+            selectPeriod(event) {
+                const indexStr = event?.currentTarget?.dataset?.periodIndex;
+                if (indexStr === undefined) return;
+                const index = parseInt(indexStr, 10);
+                if (Number.isNaN(index)) return;
+                this.selectedPeriod = this.displayPeriods[index] || null;
+                this.updateSelectedPeriodDisplay();
+            },
+
+            updateSelectedPeriodDisplay() {
+                if (!this.selectedPeriod) {
+                    this.selectedPeriodDetailVisible = false;
+                    this.selectedPeriodPromptVisible = true;
+                    this.selectedPeriodTitleText = '';
+                    this.selectedPeriodTotalDistanceText = 'N/A';
+                    this.selectedPeriodTotalDurationText = 'N/A';
+                    this.selectedPeriodTripCountText = '0';
+                    this.selectedPeriodAvgSpeedText = 'N/A';
+                    this.selectedPeriodEnergyText = null;
+                    this.selectedPeriodSocUsedText = null;
+                    this.selectedPeriodLongestTripText = 'N/A';
+                    this.selectedPeriodShortestTripText = 'N/A';
+                    this.selectedPeriodBusiestDayText = 'N/A';
+                    this.showSelectedPeriodBusiestDay = false;
+                    return;
+                }
+                this.selectedPeriodDetailVisible = true;
+                this.selectedPeriodPromptVisible = false;
+                this.selectedPeriodTitleText = `${vehicleDetailTranslations.labels.detailsFor} ${this.formatPeriodLabel(this.selectedPeriod.period, true)}`;
+                this.selectedPeriodTotalDistanceText = this.formatDistance(this.selectedPeriod.totalDistanceKm);
+                this.selectedPeriodTotalDurationText = this.formatDuration(this.selectedPeriod.totalDurationSeconds);
+                this.selectedPeriodTripCountText = String(this.selectedPeriod.tripCount);
+                this.selectedPeriodAvgSpeedText = this.formatSpeed(this.selectedPeriod.overallAverageSpeedKph);
+                this.selectedPeriodEnergyText = this.selectedPeriod.totalEnergyKwh != null ? `${this.selectedPeriod.totalEnergyKwh.toFixed(2)} kWh` : null;
+                this.selectedPeriodSocUsedText = this.selectedPeriod.totalSocUsed != null ? `${this.selectedPeriod.totalSocUsed.toFixed(1)} %` : null;
+                this.selectedPeriodLongestTripText = this.formatDistance(this.selectedPeriod.longestTripKm);
+                this.selectedPeriodShortestTripText = this.formatDistance(this.selectedPeriod.shortestTripKm);
+                this.selectedPeriodBusiestDayText = this.formatDayOfWeek(this.selectedPeriod.mostActiveDayOfWeek);
+                this.showSelectedPeriodBusiestDay = this.currentView !== 'daily' && !!this.selectedPeriod.mostActiveDayOfWeek;
+            },
+
+            getWeekNumber(d) {
+                d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+                d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+                var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+                var weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+                return weekNo;
+            },
+
+            formatPeriodLabel(dateStr, long = false) {
+                if (!dateStr) return '';
+                const date = new Date(dateStr + 'T00:00:00Z');
+                if (this.currentView === 'daily') {
+                    return date.toLocaleDateString(undefined, { timeZone: 'UTC', month: 'short', day: 'numeric' });
+                }
+                if (this.currentView === 'weekly') {
+                    if (long) {
+                        const startOfWeek = new Date(date);
+                        const endOfWeek = new Date(startOfWeek);
+                        endOfWeek.setUTCDate(startOfWeek.getUTCDate() + 6);
+                        return `${startOfWeek.toLocaleDateString(undefined, { timeZone: 'UTC', month: 'short', day: 'numeric' })} - ${endOfWeek.toLocaleDateString(undefined, { timeZone: 'UTC', month: 'short', day: 'numeric' })}`;
+                    }
+                    return `W${this.getWeekNumber(date)}`;
+                }
+                if (this.currentView === 'monthly') {
+                    return date.toLocaleDateString(undefined, { timeZone: 'UTC', month: long ? 'long' : 'short', year: 'numeric' });
+                }
+                return dateStr;
+            },
+
+            formatDuration(sec) { if (sec === null || sec === undefined) return 'N/A'; const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = Math.round(sec % 60); return [h, m, s].map(v => v < 10 ? '0' + v : v).join(':'); },
+            formatDayOfWeek(day) { return vehicleDetailTranslations.labels.dayNames[day] || day || 'N/A'; },
+            formatDistance(km, short = false) {
+                if (km === null || km === undefined) return 'N/A';
+                if (vehicleDetailConfig.userPrefersImperial) {
+                    return short ? `${(Number(km) * KM_TO_MI).toFixed(0)}` : `${(Number(km) * KM_TO_MI).toFixed(1)} mi`;
+                }
+                return short ? `${Number(km).toFixed(0)}` : `${Number(km).toFixed(1)} km`;
+            },
+            formatSpeed(kph) {
+                if (kph === null || kph === undefined) return 'N/A';
+                if (vehicleDetailConfig.userPrefersImperial) return `${(Number(kph) * KM_TO_MI).toFixed(1)} mph`;
+                return `${Number(kph).toFixed(1)} kph`;
+            },
+        };
+    }
+
+    function createChargeStatsState() {
+        return {
+            hasBeenInitialized: false, isLoading: true, error: null, stats: null,
+            vehicleId: null, selectedMonth: null,
+            t: { detailsFor: {{ _('Details for') | tojson | safe }} },
+            showLoading: true,
+            showError: false,
+            hasStats: false,
+            monthlyBars: [],
+            noMonthlyData: true,
+            lifetimeTotalChargesText: '0',
+            lifetimeTotalEnergyText: 'N/A',
+            lifetimeTotalDurationText: 'N/A',
+            lifetimeAverageEnergyText: 'N/A',
+            lifetimeAverageDurationText: 'N/A',
+            lifetimeAverageSocGainedText: 'N/A',
+            selectedMonthDetailVisible: false,
+            selectedMonthPromptVisible: true,
+            selectedMonthTitleText: '',
+            selectedMonthChargesText: '0',
+            selectedMonthEnergyText: 'N/A',
+
+            init(vehicleId) {
+                if (this.hasBeenInitialized || !vehicleId) return;
+                this.hasBeenInitialized = true; this.vehicleId = vehicleId;
+                this.selectMonth = this.selectMonth.bind(this);
+                this.fetchStats();
+            },
+            get maxEnergy() {
+                if (!this.stats || !this.stats.monthly.length) return 0;
+                const max = Math.max(...this.stats.monthly.map(p => p.total_energy_kwh));
+                return max > 0 ? max : 1;
+            },
+            async fetchStats() {
+                this.isLoading = true; this.error = null; this.selectedMonth = null;
+                this.refreshViewState();
+                try {
+                    const response = await fetch(`/api/chargelogs/v1/vehicles/${this.vehicleId}/stats`, { credentials: 'include' });
+                     if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.detail || `{{ _('Failed to load charge stats (Status: ') }}${response.status})`);
+                    }
+                    this.stats = await response.json();
+                    this.buildDisplayState();
+                } catch (err) {
+                    this.error = err.message; this.stats = null;
+                    this.buildDisplayState();
+                } finally {
+                    this.isLoading = false;
+                    this.refreshViewState();
+                }
+            },
+            refreshViewState() {
+                this.showLoading = this.isLoading;
+                this.showError = !!this.error;
+                this.hasStats = !!this.stats;
+            },
+            buildDisplayState() {
+                if (!this.stats || !this.stats.total) {
+                    this.monthlyBars = [];
+                    this.noMonthlyData = true;
+                    this.selectedMonthDetailVisible = false;
+                    this.selectedMonthPromptVisible = true;
+                    return;
+                }
+
+                const monthly = Array.isArray(this.stats.monthly) ? this.stats.monthly : [];
+                const maxEnergy = monthly.length > 0
+                    ? Math.max(...monthly.map((m) => Number(m.total_energy_kwh) || 0), 1)
+                    : 1;
+
+                this.monthlyBars = monthly.map((month, index) => {
+                    const energy = Number(month.total_energy_kwh) || 0;
+                    const height = energy <= 0 ? 0 : Math.max(1, (energy / maxEnergy) * 100);
+                    return {
+                        id: `m-${index}`,
+                        index,
+                        period: month.period,
+                        totalCharges: month.total_charges,
+                        totalEnergyKwh: energy,
+                        energyShortText: this.formatEnergy(energy, true),
+                        periodLabelText: this.formatPeriodLabel(month.period),
+                        barStyle: { height: `${height}%` }
+                    };
+                });
+                this.noMonthlyData = this.monthlyBars.length === 0;
+
+                const total = this.stats.total;
+                this.lifetimeTotalChargesText = String(total.total_charges ?? 0);
+                this.lifetimeTotalEnergyText = this.formatEnergy(total.total_energy_kwh);
+                this.lifetimeTotalDurationText = this.formatDuration(total.total_duration_seconds, true);
+                this.lifetimeAverageEnergyText = this.formatEnergy(total.average_energy_kwh);
+                this.lifetimeAverageDurationText = this.formatDuration(total.average_duration_seconds);
+                const avgSoc = Number(total.average_soc_gained);
+                this.lifetimeAverageSocGainedText = Number.isFinite(avgSoc) ? `+${avgSoc.toFixed(1)}%` : 'N/A';
+
+                this.updateSelectedMonthDisplay();
+            },
+            selectMonth(event) {
+                const indexStr = event?.currentTarget?.dataset?.monthIndex;
+                if (indexStr === undefined) return;
+                const index = parseInt(indexStr, 10);
+                if (Number.isNaN(index)) return;
+                this.selectedMonth = this.monthlyBars[index] || null;
+                this.updateSelectedMonthDisplay();
+            },
+            updateSelectedMonthDisplay() {
+                if (!this.selectedMonth) {
+                    this.selectedMonthDetailVisible = false;
+                    this.selectedMonthPromptVisible = true;
+                    this.selectedMonthTitleText = '';
+                    this.selectedMonthChargesText = '0';
+                    this.selectedMonthEnergyText = 'N/A';
+                    return;
+                }
+                this.selectedMonthDetailVisible = true;
+                this.selectedMonthPromptVisible = false;
+                this.selectedMonthTitleText = `${this.t.detailsFor} ${this.formatPeriodLabel(this.selectedMonth.period, true)}`;
+                this.selectedMonthChargesText = String(this.selectedMonth.totalCharges ?? 0);
+                this.selectedMonthEnergyText = this.formatEnergy(this.selectedMonth.totalEnergyKwh);
+            },
+            getBarHeight(energy) {
+                if (this.maxEnergy === 0 || energy === 0) return 0;
+                return Math.max(1, (energy / this.maxEnergy) * 100);
+            },
+            formatPeriodLabel(dateStr, long = false) {
+                if (!dateStr) return '';
+                return new Date(dateStr + 'T00:00:00Z').toLocaleDateString(undefined, {
+                    timeZone: 'UTC', month: long ? 'long' : 'short', year: 'numeric'
+                });
+            },
+            formatDuration(sec, long = false) {
+                if (sec === null || sec === undefined) return 'N/A';
+                const h = Math.floor(sec / 3600); const m = Math.floor(sec % 3600 / 60);
+                if (long) return `${h}h ${m}m`;
+                return [h, m].map(v => v < 10 ? '0' + v : v).join(':');
+            },
+            formatEnergy(kwh, short=false) { return (kwh !== null && kwh !== undefined) ? `${Number(kwh).toFixed(short ? 0 : 2)}${short ? '' : ' kWh'}` : 'N/A'; },
+        }
+    }
+
+function createTripsState() {
+    return {
+        hasBeenInitialized: false,
+        isLoading: true,
+        isPaginating: false,
+        error: null,
+        trips: [],
+        displayTrips: [],
+        pagination: {},
+        vehicleId: null,
+        userTimezone: 'UTC',
+        tripToDelete: null,
+        showLoading: true,
+        showError: false,
+        showEmpty: false,
+        showList: false,
+        listOpacityClass: '',
+        hasPagination: false,
+        showPrevPage: false,
+        showNextPage: false,
+        currentPageText: '1',
+        totalPagesText: '1',
+
+        init(vehicleId, userTimezone) {
+            if (this.hasBeenInitialized || !vehicleId) return;
+            this.hasBeenInitialized = true;
+            this.vehicleId = vehicleId;
+            this.userTimezone = userTimezone;
+
+            const savedPage = sessionStorage.getItem('vehicleDetailTripPage');
+            const pageToLoad = savedPage ? parseInt(savedPage, 10) : 1;
+
+            this.fetchTrips(pageToLoad);
+
+            if (savedPage) {
+                sessionStorage.removeItem('vehicleDetailTripPage');
+            }
+        },
+
+        async fetchTrips(page = 1) {
+            if (!this.vehicleId) {
+                this.error = "Invalid Vehicle ID for trips.";
+                this.isLoading = false;
+                this.refreshViewState();
+                return;
+            }
+            
+            if (this.trips.length > 0) { this.isPaginating = true; } 
+            else { this.isLoading = true; }
+            this.error = null;
+            this.refreshViewState();
+            
+            const url = new URL(`/api/karto/v1/vehicles/${this.vehicleId}/trips`, window.location.origin);
+            url.searchParams.set('page', page);
+
+            try {
+                const response = await fetch(url, { credentials: 'include' });
+                if (!response.ok) {
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        const err = await response.json();
+                        throw new Error(err.detail || `${vehicleDetailTranslations.errors.failed_to_load_data}${response.status})`);
+                    } else {
+                        throw new Error(`${vehicleDetailTranslations.errors.service_unavailable}${response.status})`);
+                    }
+                }
+                const data = await response.json();
+                this.trips = data.trips;
+                this.pagination = data.pagination;
+                this.mapTripsForDisplay();
+            } catch (err) {
+                this.error = err.message;
+            } finally {
+                const wasPaginating = this.isPaginating;
+                this.isLoading = false;
+                this.isPaginating = false;
+                this.refreshViewState();
+                if (wasPaginating) {
+                    setTimeout(() => {
+                        const el = document.getElementById('trip-list-container');
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 0);
+                }
+            }
+        },
+
+        refreshViewState() {
+            this.showLoading = this.isLoading;
+            this.showError = !!this.error;
+            const hasTrips = this.displayTrips.length > 0;
+            this.showEmpty = !this.isLoading && !this.error && !hasTrips;
+            this.showList = !this.isLoading && !this.error && hasTrips;
+            this.listOpacityClass = this.isPaginating ? 'opacity-50' : '';
+            const currentPage = this.pagination.current_page || 1;
+            const totalPages = this.pagination.total_pages || 1;
+            this.hasPagination = totalPages > 1;
+            this.showPrevPage = this.hasPagination && currentPage > 1;
+            this.showNextPage = this.hasPagination && currentPage < totalPages;
+            this.currentPageText = String(currentPage);
+            this.totalPagesText = String(totalPages);
+        },
+        mapTripsForDisplay() {
+            this.displayTrips = this.trips.map((trip) => {
+                const consumptionVal = vehicleDetailConfig.userPrefersImperial
+                    ? (trip.consumption_kwh_per_100mi != null ? `${trip.consumption_kwh_per_100mi.toFixed(1)} kWh/100mi` : null)
+                    : (trip.consumption_kwh_per_100km != null ? `${trip.consumption_kwh_per_100km.toFixed(1)} kWh/100km` : null);
+                return {
+                    id: trip.id,
+                    detailHref: `/vehicle/${this.vehicleId}/trip/${trip.id}`,
+                    mapPreviewVisible: !!trip.map_preview_path,
+                    mapPreviewSrc: trip.map_preview_path ? `/api/karto/v1/${trip.map_preview_path}` : '',
+                    mapAltText: trip.start_time
+                        ? `{{ _('Map of trip from ') }}${this.formatDateTime(trip.start_time, { dateStyle: 'medium', timeStyle: 'short' })}`
+                        : `{{ _('Trip map preview') }}`,
+                    startDateText: this.formatDateTime(trip.start_time, { dateStyle: 'full' }),
+                    startTimeText: this.formatDateTime(trip.start_time, { timeStyle: 'short' }),
+                    endTimeText: this.formatDateTime(trip.end_time, { timeStyle: 'short' }),
+                    durationText: this.formatDuration(trip.duration_seconds),
+                    distanceText: this.formatDistance(trip.distance_km),
+                    averageSpeedText: this.formatSpeed(trip.average_speed_kph),
+                    socUsedText: this.formatSoc(trip.soc_used),
+                    socClass: this.getSocColor(trip.soc_used),
+                    energyUsedText: trip.energy_used_kwh != null ? `${Number(trip.energy_used_kwh).toFixed(2)} kWh` : null,
+                    consumptionText: consumptionVal
+                };
+            });
+        },
+        saveTripsScrollState() {
+            sessionStorage.setItem('vehicleDetailScrollPos', String(window.scrollY));
+            sessionStorage.setItem('vehicleDetailTripPage', String(this.pagination.current_page || 1));
+        },
+        selectTripForDelete(event) {
+            const tripId = event?.currentTarget?.dataset?.tripId;
+            if (!tripId) return;
+            this.tripToDelete = this.trips.find((trip) => String(trip.id) === tripId) || null;
+        },
+        clearTripToDelete() {
+            this.tripToDelete = null;
+        },
+        confirmDeleteTrip() {
+            if (!this.tripToDelete || !this.tripToDelete.id) return;
+            const tripId = this.tripToDelete.id;
+            this.tripToDelete = null;
+            this.deleteTrip(tripId);
+        },
+        goToPreviousPage() {
+            const currentPage = this.pagination.current_page || 1;
+            if (currentPage > 1) this.fetchTrips(currentPage - 1);
+        },
+        goToNextPage() {
+            const currentPage = this.pagination.current_page || 1;
+            const totalPages = this.pagination.total_pages || 1;
+            if (currentPage < totalPages) this.fetchTrips(currentPage + 1);
+        },
+
+        deleteTrip(tripId) {
+            if (!tripId) return;
+            fetch(`/api/karto/v1/trips/${tripId}`, { method: 'DELETE', credentials: 'include' })
+                .then(response => {
+                    if (response.ok) {
+                        this.fetchTrips(this.pagination.current_page || 1);
+                    } else {
+                        response.json().then(data => alert(`{{ _('Error deleting trip: ') }}${data.detail || response.statusText}`));
+                    }
+                })
+                .catch(err => alert(`{{ _('Network error: ') }}${err.message}`));
+        },
+
+        formatDateTime(isoString, options = {}) {
+            if (!isoString) return 'N/A';
+            const date = new Date(isoString);
+            const defaultOptions = {
+                timeZone: this.userTimezone
+            };
+            const finalOptions = { ...defaultOptions, ...options };
+
+            try {
+                return date.toLocaleString(undefined, finalOptions);
+            } catch (e) {
+                console.error(`Invalid timezone or options for formatting: ${this.userTimezone}`, e, finalOptions);
+                delete finalOptions.timeZone;
+                return date.toLocaleString(undefined, finalOptions);
+            }
+        },
+        formatDuration(sec) { if (sec === null || sec === undefined) return 'N/A'; const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = Math.round(sec % 60); return [h, m, s].map(v => v < 10 ? '0' + v : v).join(':'); },
+        formatDistance(km) {
+            if (km === null || km === undefined) return 'N/A';
+            if (vehicleDetailConfig.userPrefersImperial) return `${(Number(km) * KM_TO_MI).toFixed(2)} mi`;
+            return `${Number(km).toFixed(2)} km`;
+        },
+        formatSpeed(kph) {
+            if (kph === null || kph === undefined) return 'N/A';
+            if (vehicleDetailConfig.userPrefersImperial) return `${(Number(kph) * KM_TO_MI).toFixed(1)} mph`;
+            return `${Number(kph).toFixed(1)} kph`;
+        },
+        formatSoc(soc) { return (soc !== null && soc !== undefined) ? `${Number(soc).toFixed(1)} %` : 'N/A'; },
+        getSocColor(soc) { return soc > 0 ? 'text-red-400' : (soc < 0 ? 'text-green-400' : 'text-text-primary'); }
+    };
+}
+
+    function createChargeLogState() {
+        return {
+            hasBeenInitialized: false,
+            isLoading: true,
+            isPaginating: false,
+            error: null,
+            charges: [],
+            displayCharges: [],
+            pagination: {},
+            vehicleId: null,
+            userTimezone: 'UTC',
+            dateTimeFormatter: null,
+            chargeToDelete: null,
+            showLoading: true,
+            showError: false,
+            showEmpty: false,
+            showList: false,
+            hasPagination: false,
+            showPrevPage: false,
+            showNextPage: false,
+            currentPageText: '1',
+            totalPagesText: '1',
+            exportHref: '',
+
+            init(vehicleId, userTimezone) {
+                if (this.hasBeenInitialized || !vehicleId) return;
+                this.hasBeenInitialized = true;
+                this.vehicleId = vehicleId;
+                this.userTimezone = userTimezone;
+
+                try {
+                    this.dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+                        timeZone: this.userTimezone,
+                        dateStyle: 'medium',
+                        timeStyle: 'short'
+                    });
+                } catch (e) {
+                    console.error(`Invalid timezone for formatter: ${this.userTimezone}`, e);
+                    this.dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+                        dateStyle: 'medium',
+                        timeStyle: 'short'
+                    });
+                }
+
+                this.exportHref = `/api/chargelogs/v1/vehicles/${this.vehicleId}/export`;
+                this.fetchCharges(1);
+            },
+            refreshViewState() {
+                this.showLoading = this.isLoading;
+                this.showError = !!this.error;
+                const hasCharges = this.charges.length > 0;
+                this.showEmpty = !this.isLoading && !this.error && !hasCharges;
+                this.showList = !this.isLoading && !this.error && hasCharges;
+                const currentPage = this.pagination.current_page || 1;
+                const totalPages = this.pagination.total_pages || 1;
+                this.hasPagination = totalPages > 1;
+                this.showPrevPage = this.hasPagination && currentPage > 1;
+                this.showNextPage = this.hasPagination && currentPage < totalPages;
+                this.currentPageText = String(currentPage);
+                this.totalPagesText = String(totalPages);
+            },
+            mapChargesForDisplay() {
+                this.displayCharges = this.charges.map((charge) => ({
+                    id: charge.id,
+                    detailHref: `/vehicle/${this.vehicleId}/charge/${charge.id}`,
+                    startTimeText: this.formatDateTime(charge.start_time),
+                    durationText: this.formatDuration(charge.duration_seconds),
+                    startSocText: this.formatSoc(charge.start_soc),
+                    endSocText: this.formatSoc(charge.end_soc),
+                    energyText: this.formatEnergy(charge.energy_added_kwh)
+                }));
+            },
+    
+            async fetchCharges(page = 1) {
+                if (!this.vehicleId) {
+                    this.error = "Invalid Vehicle ID for charge logs.";
+                    this.isLoading = false;
+                    this.refreshViewState();
+                    return;
+                }
+                
+                if (this.charges.length > 0) { this.isPaginating = true; } 
+                else { this.isLoading = true; }
+                this.error = null;
+                this.refreshViewState();
+                
+                const url = new URL(`/api/chargelogs/v1/vehicles/${this.vehicleId}/charges`, window.location.origin);
+                url.searchParams.set('page', page);
+    
+                try {
+                    const response = await fetch(url, { credentials: 'include' });
+                    if (!response.ok) {
+                        const contentType = response.headers.get("content-type");
+                        if (contentType && contentType.includes("application/json")) {
+                            const err = await response.json();
+                            throw new Error(err.detail || `{{ _('Failed to load charge logs (Status: ') }}${response.status})`);
+                        } else {
+                            throw new Error(`{{ _('Service unavailable. Server sent an unexpected response (Status: ') }}${response.status})`);
+                        }
+                    }
+                    const data = await response.json();
+                    this.charges = data.charges;
+                    this.pagination = data.pagination;
+                    this.mapChargesForDisplay();
+                } catch (err) {
+                    this.error = err.message;
+                } finally {
+                    const wasPaginating = this.isPaginating;
+                    this.isLoading = false;
+                    this.isPaginating = false;
+                    this.refreshViewState();
+                    if (wasPaginating) {
+                        setTimeout(() => {
+                            const el = document.getElementById('charge-list-anchor');
+                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 0);
+                    }
+                }
+            },
+            selectChargeForDelete(event) {
+                const chargeId = event?.currentTarget?.dataset?.chargeId;
+                if (!chargeId) return;
+                this.chargeToDelete = this.charges.find((charge) => String(charge.id) === chargeId) || null;
+            },
+            clearChargeToDelete() {
+                this.chargeToDelete = null;
+            },
+            confirmDeleteCharge() {
+                if (!this.chargeToDelete || !this.chargeToDelete.id) return;
+                const chargeId = this.chargeToDelete.id;
+                this.chargeToDelete = null;
+                this.deleteCharge(chargeId);
+            },
+            goToPreviousPage() {
+                const currentPage = this.pagination.current_page || 1;
+                if (currentPage > 1) this.fetchCharges(currentPage - 1);
+            },
+            goToNextPage() {
+                const currentPage = this.pagination.current_page || 1;
+                const totalPages = this.pagination.total_pages || 1;
+                if (currentPage < totalPages) this.fetchCharges(currentPage + 1);
+            },
+            
+            deleteCharge(chargeId) {
+                if (!chargeId) return;
+                fetch(`/api/chargelogs/v1/charges/${chargeId}`, { method: 'DELETE', credentials: 'include' })
+                    .then(response => {
+                        if (response.ok) {
+                            this.fetchCharges(this.pagination.current_page || 1);
+                        } else {
+                            response.json().then(data => alert(`{{ _('Error deleting charge log: ') }}${data.detail || response.statusText}`));
+                        }
+                    })
+                    .catch(err => alert(`{{ _('Network error: ') }}${err.message}`));
+            },
+    
+            formatDateTime(isoString) {
+                if (!isoString || !this.dateTimeFormatter) return 'N/A';
+                return this.dateTimeFormatter.format(new Date(isoString));
+            },
+            formatDuration(seconds) {
+                if (seconds === null || seconds === undefined) return 'N/A';
+                const h = Math.floor(seconds / 3600);
+                const m = Math.floor((seconds % 3600) / 60);
+                return `${h}h ${m}m`;
+            },
+            formatSoc(soc) { return soc !== null ? `${soc.toFixed(1)}%` : 'N/A'; },
+            formatEnergy(kwh) { return kwh !== null ? `${kwh.toFixed(2)} kWh` : 'N/A'; }
+        };
+    }
+
+    function bindTripPreviewImage(container) {
+        if (!(container instanceof Element) || container.dataset.tripPreviewBound === 'true') return;
+
+        const image = container.querySelector('[data-trip-preview-image]');
+        const skeleton = container.querySelector('[data-trip-preview-skeleton]');
+        if (!image || !skeleton) return;
+
+        const showLoadedState = () => {
+            image.classList.remove('opacity-0');
+            image.classList.add('opacity-100');
+            skeleton.classList.add('hidden');
+        };
+
+        const showFallbackState = () => {
+            container.classList.add('hidden');
+        };
+
+        image.addEventListener('load', showLoadedState);
+        image.addEventListener('error', showFallbackState);
+        container.dataset.tripPreviewBound = 'true';
+
+        if (image.complete) {
+            if (image.naturalWidth > 0) showLoadedState();
+            else showFallbackState();
+        }
+    }
+
+    function initTripPreviewImages(root = document) {
+        if (!root || typeof root.querySelectorAll !== 'function') return;
+        root.querySelectorAll('[data-trip-preview]').forEach(bindTripPreviewImage);
+    }
+
+    function installTripPreviewObserver() {
+        initTripPreviewImages(document);
+
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (!(node instanceof Element)) return;
+                    if (node.matches('[data-trip-preview]')) {
+                        bindTripPreviewImage(node);
+                    }
+                    initTripPreviewImages(node);
+                });
+            });
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    function createSearchState() {
+        return {
+            hasBeenInitialized: false, vehicleId: null, map: null,
+            isLoading: false, error: null, searchResults: [], pagination: {},
+            displaySearchResults: [],
+            heatmapLayer: null, searchMarkersLayer: null, selectionMarker: null, selectionBox: null,
+            isDrawingBox: false, boxStartPoint: null,
+            storageKey: '',
+            showRadiusInputs: true,
+            showBboxInputs: false,
+            drawBoxButtonClass: 'bg-neon-blue hover:bg-neon-blue-darker',
+            showDrawBoxIdle: true,
+            showDrawingActive: false,
+            showDrawPromptSetFirstCorner: false,
+            showDrawPromptSetSecondCorner: false,
+            hasSearchResults: false,
+            hasPagination: false,
+            showPrevPage: false,
+            showNextPage: false,
+            currentPageText: '1',
+            totalPagesText: '1',
+            form: {
+                relation: 'starts_within_radius',
+                lat: '', lon: '', radius_m: 1000, bbox: ''
+            },
+            
+            setFormRelation(value) { this.form.relation = value; this.refreshUiState(); },
+            setFormLat(value) { this.form.lat = value; },
+            setFormLon(value) { this.form.lon = value; },
+            setFormRadiusM(value) { this.form.radius_m = value; },
+            setFormBbox(value) { this.form.bbox = value; },
+
+            init(vehicleId, initialLat, initialLon) {
+                if (this.hasBeenInitialized || !vehicleId) return;
+                this.hasBeenInitialized = true;
+                this.vehicleId = vehicleId;
+                this.storageKey = `searchState_${this.vehicleId}`;
+                
+                if (!this.loadState()) {
+                    if (initialLat && initialLon) {
+                        this.form.lat = parseFloat(initialLat).toFixed(5);
+                        this.form.lon = parseFloat(initialLon).toFixed(5);
+                    }
+                }
+                
+                this.initMap(this.form.lat || initialLat, this.form.lon || initialLon);
+                
+                if (this.searchResults.length > 0) {
+                    this.buildSearchResultsDisplay();
+                    this.displaySearchResultsOnMap(this.searchResults);
+                }
+                this.refreshUiState();
+            },
+            refreshUiState() {
+                const relation = this.form.relation || '';
+                const isRadius = relation.includes('radius');
+                this.showRadiusInputs = isRadius;
+                this.showBboxInputs = !isRadius;
+                this.drawBoxButtonClass = this.isDrawingBox ? 'bg-red-500 hover:bg-red-600' : 'bg-neon-blue hover:bg-neon-blue-darker';
+                this.showDrawBoxIdle = !this.isDrawingBox;
+                this.showDrawingActive = this.isDrawingBox;
+                this.showDrawPromptSetFirstCorner = this.isDrawingBox && !this.boxStartPoint;
+                this.showDrawPromptSetSecondCorner = this.isDrawingBox && !!this.boxStartPoint;
+                this.hasSearchResults = this.displaySearchResults.length > 0;
+                const currentPage = this.pagination.current_page || 1;
+                const totalPages = this.pagination.total_pages || 1;
+                this.hasPagination = totalPages > 1;
+                this.showPrevPage = this.hasPagination && currentPage > 1;
+                this.showNextPage = this.hasPagination && currentPage < totalPages;
+                this.currentPageText = String(currentPage);
+                this.totalPagesText = String(totalPages);
+            },
+            buildSearchResultsDisplay() {
+                this.displaySearchResults = this.searchResults.map((trip) => {
+                    const startDate = trip.start_time ? new Date(trip.start_time) : null;
+                    const startTimeText = startDate ? startDate.toLocaleString() : 'N/A';
+                    const tripDistance = Number(trip.distance_km);
+                    const tripDistDisplay = Number.isFinite(tripDistance) ? (vehicleDetailConfig.userPrefersImperial ? `${(tripDistance * KM_TO_MI).toFixed(2)} mi` : `${tripDistance.toFixed(2)} km`) : 'N/A';
+                    const distanceText = `{{ _('Distance:') }} ${tripDistDisplay}`;
+                    const distanceFromPointRaw = Number(trip.distance_m);
+                    const showDistanceFromPoint = Number.isFinite(distanceFromPointRaw);
+                    const distFromKm = distanceFromPointRaw / 1000;
+                    const distanceFromPointText = showDistanceFromPoint ? (vehicleDetailConfig.userPrefersImperial ? `${(distFromKm * KM_TO_MI).toFixed(2)} mi` : `${distFromKm.toFixed(2)} km`) : '';
+                    return {
+                        id: trip.id,
+                        detailHref: `/vehicle/${this.vehicleId}/trip/${trip.id}?from=search`,
+                        startTimeText,
+                        distanceText,
+                        showDistanceFromPoint,
+                        distanceFromPointText
+                    };
+                });
+                this.refreshUiState();
+            },
+            submitSearch() {
+                this.searchTrips(1);
+            },
+            fetchHeatmapAction() {
+                this.fetchHeatmap();
+            },
+            clearMapAndSearch() {
+                this.clearMapLayers(true);
+            },
+            goToPreviousPage() {
+                const currentPage = this.pagination.current_page || 1;
+                if (currentPage > 1) this.searchTrips(currentPage - 1);
+            },
+            goToNextPage() {
+                const currentPage = this.pagination.current_page || 1;
+                const totalPages = this.pagination.total_pages || 1;
+                if (currentPage < totalPages) this.searchTrips(currentPage + 1);
+            },
+            isRadiusRelation() {
+                return (this.form.relation || '').includes('radius');
+            },
+
+            saveState() {
+                const state = {
+                    form: this.form,
+                    results: this.searchResults,
+                    pagination: this.pagination,
+                };
+                sessionStorage.setItem(this.storageKey, JSON.stringify(state));
+            },
+
+            loadState() {
+                const savedState = sessionStorage.getItem(this.storageKey);
+                if (savedState) {
+                    try {
+                        const state = JSON.parse(savedState);
+                        this.form = state.form;
+                        this.searchResults = state.results;
+                        this.pagination = state.pagination;
+                        this.buildSearchResultsDisplay();
+                        return true;
+                    } catch (e) {
+                        console.error("Failed to parse saved search state:", e);
+                        this.clearState();
+                        return false;
+                    }
+                }
+                return false;
+            },
+
+            clearState() {
+                sessionStorage.removeItem(this.storageKey);
+            },
+
+            initMap(lat, lon, attempt = 0) {
+                const mapEl = document.getElementById('search-map');
+                if (!mapEl) return;
+                if (this.map) {
+                    if (this.map._container === mapEl) { this.map.invalidateSize({ pan: false }); return; }
+                    if (this.searchMapResizeObserver) { this.searchMapResizeObserver.disconnect(); this.searchMapResizeObserver = null; }
+                    this.map.remove();
+                    this.map = null;
+                }
+                if (typeof L === 'undefined' || typeof L.heatLayer === 'undefined') {
+                    console.error('Leaflet or Leaflet.heat is not loaded');
+                    mapEl.innerHTML = `<div class="flex items-center justify-center h-full text-red-400 p-4 text-center">{{ _("Map Error: A required map library failed to load. Check the browser console.") }}</div>`;
+                    return;
+                }
+                if (mapEl.offsetWidth === 0 && attempt < 30) {
+                    requestAnimationFrame(() => this.initMap(lat, lon, attempt + 1));
+                    return;
+                }
+                const centerLat = lat ?? 51.505; const centerLon = lon ?? -0.09;
+                const zoomLevel = lat !== null ? 13 : 5;
+                this.map = L.map('search-map').setView([centerLat, centerLon], zoomLevel);
+
+                const protomapsUrl = {{ PROTOMAPS_URL | tojson | safe }};
+                if (protomapsUrl) {
+                    try {
+                        const paintRules = [
+                            { dataLayer: "water", symbolizer: new protomapsL.PolygonSymbolizer({ fill: "#1e3a8a" }) },
+                            { dataLayer: "landuse", symbolizer: new protomapsL.PolygonSymbolizer({ fill: "#161b22" }) },
+                            { dataLayer: "natural", symbolizer: new protomapsL.PolygonSymbolizer({ fill: "#161b22" }) },
+                            { dataLayer: "transit", symbolizer: new protomapsL.LineSymbolizer({ color: "#374151", width: 1 })},
+                             {
+                                dataLayer: "roads",
+                                symbolizer: new protomapsL.LineSymbolizer({
+                                    color: (z,f) => (f.props.highway_kind === "highway" || f.props.highway_kind === "motorway") ? "#6b7280" : "#4b5563",
+                                    width: (z,f) => (f.props.highway_kind === "highway" || f.props.highway_kind === "motorway") ? (z > 14 ? 3 : 2) : (z > 14 ? 2 : 1)
+                                })
+                            },
+                            { dataLayer: "buildings", symbolizer: new protomapsL.PolygonSymbolizer({ fill: "#22282f" }) },
+                        ];
+                        const labelRules = [
+                             { dataLayer: "places", symbolizer: new protomapsL.CenteredTextSymbolizer({ label_props: ["name"], fill: '#c9d1d9', stroke: "#0d1117", width: 2, font: "11px sans-serif" }) },
+                        ];
+                        let mapUrl = protomapsUrl;
+                        if (protomapsUrl.endsWith('.pmtiles') && typeof pmtiles !== 'undefined') {
+                            const pmtilesSource = new pmtiles.FetchSource(protomapsUrl, new Headers({'Cache-Control': 'no-cache', 'Pragma': 'no-cache'}));
+                            pmtilesSource.chromeWindowsNoCache = true;
+                            mapUrl = new pmtiles.PMTiles(pmtilesSource);
+                        }
+                        protomapsL.leafletLayer({ url: mapUrl, paintRules, labelRules, backgroundColor: "#0d1117" }).addTo(this.map);
+                    } catch(e) { console.error("Protomaps init error:", e); }
+                } else {
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors', maxZoom: 19
+                    }).addTo(this.map);
+                }
+                this.searchMarkersLayer = L.layerGroup().addTo(this.map);
+                requestAnimationFrame(() => { if (this.map) this.map.invalidateSize({ pan: false }); });
+                setTimeout(() => { if (this.map) this.map.invalidateSize({ pan: false }); }, 500);
+                this.searchMapResizeObserver = new ResizeObserver((entries) => {
+                    if (!this.map) return;
+                    const rect = entries[0]?.contentRect;
+                    if (rect && rect.width > 0 && rect.height > 0) this.map.invalidateSize({ pan: false });
+                });
+                this.searchMapResizeObserver.observe(mapEl);
+
+                this.map.on('click', (e) => {
+                    if (this.isDrawingBox) {
+                        if (!this.boxStartPoint) {
+                            this.boxStartPoint = e.latlng;
+                            if (this.selectionMarker) this.selectionMarker.setLatLng(e.latlng);
+                            else this.selectionMarker = L.marker(e.latlng).addTo(this.map);
+                        } else {
+                            const bounds = L.latLngBounds(this.boxStartPoint, e.latlng);
+                            if (this.selectionBox) this.selectionBox.remove();
+                            this.selectionBox = L.rectangle(bounds, { color: '#ff7800', weight: 1, interactive: false }).addTo(this.map);
+                            const ne = bounds.getNorthEast();
+                            const sw = bounds.getSouthWest();
+                            this.form.bbox = `${sw.lng.toFixed(5)},${sw.lat.toFixed(5)},${ne.lng.toFixed(5)},${ne.lat.toFixed(5)}`;
+                            this.toggleDrawingBox(false);
+                        }
+                    } else if (this.isRadiusRelation()) {
+                        this.form.lat = e.latlng.lat.toFixed(5);
+                        this.form.lon = e.latlng.lng.toFixed(5);
+                        if (this.selectionMarker) {
+                            this.selectionMarker.setLatLng(e.latlng);
+                        } else {
+                            this.selectionMarker = L.marker(e.latlng, { draggable: true }).addTo(this.map);
+                            this.selectionMarker.on('dragend', (event) => {
+                                const position = event.target.getLatLng();
+                                this.form.lat = position.lat.toFixed(5);
+                                this.form.lon = position.lng.toFixed(5);
+                            });
+                        }
+                        this.refreshUiState();
+                    }
+                });
+            },
+
+            toggleDrawingBox(newState = null) {
+                this.isDrawingBox = newState !== null ? newState : !this.isDrawingBox;
+                const mapContainer = document.getElementById('search-map');
+                if (this.isDrawingBox) {
+                    if(mapContainer) mapContainer.style.cursor = 'crosshair';
+                } else {
+                    if(mapContainer) mapContainer.style.cursor = '';
+                    this.boxStartPoint = null;
+                    if (this.selectionMarker) { this.map.removeLayer(this.selectionMarker); this.selectionMarker = null; }
+                }
+                this.refreshUiState();
+            },
+
+            async fetchHeatmap() {
+                this.isLoading = true; this.error = null; this.clearMapLayers();
+                this.refreshUiState();
+                try {
+                    const response = await fetch(`/api/karto/v1/vehicles/${this.vehicleId}/heatmap?grid_size_m=100`, { credentials: 'include' });
+                    if (!response.ok) {
+                        const contentType = response.headers.get("content-type");
+                        if (contentType && contentType.includes("application/json")) {
+                            const err = await response.json();
+                            throw new Error(err.detail || `${vehicleDetailTranslations.errors.failed_to_load_data}${response.status})`);
+                        } else {
+                            throw new Error(`${vehicleDetailTranslations.errors.service_unavailable}${response.status})`);
+                        }
+                    }
+                    const data = await response.json();
+                    if (data.length > 0) {
+                        const points = data.map(p => [p.lat, p.lon, p.weight]);
+                        this.heatmapLayer = L.heatLayer(points, { radius: 20, blur: 15, maxZoom: 12, gradient: {0.4: '#00c6ff', 0.6: '#39FF14', 0.8: '#FFF01F', 1: '#ff00ff'} }).addTo(this.map);
+                        const bounds = L.latLngBounds(data.map(p => [p.lat, p.lon]));
+                        if (bounds.isValid()) this.map.fitBounds(bounds.pad(0.1));
+                    } else { this.error = `{{ _('No data available to generate a heatmap.') }}`; }
+                } catch (e) {
+                    this.error = e.message;
+                } finally {
+                    this.isLoading = false;
+                    this.refreshUiState();
+                }
+            },
+
+            async searchTrips(page = 1) {
+                const isPaginating = this.searchResults.length > 0 && page > 1;
+                this.isLoading = true; this.error = null; this.clearMapLayers(false);
+                this.refreshUiState();
+                const params = new URLSearchParams({ vehicle_id: this.vehicleId, relation: this.form.relation, page, limit: 5 });
+                if (this.isRadiusRelation()) {
+                    if(!this.form.lat || !this.form.lon || !this.form.radius_m) { this.error = `{{ _('Latitude, Longitude, and Radius are required.') }}`; this.isLoading = false; return; }
+                    params.set('lat', this.form.lat); params.set('lon', this.form.lon); params.set('radius_m', this.form.radius_m);
+                } else {
+                     if(!this.form.bbox) { this.error = `{{ _('Bounding Box is required.') }}`; this.isLoading = false; return; }
+                    params.set('bbox', this.form.bbox);
+                }
+                try {
+                    const response = await fetch(`/api/karto/v1/trips/search?${params.toString()}`, {credentials: 'include'});
+                    if (!response.ok) {
+                        const contentType = response.headers.get("content-type");
+                        if (contentType && contentType.includes("application/json")) {
+                            const err = await response.json();
+                            throw new Error(err.detail || `{{_('Search failed:')}} ${response.status}`);
+                        } else {
+                            throw new Error(`${vehicleDetailTranslations.errors.service_unavailable}${response.status})`);
+                        }
+                    }
+                    const data = await response.json();
+                    this.searchResults = data.trips; 
+                    this.pagination = data.pagination; 
+                    this.buildSearchResultsDisplay();
+                    this.displaySearchResultsOnMap(data.trips);
+                    this.saveState();
+                } catch (e) {
+                    this.error = e.message; this.searchResults = []; this.pagination = {}; this.displaySearchResults = [];
+                } finally {
+                    this.isLoading = false;
+                    this.refreshUiState();
+                    if (isPaginating) {
+                        setTimeout(() => {
+                            const container = document.querySelector('[x-ref="searchResultsContainer"]');
+                            if (container) {
+                                container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        }, 0);
+                    }
+                }
+            },
+            
+            displaySearchResultsOnMap(trips) {
+                let bounds = L.latLngBounds();
+                trips.forEach(trip => {
+                    fetch(`/api/karto/v1/trips/${trip.id}?simplify_tolerance=0.0005`, {credentials: 'include'})
+                        .then(res => res.json()).then(detail => {
+                            if(detail.geojson) {
+                                const geojsonData = JSON.parse(detail.geojson);
+                                const tripPath = L.geoJSON(geojsonData, { style: { color: "#39FF14", weight: 3, opacity: 0.7 } }).addTo(this.searchMarkersLayer);
+                                const popupDist = vehicleDetailConfig.userPrefersImperial ? `${(trip.distance_km * KM_TO_MI).toFixed(2)} mi` : `${trip.distance_km.toFixed(2)} km`;
+                                tripPath.bindPopup(`<b>{{ _('Trip:') }}</b> ${new Date(trip.start_time).toLocaleString()}<br><b>{{ _('Distance:') }}</b> ${popupDist}`);
+                                bounds.extend(tripPath.getBounds());
+                            }
+                        });
+                });
+                if (trips.length > 0) {
+                     setTimeout(() => { if (bounds.isValid()) this.map.fitBounds(bounds.pad(0.1)); }, 500);
+                }
+            },
+
+            clearMapLayers(clearAll = true) {
+                if (this.heatmapLayer) { this.map.removeLayer(this.heatmapLayer); this.heatmapLayer = null; }
+                if (this.searchMarkersLayer) this.searchMarkersLayer.clearLayers();
+                this.searchResults = []; this.displaySearchResults = []; this.pagination = {}; this.error = null;
+                
+                if (clearAll) {
+                    this.clearState();
+                    this.form.lat = ''; this.form.lon = ''; this.form.bbox = '';
+                    if (this.selectionMarker) { this.map.removeLayer(this.selectionMarker); this.selectionMarker = null; }
+                    if (this.selectionBox) { this.map.removeLayer(this.selectionBox); this.selectionBox = null; }
+                    this.toggleDrawingBox(false);
+                }
+                this.refreshUiState();
+            }
+        }
+    }
+
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('vehicleDetailPageData', () => ({
+            t: vehicleDetailTranslations,
+            userTimezone: vehicleDetailConfig.userTimezone,
+            ws: null, wsStatus: vehicleDetailTranslations.ws_connecting, reconnectAttempts: 0, reconnectTimer: null,
+            map: null, marker: null, activeTab: 'overview', liveData: initialLiveData,
+            tabClasses: {
+                overview: '',
+                trips: '',
+                search: '',
+                charges: '',
+                terminal: '',
+                cell_stats: '',
+                metrics: '',
+                logs: '',
+                notifications: ''
+            },
+            cellStatsTabButtonClass: 'hidden',
+            cellStatsTabDisabled: true,
+            tabVisibility: {
+                overview: true,
+                trips: false,
+                search: false,
+                charges: false,
+                terminal: false,
+                cell_stats: false,
+                metrics: false,
+                logs: false,
+                notifications: false
+            },
+            hasCellStatsAvailable: false,
+            hasMeaningfulTpmsDataAvailable: false,
+            protocolView: {
+                showV2: false,
+                showV3: false,
+                v2Online: false,
+                v2Offline: true,
+                v3Online: false,
+                v3Offline: true
+            },
+            overviewMetrics: {
+                socText: 'N/A',
+                socClass: 'text-red-400',
+                estimatedRangeText: 'N/A',
+                vehicle12vText: 'N/A',
+                batteryVoltageText: 'N/A',
+                batteryCurrentText: 'N/A',
+                batterySohText: 'N/A',
+                lineVoltageText: 'N/A',
+                chargeCurrentText: 'N/A',
+                chargeStateText: 'N/A',
+                chargeModeText: 'N/A',
+                positionText: 'N/A'
+            },
+            tpmsWheelCards: [],
+            tripDeletePreview: {
+                startTimeText: 'N/A',
+                distanceText: 'N/A'
+            },
+            chargeDeletePreview: {
+                startTimeText: 'N/A',
+                energyText: 'N/A'
+            },
+            terminalUi: {
+                inputDisabled: true,
+                sendDisabled: true,
+                inputPlaceholder: vehicleDetailTranslations.placeholders.v2_offline
+            },
+            metricsUi: {
+                showSourceSwitcher: false,
+                showV2: true,
+                showV3: false,
+                hasV2Groups: false,
+                noV2Groups: true,
+                hasV3Groups: false,
+                noV3Groups: true,
+                v2Groups: [],
+                v3Groups: []
+            },
+            cellStatsView: {
+                hasVoltages: false,
+                hasTemperatures: false,
+                showEmptyState: true,
+                voltageMinText: '0.000 V',
+                voltageMaxText: '0.000 V',
+                voltageCountText: '0',
+                temperatureMinText: '0.0 °C',
+                temperatureMaxText: '0.0 °C',
+                temperatureCountText: '0',
+                voltageCells: [],
+                temperatureSensors: []
+            },
+            commandHistory: [], currentCommand: '', promptText: '> ', isSubmitting: false, csrfToken: '{{ csrf_token }}',
+            nextCommandLineId: 1,
+            sentCommandHistory: [], sentCommandHistoryIndex: -1, selectedTerminalProtocol: 'v2',
+            metricsSource: 'v2',
+            get isMetricsSourceV2() { return this.metricsSource === 'v2'; },
+            get isMetricsSourceV3() { return this.metricsSource === 'v3'; },
+            setMetricsSourceV2() { this.metricsSource = 'v2'; },
+            setMetricsSourceV3() { this.metricsSource = 'v3'; },
+            setSelectedTerminalProtocol(value) { this.selectedTerminalProtocol = value; },
+            statsState: createStatsState(),
+            tripsState: createTripsState(),
+            chargeLogState: createChargeLogState(),
+            chargeStatsState: createChargeStatsState(),
+            searchState: createSearchState(),
+            v2_metrics_grouped: {{ v2_metrics_grouped | tojson | safe }},
+            v3_metrics_grouped: {{ v3_metrics_grouped | tojson | safe }},
+            
+            init() {
+                ['statsState', 'tripsState', 'chargeLogState', 'chargeStatsState', 'searchState'].forEach(key => {
+                    const state = this[key];
+                    if (!state) return;
+                    Object.keys(state).forEach(prop => {
+                        if (typeof state[prop] === 'function') {
+                            state[prop] = state[prop].bind(state);
+                        }
+                    });
+                });
+
+                this.wsStatus = this.t.ws_connecting;
+                this.activeTab = new URLSearchParams(window.location.search).get("tab") || "overview";
+                this.selectedTerminalProtocol = vehicleDetailConfig.preferV3Terminal ? "v3" : (vehicleDetailConfig.hasV2Online ? "v2" : "v3");
+                this.metricsSource = vehicleDetailConfig.hasV3Metrics ? "v3" : "v2";
+                this.updateDerivedAvailability();
+                this.updateTabClasses();
+                this.updateTabVisibility();
+                this.refreshOverviewDerived();
+                this.refreshTerminalUi();
+                this.refreshMetricsUi();
+                this.refreshCellStatsView();
+
+                this.$watch("activeTab", (newTab) => {
+                    this.updateTabClasses();
+                    this.updateTabVisibility();
+                    if (newTab === "overview") {
+                        this.$nextTick(() => {
+                            this.ensureOverviewMapReady();
+                        });
+                    }
+                    if (newTab === "trips") {
+                        this.statsState.init(vehicleDetailConfig.vehicleId, this.userTimezone);
+                        this.tripsState.init(vehicleDetailConfig.vehicleId, this.userTimezone);
+                    }
+                    if (newTab === "search") {
+                        this.$nextTick(() => {
+                            this.searchState.init(vehicleDetailConfig.vehicleId, this.liveData.lat, this.liveData.lon);
+                            if (this.searchState.hasBeenInitialized) {
+                                this.searchState.initMap(this.searchState.form.lat, this.searchState.form.lon);
+                                if (this.searchState.searchResults.length > 0 &&
+                                    this.searchState.searchMarkersLayer &&
+                                    this.searchState.searchMarkersLayer.getLayers().length === 0) {
+                                    this.searchState.displaySearchResultsOnMap(this.searchState.searchResults);
+                                }
+                            }
+                        });
+                    }
+                    if (newTab === "charges") {
+                        this.chargeLogState.init(vehicleDetailConfig.vehicleId, this.userTimezone);
+                        this.chargeStatsState.init(vehicleDetailConfig.vehicleId);
+                    }
+                });
+
+                this.$watch("searchState.form.relation", (newVal) => {
+                    const isRadius = newVal.includes("radius");
+                    this.searchState.toggleDrawingBox(false);
+                    if (!this.searchState.map) return;
+                    if (isRadius) {
+                        if (this.searchState.selectionBox) {
+                            this.searchState.map.removeLayer(this.searchState.selectionBox);
+                            this.searchState.selectionBox = null;
+                        }
+                    } else if (this.searchState.selectionMarker) {
+                        this.searchState.map.removeLayer(this.searchState.selectionMarker);
+                        this.searchState.selectionMarker = null;
+                    }
+                });
+
+                this.$watch("tripsState.isLoading", (isLoading) => {
+                    if (!isLoading) {
+                        this.$nextTick(() => {
+                            const savedScrollPos = sessionStorage.getItem("vehicleDetailScrollPos");
+                            if (savedScrollPos) {
+                                window.scrollTo(0, parseInt(savedScrollPos, 10));
+                                sessionStorage.removeItem("vehicleDetailScrollPos");
+                            }
+                        });
+                    }
+                });
+                this.$watch("tripsState.tripToDelete", (trip) => {
+                    if (!trip) {
+                        this.tripDeletePreview.startTimeText = 'N/A';
+                        this.tripDeletePreview.distanceText = 'N/A';
+                        return;
+                    }
+                    this.tripDeletePreview.startTimeText = this.tripsState.formatDateTime(trip.start_time, { dateStyle: 'medium', timeStyle: 'short' });
+                    this.tripDeletePreview.distanceText = this.tripsState.formatDistance(trip.distance_km);
+                });
+                this.$watch("chargeLogState.chargeToDelete", (charge) => {
+                    if (!charge) {
+                        this.chargeDeletePreview.startTimeText = 'N/A';
+                        this.chargeDeletePreview.energyText = 'N/A';
+                        return;
+                    }
+                    this.chargeDeletePreview.startTimeText = this.chargeLogState.formatDateTime(charge.start_time);
+                    this.chargeDeletePreview.energyText = this.chargeLogState.formatEnergy(charge.energy_added_kwh);
+                });
+                this.$watch("selectedTerminalProtocol", () => {
+                    this.refreshTerminalUi();
+                });
+                this.$watch("currentCommand", () => {
+                    this.refreshTerminalUi();
+                });
+                this.$watch("isSubmitting", () => {
+                    this.refreshTerminalUi();
+                });
+                this.$watch("metricsSource", () => {
+                    this.refreshMetricsUi();
+                });
+
+                if (this.activeTab === "trips") {
+                    this.statsState.init(vehicleDetailConfig.vehicleId, this.userTimezone);
+                    this.tripsState.init(vehicleDetailConfig.vehicleId, this.userTimezone);
+                }
+                if (this.activeTab === "search") {
+                    this.$nextTick(() => {
+                        this.searchState.init(vehicleDetailConfig.vehicleId, this.liveData.lat, this.liveData.lon);
+                    });
+                }
+                if (this.activeTab === "charges") {
+                    this.chargeLogState.init(vehicleDetailConfig.vehicleId, this.userTimezone);
+                    this.chargeStatsState.init(vehicleDetailConfig.vehicleId);
+                }
+
+                this.$nextTick(() => {
+                    this.ensureOverviewMapReady();
+                    if (this.activeTab === "terminal" && this.$refs.commandInput) {
+                        this.$refs.commandInput.focus();
+                    }
+                });
+                this.connect(vehicleDetailConfig.vehicleId);
+                this.setPrompt(`${vehicleDetailConfig.vehicleId}$ `);
+            },
+
+            updateTabClasses() {
+                const active = 'border-neon-blue text-neon-blue';
+                const inactive = 'border-transparent text-text-secondary hover:text-text-primary hover:border-gray-500';
+                const tabs = ['overview', 'trips', 'search', 'charges', 'terminal', 'cell_stats', 'metrics', 'logs', 'notifications'];
+                for (const tab of tabs) {
+                    this.tabClasses[tab] = this.activeTab === tab ? active : inactive;
+                }
+                const hidden = 'hidden';
+                this.cellStatsTabDisabled = !this.hasCellStatsAvailable;
+                this.cellStatsTabButtonClass = this.hasCellStatsAvailable ? this.tabClasses.cell_stats : hidden;
+            },
+            updateTabVisibility() {
+                const tabs = ['overview', 'trips', 'search', 'charges', 'terminal', 'cell_stats', 'metrics', 'logs', 'notifications'];
+                for (const tab of tabs) {
+                    this.tabVisibility[tab] = this.activeTab === tab;
+                }
+            },
+
+            updateDerivedAvailability() {
+                this.hasCellStatsAvailable = this.computeHasCellStats(this.liveData?.v3_metrics);
+                this.hasMeaningfulTpmsDataAvailable = this.computeHasMeaningfulTpmsData(this.liveData?.tpms_data);
+                this.updateTabClasses();
+            },
+            refreshOverviewDerived() {
+                const protocol = vehicleDetailConfig.vehicleProtocol;
+                const showV2 = protocol === 'v2' || protocol === 'both';
+                const showV3 = protocol === 'v3' || protocol === 'both';
+                const v2Online = !!this.liveData?.isV2Online;
+                const v3Online = !!this.liveData?.isV3Online;
+
+                this.protocolView.showV2 = showV2;
+                this.protocolView.showV3 = showV3;
+                this.protocolView.v2Online = v2Online;
+                this.protocolView.v2Offline = !v2Online;
+                this.protocolView.v3Online = v3Online;
+                this.protocolView.v3Offline = !v3Online;
+
+                const socRaw = this.liveData?.soc;
+                const socNum = Number.parseInt(socRaw, 10);
+                let socClass = 'text-red-400';
+                if (!Number.isNaN(socNum)) {
+                    if (socNum >= 70) socClass = 'text-green-400';
+                    else if (socNum >= 30) socClass = 'text-yellow-400';
+                }
+
+                this.overviewMetrics.socText = this.formatMetricValue('soc', '%', 0, false);
+                this.overviewMetrics.socClass = socClass;
+                this.overviewMetrics.estimatedRangeText = this.formatMetricDistance(this.liveData?.estimated_range);
+                this.overviewMetrics.vehicle12vText = this.formatMetricValue('vehicle_12v', ' V', 2, false);
+                this.overviewMetrics.batteryVoltageText = this.formatMetricValue('battery_voltage', ' V', 2, false);
+                this.overviewMetrics.batteryCurrentText = this.formatMetricValue('battery_current', ' A', 2, false);
+                this.overviewMetrics.batterySohText = this.formatMetricValue('battery_soh', ' %', 1, false);
+                this.overviewMetrics.lineVoltageText = this.formatMetricValue('line_voltage', ' V', 1, false);
+                this.overviewMetrics.chargeCurrentText = this.formatMetricValue('charge_current', ' A', 1, false);
+                this.overviewMetrics.chargeStateText = this.formatMetricValue('charge_state_text', '', null, true);
+                this.overviewMetrics.chargeModeText = this.formatMetricValue('charge_mode_text', '', null, true);
+                this.overviewMetrics.positionText = this.getPositionTextDisplay();
+
+                const wheels = this.liveData?.tpms_data?.wheels || [];
+                this.tpmsWheelCards = wheels.map((tyre) => {
+                    const pressure = tyre.pressure_bar;
+                    const temp = tyre.temperature_c;
+                    const pressureWidth = this.getBarPercentage(pressure, 0, 3.5);
+                    const health = tyre.health_pct;
+                    const alertLevel = tyre.alert_level;
+                    let alertClass = 'text-yellow-400';
+                    if (alertLevel >= 3) {
+                        alertClass = 'text-red-500 font-bold';
+                    } else if (alertLevel === 2) {
+                        alertClass = 'text-orange-400';
+                    }
+
+                    return {
+                        name: tyre.name,
+                        pressureBarStyle: { width: `${pressureWidth}%` },
+                        pressureBarClass: this.getTyrePressureBarColor(pressure),
+                        pressureText: pressure !== null ? `${Number(pressure).toFixed(2)} bar` : 'P: N/A',
+                        temperatureText: temp !== null ? `${Number(temp).toFixed(1)}°C` : 'T: N/A',
+                        showHealth: health !== null && typeof health !== 'undefined',
+                        healthText: `${this.t.labels.health} ${health}%`,
+                        showAlert: alertLevel !== null && alertLevel > 0,
+                        alertClass,
+                        alertText: `${this.t.labels.alert} Lvl ${alertLevel}`
+                    };
+                });
+            },
+            refreshTerminalUi() {
+                const isOnline = this.isTerminalProtocolOnline();
+                const hasCommand = this.currentCommand && this.currentCommand.trim().length > 0;
+                this.terminalUi.inputDisabled = this.isSubmitting || !isOnline;
+                this.terminalUi.sendDisabled = this.isSubmitting || !isOnline || !hasCommand;
+                if (isOnline) {
+                    this.terminalUi.inputPlaceholder = this.t.placeholders.online;
+                } else if (this.selectedTerminalProtocol === 'v2') {
+                    this.terminalUi.inputPlaceholder = this.t.placeholders.v2_offline;
+                } else {
+                    this.terminalUi.inputPlaceholder = this.t.placeholders.v3_offline;
+                }
+            },
+            appendCommandLine(type, text, addTopMargin = false) {
+                let colorClass = 'text-red-400';
+                if (type === 'command') colorClass = 'text-green-400';
+                else if (type === 'response') colorClass = 'text-blue-300';
+
+                let spacingClass = '';
+                if (type === 'command') spacingClass = ' mb-1';
+                else if (addTopMargin) spacingClass = ' mt-1';
+
+                this.commandHistory.push({
+                    id: this.nextCommandLineId++,
+                    type,
+                    text,
+                    cssClass: `${colorClass} whitespace-pre-wrap${spacingClass}`
+                });
+            },
+            refreshMetricsUi() {
+                const protocol = vehicleDetailConfig.vehicleProtocol;
+                this.metricsUi.showSourceSwitcher = protocol === 'both';
+                this.metricsUi.showV2 = this.metricsSource === 'v2' || protocol === 'v2';
+                this.metricsUi.showV3 = this.metricsSource === 'v3' || protocol === 'v3';
+
+                const v2Entries = Object.entries(this.v2_metrics_grouped || {}).sort((a, b) => a[0].localeCompare(b[0]));
+                this.metricsUi.v2Groups = v2Entries.map(([groupName, items]) => {
+                    const itemEntries = Object.entries(items || {}).sort((a, b) => a[0].localeCompare(b[0]));
+                    return {
+                        id: `v2-${groupName}`,
+                        label: groupName,
+                        items: itemEntries.map(([key, value]) => ({
+                            id: `v2-${groupName}-${key}`,
+                            title: key,
+                            label: this.humanizeKey(key),
+                            valueText: value === true ? 'Yes' : (value === false ? 'No' : String(value))
+                        }))
+                    };
+                });
+                this.metricsUi.hasV2Groups = this.metricsUi.v2Groups.length > 0;
+                this.metricsUi.noV2Groups = !this.metricsUi.hasV2Groups;
+
+                const v3Entries = Object.entries(this.v3_metrics_grouped || {}).sort((a, b) => a[0].localeCompare(b[0]));
+                this.metricsUi.v3Groups = v3Entries.map(([groupName, metrics]) => {
+                    const metricEntries = Object.entries(metrics || {}).sort((a, b) => a[0].localeCompare(b[0]));
+                    return {
+                        id: `v3-${groupName}`,
+                        label: groupName,
+                        items: metricEntries.map(([key, value]) => ({
+                            id: `v3-${groupName}-${key}`,
+                            title: key,
+                            key,
+                            valueText: String(value)
+                        }))
+                    };
+                });
+                this.metricsUi.hasV3Groups = this.metricsUi.v3Groups.length > 0;
+                this.metricsUi.noV3Groups = !this.metricsUi.hasV3Groups;
+            },
+            refreshCellStatsView() {
+                const v3Metrics = this.liveData?.v3_metrics || {};
+                const voltageStr = v3Metrics['v.b.p.voltage'] || v3Metrics['v.b.c.voltage'] || '';
+                const tempStr = v3Metrics['v.b.p.temp'] || v3Metrics['v.b.c.temp'] || '';
+
+                const voltages = typeof voltageStr === 'string' ? voltageStr.split(',').map(Number).filter((n) => !Number.isNaN(n)) : [];
+                const temps = typeof tempStr === 'string' ? tempStr.split(',').map(Number).filter((n) => !Number.isNaN(n)) : [];
+
+                const hasVoltages = voltages.length > 0;
+                const hasTemperatures = temps.length > 0;
+                this.cellStatsView.hasVoltages = hasVoltages;
+                this.cellStatsView.hasTemperatures = hasTemperatures;
+                this.cellStatsView.showEmptyState = !hasVoltages && !hasTemperatures;
+
+                if (hasVoltages) {
+                    const min = Math.min(...voltages);
+                    const max = Math.max(...voltages);
+                    this.cellStatsView.voltageMinText = `${min.toFixed(3)} V`;
+                    this.cellStatsView.voltageMaxText = `${max.toFixed(3)} V`;
+                    this.cellStatsView.voltageCountText = String(voltages.length);
+                    this.cellStatsView.voltageCells = voltages.map((value, idx) => ({
+                        id: `v-${idx + 1}`,
+                        label: `{{ _('Cell') }} ${idx + 1}`,
+                        valueText: `${value.toFixed(3)} V`,
+                        barStyle: { width: `${this.getBarPercentage(value, min, max - min)}%` },
+                        barClass: this.getCellVoltageBarColor(value, min, max)
+                    }));
+                } else {
+                    this.cellStatsView.voltageMinText = '0.000 V';
+                    this.cellStatsView.voltageMaxText = '0.000 V';
+                    this.cellStatsView.voltageCountText = '0';
+                    this.cellStatsView.voltageCells = [];
+                }
+
+                if (hasTemperatures) {
+                    const min = Math.min(...temps);
+                    const max = Math.max(...temps);
+                    this.cellStatsView.temperatureMinText = `${min.toFixed(1)} °C`;
+                    this.cellStatsView.temperatureMaxText = `${max.toFixed(1)} °C`;
+                    this.cellStatsView.temperatureCountText = String(temps.length);
+                    this.cellStatsView.temperatureSensors = temps.map((value, idx) => ({
+                        id: `t-${idx + 1}`,
+                        label: `{{ _('Sensor') }} ${idx + 1}`,
+                        valueText: `${value.toFixed(1)} °C`,
+                        barStyle: { width: `${this.getBarPercentage(value, 0, 60)}%` },
+                        barClass: this.getCellTempBarColor(value)
+                    }));
+                } else {
+                    this.cellStatsView.temperatureMinText = '0.0 °C';
+                    this.cellStatsView.temperatureMaxText = '0.0 °C';
+                    this.cellStatsView.temperatureCountText = '0';
+                    this.cellStatsView.temperatureSensors = [];
+                }
+            },
+            formatMetricValue(key, unit = '', precision = null, isString = false) {
+                const value = this.liveData?.[key];
+                if (value === undefined || value === null) return 'N/A';
+                let displayValue = String(value);
+                if (!isString && precision !== null) {
+                    const num = Number.parseFloat(value);
+                    if (!Number.isNaN(num)) displayValue = num.toFixed(precision);
+                }
+                return displayValue + unit;
+            },
+
+            deepMerge(target, source) {
+                const output = { ...target };
+                if (this.isObject(target) && this.isObject(source)) {
+                    Object.keys(source).forEach(key => {
+                        if (this.isObject(source[key])) {
+                            if (!(key in target))
+                                Object.assign(output, { [key]: source[key] });
+                            else
+                                output[key] = this.deepMerge(target[key], source[key]);
+                        } else {
+                            Object.assign(output, { [key]: source[key] });
+                        }
+                    });
+                }
+                return output;
+            },
+            isObject(item) { return (item && typeof item === 'object' && !Array.isArray(item)); },
+
+            updateWsStatusFooter(status) {
+                const container = document.getElementById('ws-status-container');
+                if (!container) return;
+                let colorClass = 'text-yellow-400';
+                if (status === this.t.ws_connected) { colorClass = 'text-green-400'; }
+                else if (status.startsWith(this.t.ws_disconnected.trim()) || status.startsWith(this.t.ws_error)) { colorClass = 'text-red-400'; }
+                container.innerHTML = {{ _('Real-time Status:') | tojson | safe }} + ` <span class="font-bold ${colorClass}">${status}</span>`;
+            },
+
+            isTerminalProtocolOnline() {
+                if (this.selectedTerminalProtocol === 'v2') return this.liveData.isV2Online;
+                if (this.selectedTerminalProtocol === 'v3') return this.liveData.isV3Online;
+                return false;
+            },
+
+            computeHasMeaningfulTpmsData(tpmsData) {
+                if (!tpmsData || !tpmsData.wheels) {
+                    return false;
+                }
+                return tpmsData.wheels.some(
+                    wheel => wheel.pressure_bar !== null || wheel.temperature_c !== null
+                );
+            },
+
+            computeHasCellStats(v3Metrics) {
+                if (!v3Metrics) {
+                    return false;
+                }
+                const v = v3Metrics['v.b.p.voltage'] || v3Metrics['v.b.c.voltage'];
+                const t = v3Metrics['v.b.p.temp'] || v3Metrics['v.b.c.temp'];
+                return (v && typeof v === 'string' && v.trim().length > 0) || (t && typeof t === 'string' && t.trim().length > 0);
+            },
+
+            setPrompt(vehicleId) { this.promptText = `${vehicleId}$ `; },
+            disconnect() {
+                clearTimeout(this.reconnectTimer);
+                if (this.ws) { this.ws.onclose = null; this.ws.close(); this.ws = null; }
+            },
+            async connect(vehicleId) {
+                this.disconnect();
+                this.wsStatus = this.t.ws_connecting;
+                try {
+                    const response = await fetch("{{ url_for('api_get_ws_ticket') }}", { credentials: 'include' });
+                    if (!response.ok) throw new Error(`Ticket Error: ${response.status} ${response.statusText}`);
+                    const ticketData = await response.json();
+
+                    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    const wsPath = "{{ url_for('websocket_endpoint') }}";
+                    const wsUrl = new URL(wsPath, `${wsProtocol}//${window.location.host}`);
+                    wsUrl.searchParams.set('ticket', ticketData.app_ws_ticket);
+
+                    this.ws = new WebSocket(wsUrl.toString());
+                    this.ws.binaryType = 'arraybuffer';
+
+                    this.ws.onopen = () => {
+                        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                            this.wsStatus = this.t.ws_connected;
+                            this.reconnectAttempts = 0;
+                            this.ws.send(JSON.stringify({ action: 'subscribe', topic: `vehicle:${vehicleId}` }));
+                        } else {
+                            console.warn("WebSocket was closed before 'onopen' could send subscription.");
+                        }
+                    };
+                    this.ws.onmessage = (event) => {
+                        try {
+                            const data = MessagePack.decode(new Uint8Array(event.data));
+                            if (data.type === 'ping') { return; }
+                            if (data && data.topic === `vehicle:${vehicleId}` && data.type === 'update') {
+                                this.handleDataUpdate(data.payload);
+                            }
+                        } catch (e) { console.error("Error decoding WebSocket message:", e); }
+                    };
+                    this.ws.onerror = (event) => { console.error("WebSocket error:", event); this.wsStatus = this.t.ws_error; };
+                    
+                    this.ws.onclose = (event) => {
+                        this.wsStatus = this.t.ws_disconnected + (event.reason || this.t.ws_conn_lost);
+                        this.liveData.isV2Online = false; this.liveData.isV3Online = false;
+                        this.handleReconnect(vehicleId);
+                    };
+
+                } catch (error) {
+                    console.error("Connection setup failed:", error);
+                    this.wsStatus = this.t.ws_error + ': ' + error.message;
+                    this.handleReconnect(vehicleId);
+                }
+            },
+            handleReconnect(vehicleId) {
+                if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+                const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+                this.reconnectAttempts++;
+                this.wsStatus = this.t.ws_reconnecting + Math.round(delay / 1000) + 's...';
+                this.reconnectTimer = setTimeout(() => this.connect(vehicleId), delay);
+            },
+            handleDataUpdate(payload) {
+                this.liveData = this.deepMerge(this.liveData, payload);
+                this.updateDerivedAvailability();
+                this.refreshOverviewDerived();
+                this.refreshTerminalUi();
+                this.refreshCellStatsView();
+                if (payload.v2_metrics) { this.v2_metrics_grouped = this.groupV2Metrics(this.liveData.v2_metrics); }
+                if (payload.v3_metrics) {
+                    // Filter out V2-sourced charge logging metrics if vehicle is V2-only
+                    let v3Metrics = this.liveData.v3_metrics;
+                    if ('{{ vehicle.protocol }}' === 'v2' && v3Metrics) {
+                        const v2ChargeMetrics = new Set([
+                            'v.c.charging', 'v.b.soc', 'v.c.power', 'v.c.kwh', 'v.b.temp',
+                            'v.o.odometer', 'v.p.latitude', 'v.p.longitude'
+                        ]);
+                        v3Metrics = Object.fromEntries(
+                            Object.entries(v3Metrics).filter(([k, v]) => !v2ChargeMetrics.has(k))
+                        );
+                    }
+                    this.v3_metrics_grouped = _create_user_friendly_v3_metric_groups(v3Metrics);
+                }
+                if (payload.v2_metrics || payload.v3_metrics) {
+                    this.refreshMetricsUi();
+                }
+                this.updateMapLocation(this.liveData.lat, this.liveData.lon);
+            },
+            ensureOverviewMapReady(attempt = 0) {
+                if (!this.tabVisibility.overview) return;
+                const mapContainer = document.getElementById('vehicle-map');
+                if (!mapContainer) return;
+                if (!this.map || this.map._container !== mapContainer) {
+                    if (mapContainer.offsetWidth === 0 && attempt < 30) {
+                        requestAnimationFrame(() => this.ensureOverviewMapReady(attempt + 1));
+                        return;
+                    }
+                    this.initMap(this.liveData.lat, this.liveData.lon);
+                } else {
+                    this.map.invalidateSize({ pan: false });
+                }
+            },
+            initMap(initialLat, initialLon) {
+                const mapContainer = document.getElementById('vehicle-map');
+                if (!mapContainer) return;
+                if (typeof L === 'undefined') { console.error('Leaflet is not loaded'); return; }
+                const centerLat = initialLat ?? 51.505; const centerLon = initialLon ?? -0.09;
+                const zoomLevel = initialLat !== null ? 13 : 5;
+                this.map = L.map('vehicle-map').setView([centerLat, centerLon], zoomLevel);
+                if (this.overviewMapResizeObserver) this.overviewMapResizeObserver.disconnect();
+                this.overviewMapResizeObserver = new ResizeObserver(() => { if (this.map) this.map.invalidateSize({ pan: false }); });
+                this.overviewMapResizeObserver.observe(mapContainer);
+
+                const protomapsUrl = {{ PROTOMAPS_URL | tojson | safe }};
+
+                if (protomapsUrl) {
+                    if (typeof protomapsL === 'undefined' || (protomapsUrl.endsWith('.pmtiles') && typeof pmtiles === 'undefined')) {
+                        console.error('Protomaps scripts (protomaps-leaflet.js and/or pmtiles.js) are not loaded.');
+                        document.getElementById('vehicle-map').innerHTML = `<div class="flex items-center justify-center h-full text-red-400 p-4 text-center">{{ _("Map Error: Protomaps scripts failed to load. Check the browser console and server configuration.") }}</div>`;
+                        return;
+                    }
+                    try {
+                        const paintRules = [
+                            { dataLayer: "water", symbolizer: new protomapsL.PolygonSymbolizer({ fill: "#1e3a8a" }) },
+                            { dataLayer: "landuse", symbolizer: new protomapsL.PolygonSymbolizer({ fill: "#161b22" }) },
+                            { dataLayer: "natural", symbolizer: new protomapsL.PolygonSymbolizer({ fill: "#161b22" }) },
+                            { dataLayer: "transit", symbolizer: new protomapsL.LineSymbolizer({ color: "#374151", width: 1 })},
+                            {
+                                dataLayer: "roads",
+                                symbolizer: new protomapsL.LineSymbolizer({
+                                    color: (z,f) => (f.props.highway_kind === "highway" || f.props.highway_kind === "motorway") ? "#6b7280" : "#4b5563",
+                                    width: (z,f) => (f.props.highway_kind === "highway" || f.props.highway_kind === "motorway") ? (z > 14 ? 3 : 2) : (z > 14 ? 2 : 1)
+                                })
+                            },
+                            { dataLayer: "buildings", symbolizer: new protomapsL.PolygonSymbolizer({ fill: "#22282f" }) },
+                            { dataLayer: "boundaries", symbolizer: new protomapsL.LineSymbolizer({ color: "#39FF14", width: 0.5, opacity: 0.4 }) }
+                        ];
+                        const labelRules = [
+                            {
+                                dataLayer: "places",
+                                symbolizer: new protomapsL.CenteredTextSymbolizer({
+                                    label_props: ["name:{{ user_locale }}","name"],
+                                    fill: (z,f) => (f.props.kind === 'country' || f.props.kind === 'region') ? '#FFF01F' : '#c9d1d9',
+                                    stroke: "#0d1117",
+                                    width: 2,
+                                    font: (z,f) => {
+                                        if (f.props.kind === 'country') return "bold 14px RobotoMono, monospace";
+                                        if (f.props.kind === 'region') return "bold 12px RobotoMono, monospace";
+                                        return "11px RobotoMono, monospace";
+                                    }
+                                })
+                            },
+                            {
+                                dataLayer: "roads",
+                                symbolizer: new protomapsL.LineLabelSymbolizer({
+                                    label_props: ["name:{{ user_locale }}","name"],
+                                    fill: "#8b949e",
+                                    stroke: "#0d1117",
+                                    width: 2,
+                                    font: "10px RobotoMono, monospace"
+                                })
+                            },
+                            { dataLayer: "water", symbolizer: new protomapsL.CenteredTextSymbolizer({ label_props: ["name"], fill: "#00c6ff", stroke: "#0d1117", font: "italic 12px sans-serif" }) },
+                            { dataLayer: "pois", symbolizer: new protomapsL.CenteredTextSymbolizer({ label_props: ["name"], fill: "#c9d1d9", stroke: "#0d1117", font: "10px sans-serif" }) }
+                        ];
+                        let mapUrl = protomapsUrl;
+                        if (protomapsUrl.endsWith('.pmtiles') && typeof pmtiles !== 'undefined') {
+                            const pmtilesSource = new pmtiles.FetchSource(protomapsUrl, new Headers({'Cache-Control': 'no-cache', 'Pragma': 'no-cache'}));
+                            pmtilesSource.chromeWindowsNoCache = true;
+                            mapUrl = new pmtiles.PMTiles(pmtilesSource);
+                        }
+                        protomapsL.leafletLayer({
+                            url: mapUrl,
+                            paintRules: paintRules,
+                            labelRules: labelRules,
+                            backgroundColor: "#0d1117"
+                        }).addTo(this.map);
+                    } catch (e) {
+                         console.error('Error initializing Protomaps layer:', e);
+                         document.getElementById('vehicle-map').innerHTML = `<div class="flex items-center justify-center h-full text-red-400 p-4 text-center">{{ _("Map Error: Could not initialize Protomaps layer.") }}</div>`;
+                    }
+                } else {
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors', maxZoom: 19
+                    }).addTo(this.map);
+                }
+
+                if (initialLat !== null) { this.marker = L.marker([initialLat, initialLon]).addTo(this.map).bindPopup({{ (vehicle.vehicle_name or vehicle.vehicle_id) | tojson | safe }}); }
+                // Protomaps sizes its canvas at layer-add time; a proxy or font-load reflow can
+                // settle the container after that frame. Two deferred invalidations cover both.
+                requestAnimationFrame(() => { if (this.map) this.map.invalidateSize({ pan: false }); });
+                setTimeout(() => { if (this.map) this.map.invalidateSize({ pan: false }); }, 500);
+            },
+            updateMapLocation(newLat, newLon) {
+                if (!this.map || newLat === null || newLon === null || isNaN(parseFloat(newLat)) || isNaN(parseFloat(newLon))) return;
+                const newLatLng = L.latLng(parseFloat(newLat), parseFloat(newLon));
+                const newZoom = this.map.getZoom() < 10 ? 13 : this.map.getZoom();
+                // Always update the marker position
+                if (this.marker) { this.marker.setLatLng(newLatLng); }
+                else { this.marker = L.marker(newLatLng).addTo(this.map).bindPopup({{ (vehicle.vehicle_name or vehicle.vehicle_id) | tojson | safe }}); }
+                // Only pan/zoom the map when the vehicle leaves the visible area or zoom is too low.
+                // Calling setView on every WebSocket tick removes tiles from the DOM mid-render,
+                // causing Protomaps to draw to detached canvas elements that are never displayed.
+                if (this.map.getZoom() < 10 || !this.map.getBounds().contains(newLatLng)) {
+                    this.map.setView(newLatLng, newZoom);
+                }
+            },
+            getMetricDisplayValue(key) { const value = this.liveData[key]; return (value === undefined || value === null) ? 'N/A' : String(value); },
+            getMetricDisplay(key, unit = '', precision = null, isString = false) {
+                const value = this.liveData[key];
+                if (value === undefined || value === null) return 'N/A';
+                let displayValue = String(value);
+                if (!isString && precision !== null) { const num = parseFloat(value); if (!isNaN(num)) displayValue = num.toFixed(precision); }
+                return displayValue + unit;
+            },
+            getPositionTextDisplay() {
+                const latVal = this.liveData.lat, lonVal = this.liveData.lon;
+                if (latVal === null || lonVal === null) return 'N/A';
+                try { return `${parseFloat(latVal).toFixed(3)}, ${parseFloat(lonVal).toFixed(3)}`; } catch (e) { return 'Invalid Coords'; }
+            },
+            getUnitSuffix() { return vehicleDetailConfig.userPrefersImperial ? ' mi' : ' km'; },
+            normalizeToKm(value, vehicleUnits) {
+                const v = parseFloat(value);
+                if (isNaN(v)) return null;
+                const u = String(vehicleUnits || '').toUpperCase();
+                return (u !== '' && u !== 'N/A' && u !== 'K') ? v * MI_TO_KM : v;
+            },
+            formatMetricDistance(rawValue) {
+                const u = String(this.liveData?.units || '').toUpperCase();
+                const km = this.normalizeToKm(rawValue, u);
+                if (km === null) return 'N/A';
+                if (vehicleDetailConfig.userPrefersImperial) return `${(km * KM_TO_MI).toFixed(0)} mi`;
+                return `${km.toFixed(0)} km`;
+            },
+            getBarPercentage(v, min, range) { if (v === null || isNaN(v) || range <= 0) return 0; return Math.max(0, Math.min(100, ((v - min) / range) * 100)); },
+            getTyrePressureBarColor(p) { if (p === null || isNaN(p)) return 'bg-gray-500'; if (p < 1.8 || p > 3.0) return 'bg-red-500'; if (p < 2.0 || p > 2.8) return 'bg-yellow-500'; return 'bg-green-500'; },
+            getCellVoltageBarColor(v, min, max) { if (v === null || isNaN(v)) return 'bg-gray-500'; const range = max - min; if (range === 0) return 'bg-green-500'; const deviation = Math.abs(v - ((max + min) / 2)); const percentage = (deviation / (range / 2)) * 100; if (percentage > 75) return 'bg-red-500'; if (percentage > 50) return 'bg-yellow-500'; return 'bg-green-500'; },
+            getCellTempBarColor(t) { if (t === null || isNaN(t)) return 'bg-gray-500'; if (t > 45 || t < 5) return 'bg-red-500'; if (t > 35 || t < 10) return 'bg-yellow-500'; return 'bg-green-500'; },
+            humanizeKey(key) { if (typeof key !== 'string') return key; return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); },
+            groupV2Metrics(metrics) { if (!metrics) return {}; const grouped = {}; for (const [key, value] of Object.entries(metrics)) { const [prefix, ...rest] = key.split('.'); if (!grouped[prefix]) grouped[prefix] = {}; grouped[prefix][rest.join('.')] = value; } return grouped; },
+            formatTerminalText(text) { return typeof text === 'string' ? text.replace(/\r\n/g, '\n').replace(/\r/g, '\n') : text; },
+            async submitCommand() {
+                if (!this.currentCommand.trim() || this.isSubmitting || !this.isTerminalProtocolOnline()) return;
+                this.isSubmitting = true;
+                const originalCmd = this.currentCommand.trim();
+                const finalCmd = /^\d+,/.test(originalCmd) ? originalCmd : `7,${originalCmd}`;
+                const cmdToSend = this.selectedTerminalProtocol === 'v2' ? finalCmd : originalCmd;
+
+                this.appendCommandLine('command', this.promptText + originalCmd);
+                if (!this.sentCommandHistory.includes(originalCmd)) this.sentCommandHistory.unshift(originalCmd);
+                this.sentCommandHistoryIndex = -1; this.currentCommand = '';
+                this.$nextTick(() => this.scrollToBottom());
+
+                try {
+                    const response = await fetch("{{ url_for('ui_send_command_to_vehicle_ajax', vehicle_module_id=vehicle.vehicle_id) }}", {
+                        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ command_str: cmdToSend, protocol_preference: this.selectedTerminalProtocol, csrf_token: window.csrfToken || this.csrfToken })
+                    });
+                    const result = await response.json();
+                    if (result.csrf_token) { this.csrfToken = result.csrf_token; window.csrfToken = result.csrf_token; }
+                    let responseText = `Failed: ${result.response_data || result.error_message || 'Unknown error'}`;
+                    if (response.ok && result.success) {
+                        if (this.selectedTerminalProtocol === 'v2' && result.response_data) {
+                            const parts = result.response_data.split(',');
+                            if (parts.length >= 2 && parts[1].trim() === '0') {
+                                const messageParts = parts.slice(2);
+                                responseText = messageParts.length > 0 ? messageParts.join(',') : 'OK';
+                            } else {
+                                responseText = result.response_data;
+                            }
+                        } else {
+                            responseText = result.response_data || 'Success';
+                        }
+                    }
+                    this.appendCommandLine(response.ok && result.success ? 'response' : 'error', this.formatTerminalText(responseText), true);
+                } catch (error) { this.appendCommandLine('error', this.formatTerminalText(`Network error: ${error.message}`), true); }
+                this.isSubmitting = false;
+                this.refreshTerminalUi();
+                this.$nextTick(() => { this.scrollToBottom(); if (this.$refs.commandInput) this.$refs.commandInput.focus(); });
+            },
+            scrollToBottom() { if (this.$refs.terminalOutput) this.$refs.terminalOutput.scrollTop = this.$refs.terminalOutput.scrollHeight; },
+            showPreviousCommand() { if (this.sentCommandHistory.length > 0 && this.sentCommandHistoryIndex < this.sentCommandHistory.length - 1) { this.sentCommandHistoryIndex++; this.currentCommand = this.sentCommandHistory[this.sentCommandHistoryIndex]; } },
+            showNextCommand() { if (this.sentCommandHistoryIndex > 0) { this.sentCommandHistoryIndex--; this.currentCommand = this.sentCommandHistory[this.sentCommandHistoryIndex]; } else if (this.sentCommandHistoryIndex <= 0) { this.sentCommandHistoryIndex = -1; this.currentCommand = ""; } },
+            handleCommandInput(event) { this.currentCommand = event?.target?.value || ''; },
+            activateOverviewTab() { this.activeTab = 'overview'; },
+            activateTripsTab() { this.activeTab = 'trips'; },
+            activateSearchTab() { this.activeTab = 'search'; },
+            activateChargesTab() { this.activeTab = 'charges'; },
+            activateTerminalTab() { this.activeTab = 'terminal'; },
+            activateCellStatsTab() { if (!this.cellStatsTabDisabled) this.activeTab = 'cell_stats'; },
+            activateMetricsTab() { this.activeTab = 'metrics'; },
+            activateLogsTab() { this.activeTab = 'logs'; },
+            activateNotificationsTab() { this.activeTab = 'notifications'; }
+        }));
+
+        Alpine.data('notifForms', () => ({
+            showNtfyForm: false,
+            showEmailForm: false,
+            showNtfyBearer: false,
+            showNtfyBasic: false,
+            showNtfyQuery: false,
+            toggleNtfy() { this.showNtfyForm = !this.showNtfyForm; },
+            toggleEmail() { this.showEmailForm = !this.showEmailForm; },
+            closeNtfy() {
+                this.showNtfyForm = false;
+                this.showNtfyBearer = false;
+                this.showNtfyBasic = false;
+                this.showNtfyQuery = false;
+            },
+            closeEmail() { this.showEmailForm = false; },
+            setNtfyAuthMethod(event) {
+                const m = event.target.value;
+                this.showNtfyBearer = (m === 'bearer');
+                this.showNtfyBasic  = (m === 'basic');
+                this.showNtfyQuery  = (m === 'query');
+            },
+            confirmAndSubmit(event) {
+                const msg = event.currentTarget.dataset.confirm;
+                if (confirm(msg)) event.currentTarget.submit();
+            }
+        }));
+    });
+
+    function _create_user_friendly_v3_metric_groups(metrics) {
+        if (!metrics) return {};
+        const groupDefinitions = [
+            ["Vehicle Specific", "x"], ["Server / System", "s."],
+            ["Battery Cells", "v.b.p."], ["Battery Cells", "v.b.c."],
+            ["12V System", "v.e.12v"], ["12V System", "v.c.12v"],
+            ["12V System", "v.b.12v"], ["Charging", "v.c."],
+            ["Main Battery", "v.b."], ["Environment", "v.e."],
+            ["Position (GPS)", "v.p."], ["Doors & Windows", "v.d."],
+            ["Tires", "v.t."], ["Service", "v.s."], ["Vehicle", "v."],
+        ];
+        let grouped = {};
+        for (const [key, value] of Object.entries(metrics).sort()) {
+            let assignedGroup = "Miscellaneous";
+            for (const [groupName, prefix] of groupDefinitions) {
+                if (key.startsWith(prefix)) {
+                    assignedGroup = groupName;
+                    break;
+                }
+            }
+            if (!grouped[assignedGroup]) grouped[assignedGroup] = {};
+            grouped[assignedGroup][key] = value;
+        }
+        return Object.keys(grouped).sort().reduce((obj, key) => { obj[key] = grouped[key]; return obj; }, {});
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', installTripPreviewObserver, { once: true });
+    } else {
+        installTripPreviewObserver();
+    }
+
+</script>
+{% endblock %}

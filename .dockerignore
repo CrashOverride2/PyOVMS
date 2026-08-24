@@ -1,0 +1,71 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+.forgejo
+.github
+
+# Documentation
+*.md
+docs/
+!privacy_policy.md
+
+# Python cache
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Data and logs
+*.log
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Environment files (should be mounted)
+.env
+.env.*
+
+# Node modules (will be installed in build)
+node_modules/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# NOTE: alembic.ini must NOT be excluded. app.bootstrap.run_migrations() loads it by
+# path at startup, so an image built without it comes up with an empty schema and only
+# an ERROR line in the log to show for it.
+
+# Temporary files
+tmp/
+temp/
+*.tmp

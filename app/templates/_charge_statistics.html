@@ -1,0 +1,92 @@
+<div>
+    <h2 class="text-xl font-semibold text-neon-blue mb-4">{{ _('Charge Statistics') }}</h2>
+    <div x-show="chargeStatsState.showLoading" class="p-4 text-center text-text-secondary">
+        <p>{{ _('Loading statistics...') }}</p>
+    </div>
+    <div x-show="chargeStatsState.showError"
+        class="p-4 text-center text-red-400 bg-red-900/40 border border-red-700/60 rounded-md">
+        <p x-text="chargeStatsState.error"></p>
+    </div>
+
+    <div x-show="chargeStatsState.hasStats">
+        <div x-cloak>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2">
+                    <div
+                        class="bg-card-bg p-4 rounded-md h-96 flex justify-between gap-1 border border-border-color overflow-x-auto">
+                        <template x-for="month in chargeStatsState.monthlyBars" :key="month.id">
+                            <div class="flex-1 flex flex-col items-center justify-end group cursor-pointer min-w-[2rem]"
+                                @click="chargeStatsState.selectMonth"
+                                :data-month-index="month.index">
+                                <div class="text-center text-xs text-text-primary mb-1"
+                                    x-text="month.energyShortText"></div>
+                                <div class="w-full bg-neon-blue/80 rounded-t-sm transition-all duration-300 hover:bg-neon-blue"
+                                    :style="month.barStyle">
+                                </div>
+                                <div class="text-center text-xs text-text-secondary mt-1 w-12 mx-auto leading-tight"
+                                    x-text="month.periodLabelText"></div>
+                            </div>
+                        </template>
+                        <div x-show="chargeStatsState.noMonthlyData"
+                            class="flex items-center justify-center w-full h-full text-text-secondary">
+                            <p>{{ _('No charge data for this period.') }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-col space-y-4 h-96">
+                    <div class="bg-card-bg p-4 rounded-md border border-border-color">
+                        <h3 class="font-semibold text-neon-yellow mb-2">{{ _('Lifetime Totals') }}</h3>
+                        <dl class="text-sm space-y-1">
+                            <div class="flex justify-between">
+                                <dt class="text-text-secondary">{{ _('Total Sessions') }}</dt>
+                                <dd class="text-text-primary font-medium" x-text="chargeStatsState.lifetimeTotalChargesText"></dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-text-secondary">{{ _('Total Energy Charged') }}</dt>
+                                <dd class="text-text-primary font-medium" x-text="chargeStatsState.lifetimeTotalEnergyText"></dd>
+                            </div>
+                             <div class="flex justify-between">
+                                <dt class="text-text-secondary">{{ _('Total Time Charging') }}</dt>
+                                <dd class="text-text-primary font-medium" x-text="chargeStatsState.lifetimeTotalDurationText"></dd>
+                            </div>
+                            <div class="flex justify-between pt-1 border-t border-border-color/20">
+                                <dt class="text-text-secondary">{{ _('Avg. Energy / Session') }}</dt>
+                                <dd class="text-text-primary font-medium" x-text="chargeStatsState.lifetimeAverageEnergyText"></dd>
+                            </div>
+                             <div class="flex justify-between">
+                                <dt class="text-text-secondary">{{ _('Avg. Duration / Session') }}</dt>
+                                <dd class="text-text-primary font-medium" x-text="chargeStatsState.lifetimeAverageDurationText"></dd>
+                            </div>
+                             <div class="flex justify-between">
+                                <dt class="text-text-secondary">{{ _('Avg. SOC Gained') }}</dt>
+                                <dd class="text-text-primary font-medium" x-text="chargeStatsState.lifetimeAverageSocGainedText"></dd>
+                            </div>
+                        </dl>
+                    </div>
+                    <div class="bg-card-bg p-4 rounded-md border border-border-color flex-grow">
+                        <div x-show="chargeStatsState.selectedMonthDetailVisible">
+                            <div>
+                                <h3 class="font-semibold text-neon-yellow mb-2" x-text="chargeStatsState.selectedMonthTitleText"></h3>
+                                <dl class="text-sm space-y-1">
+                                    <div class="flex justify-between">
+                                        <dt class="text-text-secondary">{{ _('Charge Sessions') }}</dt>
+                                        <dd class="text-text-primary font-medium" x-text="chargeStatsState.selectedMonthChargesText"></dd>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <dt class="text-text-secondary">{{ _('Energy Charged') }}</dt>
+                                        <dd class="text-text-primary font-medium" x-text="chargeStatsState.selectedMonthEnergyText"></dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+                        <div x-show="chargeStatsState.selectedMonthPromptVisible">
+                            <div class="flex items-center justify-center h-full text-text-secondary text-sm">
+                                <p>{{ _('Click a bar on the chart to see monthly details.') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

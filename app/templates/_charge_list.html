@@ -1,0 +1,79 @@
+{% include '_charge_statistics.html' %}
+<hr class="border-border-color/50 my-8">
+<h2 id="charge-list-anchor" class="text-xl font-semibold text-neon-blue mb-4">{{ _('Individual Charge Sessions') }}</h2>
+
+<div x-show="chargeLogState.showLoading" class="p-4 text-center text-text-secondary">
+    <p>{{ _('Loading charge logs...') }}</p>
+</div>
+
+<div x-show="chargeLogState.showError" class="p-4 text-center text-red-400 bg-red-900/40 border border-red-700/60 rounded-md">
+    <p x-text="chargeLogState.error"></p>
+</div>
+
+<div x-show="chargeLogState.showEmpty" class="p-4 text-center text-text-secondary">
+    <p>{{ _('No charge logs have been recorded for this vehicle yet.') }}</p>
+</div>
+
+<div x-show="chargeLogState.showList" class="space-y-4">
+    <div class="flex justify-end">
+        <a :href="chargeLogState.exportHref"
+           class="px-4 py-2 text-sm font-medium text-neon-green border border-neon-green rounded-md hover:bg-neon-green hover:text-dark-bg transition-colors">
+            {{ _('Export All (CSV)') }}
+        </a>
+    </div>
+
+    <template x-for="charge in chargeLogState.displayCharges" :key="charge.id">
+        <div class="bg-gray-800/50 p-4 rounded-md border border-border-color/50 transition-all hover:border-neon-blue/70 relative">
+            <div class="absolute top-2 right-2 z-10">
+                <button @click.stop="chargeLogState.selectChargeForDelete"
+                    :data-charge-id="charge.id"
+                    class="px-2 py-1 text-xs text-red-400 border border-red-500/50 rounded bg-card-bg/50 backdrop-blur-sm hover:bg-red-500/20 transition-colors" title="{{ _('Delete Charge') }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 011-1h4a1 1 0 110 2H8a1 1 0 01-1-1z" clip-rule="evenodd" /></svg>
+                </button>
+            </div>
+            <a :href="charge.detailHref" class="block">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                        <dt class="text-text-secondary text-xs">{{ _('Start Time') }}</dt>
+                        <dd class="text-text-primary font-medium" x-text="charge.startTimeText"></dd>
+                    </div>
+                    <div>
+                        <dt class="text-text-secondary text-xs">{{ _('Duration') }}</dt>
+                        <dd class="text-text-primary font-medium" x-text="charge.durationText"></dd>
+                    </div>
+                    <div>
+                        <dt class="text-text-secondary text-xs">{{ _('SOC') }}</dt>
+                        <dd class="text-text-primary font-medium flex items-center">
+                            <span x-text="charge.startSocText"></span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mx-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                            <span x-text="charge.endSocText"></span>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-text-secondary text-xs">{{ _('Energy Charged') }}</dt>
+                        <dd class="text-text-primary font-medium" x-text="charge.energyText"></dd>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </template>
+
+    <!-- Pagination for Charges -->
+    <nav x-show="chargeLogState.hasPagination" class="flex items-center justify-between border-t border-border-color/50 px-4 sm:px-0 pt-4 mt-6">
+        <div class="flex-1 flex justify-start">
+            <button x-show="chargeLogState.showPrevPage" @click="chargeLogState.goToPreviousPage"
+                :disabled="chargeLogState.isPaginating"
+                class="relative inline-flex items-center px-4 py-2 border border-border-color text-sm font-medium rounded-md text-text-secondary bg-card-bg hover:bg-gray-800 disabled:opacity-50">
+                {{ _('Previous') }}
+            </button>
+        </div>
+        <p class="text-sm text-text-secondary">{{ _('Page') }} <span x-text="chargeLogState.currentPageText"></span> {{ _('of') }} <span x-text="chargeLogState.totalPagesText"></span></p>
+        <div class="flex-1 flex justify-end">
+            <button x-show="chargeLogState.showNextPage" @click="chargeLogState.goToNextPage"
+                :disabled="chargeLogState.isPaginating"
+                class="ml-3 relative inline-flex items-center px-4 py-2 border border-border-color text-sm font-medium rounded-md text-text-secondary bg-card-bg hover:bg-gray-800 disabled:opacity-50">
+                {{ _('Next') }}
+            </button>
+        </div>
+    </nav>
+</div>

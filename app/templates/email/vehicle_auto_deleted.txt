@@ -1,0 +1,16 @@
+{{ _('Hello %(name)s,') % {'name': display_name} }}
+
+{{ _('This is an automated notice from your PyOVMS server.') }}
+
+{{ _('Your vehicle %(vehicle_id)s has been automatically removed from the server because it had not communicated for more than 12 months and no activity was detected after the inactivity notice was sent.') % {'vehicle_id': vehicle_id} }}
+
+{% if vehicle_name %}{{ _('Vehicle name') }}: {{ vehicle_name }}{% endif %}
+{{ _('Vehicle ID') }}: {{ vehicle_id }}
+
+{{ _('All associated data including charge logs and trip records has been deleted.') }}
+
+{{ _('If you wish to continue monitoring this vehicle, you can register it again at:') }}
+{{ server_base_url }}
+
+{{ _('PyOVMS Control Server') }}
+{{ server_base_url }}

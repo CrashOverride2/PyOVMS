@@ -1,0 +1,1672 @@
+{
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HeatmapPoint": {
+        "description": "Represents a single point in a heatmap, with a weight.",
+        "properties": {
+          "lat": {
+            "title": "Lat",
+            "type": "number"
+          },
+          "lon": {
+            "title": "Lon",
+            "type": "number"
+          },
+          "weight": {
+            "title": "Weight",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "lat",
+          "lon",
+          "weight"
+        ],
+        "title": "HeatmapPoint",
+        "type": "object"
+      },
+      "PaginatedTripSearchSummary": {
+        "description": "Holds a list of trip search results along with pagination metadata.",
+        "properties": {
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationDetails"
+          },
+          "trips": {
+            "items": {
+              "$ref": "#/components/schemas/TripSearchResult"
+            },
+            "title": "Trips",
+            "type": "array"
+          }
+        },
+        "required": [
+          "pagination",
+          "trips"
+        ],
+        "title": "PaginatedTripSearchSummary",
+        "type": "object"
+      },
+      "PaginatedTripSummary": {
+        "description": "A model to hold a list of trip summaries along with pagination metadata.",
+        "properties": {
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationDetails"
+          },
+          "trips": {
+            "items": {
+              "$ref": "#/components/schemas/TripSummary"
+            },
+            "title": "Trips",
+            "type": "array"
+          }
+        },
+        "required": [
+          "pagination",
+          "trips"
+        ],
+        "title": "PaginatedTripSummary",
+        "type": "object"
+      },
+      "PaginationDetails": {
+        "properties": {
+          "current_page": {
+            "title": "Current Page",
+            "type": "integer"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "total_items": {
+            "title": "Total Items",
+            "type": "integer"
+          },
+          "total_pages": {
+            "title": "Total Pages",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_items",
+          "total_pages",
+          "current_page",
+          "limit"
+        ],
+        "title": "PaginationDetails",
+        "type": "object"
+      },
+      "StatDetail": {
+        "description": "Represents aggregated statistics for a single time period.",
+        "properties": {
+          "average_distance_per_trip_km": {
+            "title": "Average Distance Per Trip Km",
+            "type": "number"
+          },
+          "average_duration_per_trip_seconds": {
+            "title": "Average Duration Per Trip Seconds",
+            "type": "integer"
+          },
+          "longest_trip_km": {
+            "title": "Longest Trip Km",
+            "type": "number"
+          },
+          "most_active_day_of_week": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Most Active Day Of Week"
+          },
+          "overall_average_speed_kph": {
+            "title": "Overall Average Speed Kph",
+            "type": "number"
+          },
+          "period": {
+            "description": "The start date of the aggregation period (day, week, or month).",
+            "format": "date",
+            "title": "Period",
+            "type": "string"
+          },
+          "shortest_trip_km": {
+            "title": "Shortest Trip Km",
+            "type": "number"
+          },
+          "total_distance_km": {
+            "title": "Total Distance Km",
+            "type": "number"
+          },
+          "total_duration_seconds": {
+            "title": "Total Duration Seconds",
+            "type": "integer"
+          },
+          "total_energy_used_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Energy Used Kwh"
+          },
+          "total_soc_used": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Soc Used"
+          },
+          "trip_count": {
+            "title": "Trip Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "period",
+          "total_distance_km",
+          "total_duration_seconds",
+          "trip_count",
+          "average_distance_per_trip_km",
+          "average_duration_per_trip_seconds",
+          "overall_average_speed_kph",
+          "longest_trip_km",
+          "shortest_trip_km"
+        ],
+        "title": "StatDetail",
+        "type": "object"
+      },
+      "TotalStats": {
+        "description": "Represents the lifetime total statistics for a vehicle.",
+        "properties": {
+          "average_distance_per_trip_km": {
+            "title": "Average Distance Per Trip Km",
+            "type": "number"
+          },
+          "average_duration_per_trip_seconds": {
+            "title": "Average Duration Per Trip Seconds",
+            "type": "integer"
+          },
+          "longest_trip_km": {
+            "title": "Longest Trip Km",
+            "type": "number"
+          },
+          "most_active_day_of_week": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Most Active Day Of Week"
+          },
+          "overall_average_speed_kph": {
+            "title": "Overall Average Speed Kph",
+            "type": "number"
+          },
+          "shortest_trip_km": {
+            "title": "Shortest Trip Km",
+            "type": "number"
+          },
+          "total_distance_km": {
+            "title": "Total Distance Km",
+            "type": "number"
+          },
+          "total_duration_seconds": {
+            "title": "Total Duration Seconds",
+            "type": "integer"
+          },
+          "total_energy_used_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Energy Used Kwh"
+          },
+          "total_soc_used": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Soc Used"
+          },
+          "total_trips": {
+            "title": "Total Trips",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_distance_km",
+          "total_duration_seconds",
+          "total_trips",
+          "average_distance_per_trip_km",
+          "average_duration_per_trip_seconds",
+          "overall_average_speed_kph",
+          "longest_trip_km",
+          "shortest_trip_km"
+        ],
+        "title": "TotalStats",
+        "type": "object"
+      },
+      "TripDetail": {
+        "properties": {
+          "average_speed_kph": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Speed Kph"
+          },
+          "average_speed_mph": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Average Speed Mph"
+          },
+          "consumption_kwh_per_100km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Consumption Kwh Per 100Km"
+          },
+          "consumption_kwh_per_100mi": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Consumption Kwh Per 100Mi"
+          },
+          "distance_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Km"
+          },
+          "distance_miles": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Distance Miles"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds"
+          },
+          "end_soc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Soc"
+          },
+          "end_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          },
+          "energy_used_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Used Kwh"
+          },
+          "geojson": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A GeoJSON LineString object representing the trip track.",
+            "title": "Geojson"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "map_preview_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Map Preview Path"
+          },
+          "soc_used": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soc Used"
+          },
+          "start_soc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Soc"
+          },
+          "start_time": {
+            "format": "date-time",
+            "title": "Start Time",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "vehicle_id": {
+            "title": "Vehicle Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "vehicle_id",
+          "status",
+          "start_time",
+          "consumption_kwh_per_100km",
+          "consumption_kwh_per_100mi",
+          "distance_miles",
+          "average_speed_mph"
+        ],
+        "title": "TripDetail",
+        "type": "object"
+      },
+      "TripSearchResult": {
+        "description": "Represents a trip found in a proximity search, including its distance to\nthe search origin. The distance is only included for proximity searches.",
+        "properties": {
+          "average_speed_kph": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Speed Kph"
+          },
+          "average_speed_mph": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Average Speed Mph"
+          },
+          "consumption_kwh_per_100km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Consumption Kwh Per 100Km"
+          },
+          "consumption_kwh_per_100mi": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Consumption Kwh Per 100Mi"
+          },
+          "distance_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Km"
+          },
+          "distance_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance M"
+          },
+          "distance_miles": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Distance Miles"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds"
+          },
+          "end_soc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Soc"
+          },
+          "end_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          },
+          "energy_used_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Used Kwh"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "map_preview_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Map Preview Path"
+          },
+          "soc_used": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soc Used"
+          },
+          "start_soc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Soc"
+          },
+          "start_time": {
+            "format": "date-time",
+            "title": "Start Time",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "vehicle_id": {
+            "title": "Vehicle Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "vehicle_id",
+          "status",
+          "start_time",
+          "consumption_kwh_per_100km",
+          "consumption_kwh_per_100mi",
+          "distance_miles",
+          "average_speed_mph"
+        ],
+        "title": "TripSearchResult",
+        "type": "object"
+      },
+      "TripStatistics": {
+        "description": "Holds aggregated trip statistics for daily, weekly, and monthly periods, plus totals.",
+        "properties": {
+          "daily": {
+            "items": {
+              "$ref": "#/components/schemas/StatDetail"
+            },
+            "title": "Daily",
+            "type": "array"
+          },
+          "monthly": {
+            "items": {
+              "$ref": "#/components/schemas/StatDetail"
+            },
+            "title": "Monthly",
+            "type": "array"
+          },
+          "total": {
+            "$ref": "#/components/schemas/TotalStats"
+          },
+          "weekly": {
+            "items": {
+              "$ref": "#/components/schemas/StatDetail"
+            },
+            "title": "Weekly",
+            "type": "array"
+          }
+        },
+        "required": [
+          "total",
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "title": "TripStatistics",
+        "type": "object"
+      },
+      "TripSummary": {
+        "properties": {
+          "average_speed_kph": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Speed Kph"
+          },
+          "average_speed_mph": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Average Speed Mph"
+          },
+          "consumption_kwh_per_100km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Consumption Kwh Per 100Km"
+          },
+          "consumption_kwh_per_100mi": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Consumption Kwh Per 100Mi"
+          },
+          "distance_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Km"
+          },
+          "distance_miles": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Distance Miles"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds"
+          },
+          "end_soc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Soc"
+          },
+          "end_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          },
+          "energy_used_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Used Kwh"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "map_preview_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Map Preview Path"
+          },
+          "soc_used": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soc Used"
+          },
+          "start_soc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Soc"
+          },
+          "start_time": {
+            "format": "date-time",
+            "title": "Start Time",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "vehicle_id": {
+            "title": "Vehicle Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "vehicle_id",
+          "status",
+          "start_time",
+          "consumption_kwh_per_100km",
+          "consumption_kwh_per_100mi",
+          "distance_miles",
+          "average_speed_mph"
+        ],
+        "title": "TripSummary",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "APIKeyHeader": {
+        "in": "header",
+        "name": "X-API-Key",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "contact": {
+      "name": "OVMS Karto",
+      "url": "https://github.com/openvehicles/Open-Vehicle-Monitoring-System-3"
+    },
+    "description": "\nKarto is a trip tracking and analysis service for vehicles monitored via\n[OVMS (Open Vehicle Monitoring System)](https://www.openvehicles.com/).\n\nIt ingests GPS and telemetry data from MQTT, assembles them into discrete trips,\nand exposes them through this REST API.\n\n## Authentication\n\nAll endpoints require authentication via one of:\n- **JWT cookie** \u2013 issued by the OVMS web UI (cookie name `ovms_session`)\n- **API key** \u2013 passed in the `X-API-Key` request header\n\nBoth methods are validated against the OVMS user database.\n\n## Units\n\nUnless noted otherwise, all source data from MQTT is metric:\n- Distances: **km** (plus `_miles` variants)\n- Speeds: **km/h** (plus `_mph` variants)\n- Energy: **kWh**\n- Consumption: **kWh/100 km** (plus `_per_100mi` variants)\n\n## Data model\n\nA **Trip** begins when `v.e.on=1` is received together with a first GPS fix, and ends\nafter a configurable grace period once `v.e.on=0` is received. Trips shorter than\n`KARTO_TRIP_MIN_DISTANCE_KM` are automatically discarded.\n",
+    "title": "Karto Trip Service",
+    "version": "1.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/karto/v1/maps/{filename}": {
+      "get": {
+        "description": "Serves a specific map image after verifying ownership.\nThe filename is expected to be in the format: {VEHICLE_ID}_{TRIP_ID}.png",
+        "operationId": "get_map_image_api_karto_v1_maps__filename__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "filename",
+            "required": true,
+            "schema": {
+              "title": "Filename",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Serve trip map preview",
+        "tags": [
+          "Karto API",
+          "Trips"
+        ]
+      }
+    },
+    "/api/karto/v1/trips/search": {
+      "get": {
+        "description": "Searches for trips based on geographic criteria for all vehicles owned by the user.\n\n**Search Modes:**\n1.  **Proximity (Circle):** Provide `lat`, `lon`, and `radius_m`.\n    - `relation`: `starts_within_radius` or `ends_within_radius`.\n    - Results are sorted by distance from the search point.\n2.  **Bounding Box:** Provide `bbox` as a comma-separated string.\n    - `relation`: `starts_within_bbox` or `ends_within_bbox`.",
+        "operationId": "search_trips_by_location_api_karto_v1_trips_search_get",
+        "parameters": [
+          {
+            "description": "Filter results to a single vehicle ID.",
+            "in": "query",
+            "name": "vehicle_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter results to a single vehicle ID.",
+              "title": "Vehicle Id"
+            }
+          },
+          {
+            "description": "Latitude for proximity search.",
+            "in": "query",
+            "name": "lat",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Latitude for proximity search.",
+              "title": "Lat"
+            }
+          },
+          {
+            "description": "Longitude for proximity search.",
+            "in": "query",
+            "name": "lon",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Longitude for proximity search.",
+              "title": "Lon"
+            }
+          },
+          {
+            "description": "Radius in meters for proximity search.",
+            "in": "query",
+            "name": "radius_m",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Radius in meters for proximity search.",
+              "title": "Radius M"
+            }
+          },
+          {
+            "description": "Bounding box: min_lon,min_lat,max_lon,max_lat",
+            "in": "query",
+            "name": "bbox",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bounding box: min_lon,min_lat,max_lon,max_lat",
+              "title": "Bbox"
+            }
+          },
+          {
+            "in": "query",
+            "name": "relation",
+            "required": false,
+            "schema": {
+              "default": "starts_within_radius",
+              "enum": [
+                "starts_within_radius",
+                "ends_within_radius",
+                "starts_within_bbox",
+                "ends_within_bbox"
+              ],
+              "title": "Relation",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedTripSearchSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Search Trips By Location",
+        "tags": [
+          "Karto API",
+          "Trip Search"
+        ]
+      }
+    },
+    "/api/karto/v1/trips/{trip_id}": {
+      "delete": {
+        "description": "Deletes a trip, its associated GPS points, and its map preview image.\nEnsures the authenticated user has permission before deleting.",
+        "operationId": "delete_trip_api_karto_v1_trips__trip_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Delete a trip",
+        "tags": [
+          "Karto API",
+          "Trips"
+        ]
+      },
+      "get": {
+        "description": "Retrieve the full details and GeoJSON track for a single trip,\nensuring the authenticated user has permission.\nAn optional `simplify_tolerance` can be provided to reduce the number of\npoints in the returned GeoJSON track.",
+        "operationId": "get_trip_details_api_karto_v1_trips__trip_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Simplification tolerance in degrees (e.g., 0.0001). Reduces track resolution.",
+            "in": "query",
+            "name": "simplify_tolerance",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Simplification tolerance in degrees (e.g., 0.0001). Reduces track resolution.",
+              "title": "Simplify Tolerance"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Get trip details",
+        "tags": [
+          "Karto API",
+          "Trips"
+        ]
+      }
+    },
+    "/api/karto/v1/trips/{trip_id}/gpx": {
+      "get": {
+        "description": "Exports the trip's track data as a GPX file.",
+        "operationId": "get_trip_gpx_api_karto_v1_trips__trip_id__gpx_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Export trip as GPX",
+        "tags": [
+          "Karto API",
+          "Exports"
+        ]
+      }
+    },
+    "/api/karto/v1/trips/{trip_id}/kml": {
+      "get": {
+        "description": "Exports the trip's track data as a KML file.",
+        "operationId": "get_trip_kml_api_karto_v1_trips__trip_id__kml_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trip_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trip Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Export trip as KML",
+        "tags": [
+          "Karto API",
+          "Exports"
+        ]
+      }
+    },
+    "/api/karto/v1/vehicles/{vehicle_id}/heatmap": {
+      "get": {
+        "description": "Generates heatmap data from all GPS points for a specific vehicle.\nReturns a list of points with weights, suitable for use with libraries\nlike Leaflet.heat.",
+        "operationId": "get_vehicle_heatmap_api_karto_v1_vehicles__vehicle_id__heatmap_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "vehicle_id",
+            "required": true,
+            "schema": {
+              "title": "Vehicle Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The grid cell size in meters for aggregating points.",
+            "in": "query",
+            "name": "grid_size_m",
+            "required": false,
+            "schema": {
+              "default": 100.0,
+              "description": "The grid cell size in meters for aggregating points.",
+              "maximum": 1000,
+              "minimum": 10,
+              "title": "Grid Size M",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HeatmapPoint"
+                  },
+                  "title": "Response Get Vehicle Heatmap Api Karto V1 Vehicles  Vehicle Id  Heatmap Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Get Vehicle Heatmap",
+        "tags": [
+          "Karto API",
+          "Trip Search"
+        ]
+      }
+    },
+    "/api/karto/v1/vehicles/{vehicle_id}/stats": {
+      "get": {
+        "description": "Retrieve total, daily, weekly, and monthly trip statistics for a specific vehicle.\n\nProvides aggregated data including total distance, duration, SoC used, and\nthe number of trips for each period, plus a lifetime total for the given date range.",
+        "operationId": "get_trip_statistics_api_karto_v1_vehicles__vehicle_id__stats_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "vehicle_id",
+            "required": true,
+            "schema": {
+              "title": "Vehicle Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Start date for stats (YYYY-MM-DD). If omitted, goes back indefinitely.",
+            "in": "query",
+            "name": "start_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Start date for stats (YYYY-MM-DD). If omitted, goes back indefinitely.",
+              "title": "Start Date"
+            }
+          },
+          {
+            "description": "End date for stats (YYYY-MM-DD). If omitted, defaults to today.",
+            "in": "query",
+            "name": "end_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "End date for stats (YYYY-MM-DD). If omitted, defaults to today.",
+              "title": "End Date"
+            }
+          },
+          {
+            "description": "Limit for the number of daily stat entries.",
+            "in": "query",
+            "name": "daily_limit",
+            "required": false,
+            "schema": {
+              "default": 14,
+              "description": "Limit for the number of daily stat entries.",
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Daily Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripStatistics"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Get Trip Statistics",
+        "tags": [
+          "Karto API"
+        ]
+      }
+    },
+    "/api/karto/v1/vehicles/{vehicle_id}/trips": {
+      "delete": {
+        "description": "Deletes ALL trips, associated GPS points, and map previews for a vehicle.\nThis is an irreversible operation. Ensures the authenticated user has\npermission before deleting.",
+        "operationId": "delete_all_trips_for_vehicle_api_karto_v1_vehicles__vehicle_id__trips_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "vehicle_id",
+            "required": true,
+            "schema": {
+              "title": "Vehicle Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Delete All Trips For Vehicle",
+        "tags": [
+          "Karto API"
+        ]
+      },
+      "get": {
+        "description": "Retrieve a paginated list of completed trips for a specific vehicle.\n\nEach trip summary includes:\n- `distance_km` / `distance_miles` \u2014 total trip distance\n- `average_speed_kph` / `average_speed_mph` \u2014 average moving speed\n- `soc_used` \u2014 battery State-of-Charge consumed (percentage points)\n- `energy_used_kwh` \u2014 energy consumed in kWh (from MQTT or derived from SoC + capacity)\n- `consumption_kwh_per_100km` / `consumption_kwh_per_100mi` \u2014 average energy efficiency\n- `start_soc` / `end_soc` \u2014 battery level at trip boundaries",
+        "operationId": "get_trips_for_vehicle_api_karto_v1_vehicles__vehicle_id__trips_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "vehicle_id",
+            "required": true,
+            "schema": {
+              "title": "Vehicle Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedTripSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "List trips for a vehicle",
+        "tags": [
+          "Karto API"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "Returns service status and current version.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health check",
+        "tags": [
+          "System"
+        ]
+      }
+    }
+  },
+  "tags": [
+    {
+      "description": "List, retrieve, and delete individual trips. Includes GeoJSON track data.",
+      "name": "Trips"
+    },
+    {
+      "description": "Core per-vehicle trip list, statistics, and vehicle-level operations.",
+      "name": "Karto API"
+    },
+    {
+      "description": "Geographic search across all trips (proximity radius or bounding box).",
+      "name": "Trip Search"
+    },
+    {
+      "description": "Download trip tracks as GPX or KML files.",
+      "name": "Exports"
+    },
+    {
+      "description": "Health and version information.",
+      "name": "System"
+    }
+  ]
+}

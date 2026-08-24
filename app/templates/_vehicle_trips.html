@@ -1,0 +1,8 @@
+<div class="bg-input-bg p-5 rounded-md border border-neon-blue/70 shadow-lg">
+    {% include '_trip_statistics.html' %}
+    <hr class="border-border-color/50 my-8">
+    <h2 class="text-xl font-semibold text-neon-blue mb-4">{{ _('Individual Trips') }}</h2>
+    <div id="trip-list-container">
+        {% include '_trip_list.html' %}
+    </div>
+</div>

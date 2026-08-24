@@ -1,0 +1,39 @@
+# Development / CI-only dependencies. Not needed to run the server.
+#   pip install -r requirements.txt -r requirements-dev.txt
+#   pytest
+
+pytest>=8.0
+
+# Static checks. F821 (undefined name) is the one that matters most here: three modules
+# once called security_manager.record_failure() without importing it, which silently
+# turned six brute-force counters into HTTP 500s.
+#
+# The rule set now lives in ruff.toml, so there is nothing to pass:
+#     ruff check .
+# That is byte-for-byte what the lint job in .forgejo/workflows/tests.yml runs. The whole
+# tree is clean under it — a finding is something you just wrote.
+ruff>=0.6
+
+# Regenerates requirements.txt from requirements.in. That file is generated output —
+# never edit it by hand.
+#
+#   Add or change a package (keeps every other pin where it is):
+#     uv pip compile requirements.in --universal --python-version 3.12 -o requirements.txt
+#
+#   Pull in security fixes (re-resolves everything to the newest allowed):
+#     uv pip compile requirements.in --universal --python-version 3.12 --upgrade -o requirements.txt
+#
+# --python-version 3.12 is the server's interpreter. --universal is not cosmetic: without
+# it the resolution is specific to the machine that ran it, and compiling on macOS ARM
+# dropped greenlet — which SQLAlchemy requires on x86_64 — so the Linux server installed
+# it unpinned, outside the lockfile and outside the CVE audit.
+#
+# pip-tools cannot do either of those (no cross-version, no cross-platform resolution),
+# which is why this is uv and not pip-compile.
+uv>=0.5
+
+# CVE scan of the pinned dependencies. Deselected from the default run because it needs
+# the online advisory database; run it with:
+#   pytest -m cve
+# See tests/test_dependency_cves.py.
+pip-audit>=2.7

@@ -1,0 +1,20 @@
+services:
+  valhalla:
+    image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8002:8002"    # Only bind locally — nginx proxies with auth
+    volumes:
+      - /opt/docker/valhalla/custom_files:/custom_files   # Drop .osm.pbf files here
+      - /opt/docker/valhalla/tiles:/tiles                 # Built tile cache (persisted)
+    environment:
+      # Set to True to (re)build tiles from PBF files in /custom_files on start.
+      # After the first build you can set this to False for faster restarts.
+      - build_tiles=True
+      # If tiles already exist and build_tiles=False, serve them without rebuilding.
+      - use_tiles_ignore_pbf=False
+      - serve_tiles=True
+      - tileset_name=valhalla_tiles
+      # Valhalla builds can be slow for large regions — allow enough time.
+      # For a country-size PBF this can take 10+ minutes.
+      - tile_extract=/tiles/valhalla_tiles.tar

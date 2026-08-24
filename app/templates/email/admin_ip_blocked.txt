@@ -1,0 +1,29 @@
+{{ _('OVMS Security Alert - IP Address Blocked') }}
+==========================================
+
+{{ _('An IP address has been blocked due to repeated failed authentication attempts.') }}
+
+{{ _('Details') }}:
+--------
+{{ _('IP Address') }}: {{ ip_address }}
+{{ _('Authentication Type') }}: {{ auth_type }}
+{{ _('Failed Attempts') }}: {{ failure_count }}
+{{ _('Block Duration') }}: {{ block_duration_minutes }} {{ _('minutes') }}
+{{ _('Timestamp') }}: {{ timestamp }}
+
+{{ _('The blocked IP will be automatically unblocked after %(minutes)s minutes.') % {'minutes': block_duration_minutes} }}
+
+{{ _('If this was a legitimate user, they should:') }}
+1. {{ _('Wait for the block to expire') }}
+2. {{ _('Use the correct credentials') }}
+3. {{ _('Contact the administrator if issues persist') }}
+
+{{ _('If this appears to be malicious activity, consider:') }}
+- {{ _('Reviewing your firewall rules') }}
+- {{ _('Implementing additional IP restrictions') }}
+- {{ _('Checking the Security Events Dashboard for patterns') }}
+
+{{ security_events_url }}
+
+---
+{{ _('PyOVMS Control Server') }} | {{ server_base_url }}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}{{ status_code }} — {{ _('PyOVMS Control') }}{% endblock %}
+
+{% if is_csrf_error %}
+    {% set error_title = _('Security token expired') %}
+{% elif status_code == 404 %}
+    {% set error_title = _('Page not found') %}
+{% elif status_code in (401, 403) %}
+    {% set error_title = _('Not permitted') %}
+{% elif status_code == 422 %}
+    {% set error_title = _('Invalid form submission') %}
+{% elif status_code >= 500 %}
+    {% set error_title = _('Something went wrong') %}
+{% else %}
+    {% set error_title = _('Request could not be completed') %}
+{% endif %}
+
+{% block content %}
+<div class="flex items-center justify-center py-12">
+    <div class="w-full max-w-lg bg-card-bg border border-border-color rounded-lg shadow-lg p-6 sm:p-8">
+        <p class="text-5xl font-bold text-neon-magenta leading-none">{{ status_code }}</p>
+        <h1 class="mt-3 text-xl font-semibold text-text-primary">{{ error_title }}</h1>
+
+        {% if status_code == 422 %}
+        <p class="mt-3 text-sm text-red-300 bg-red-700/40 border border-red-500/40 rounded-md p-3" role="alert">
+            {{ _('The form was submitted with missing or unexpected fields.') }}
+        </p>
+        {% elif error_detail %}
+        <p class="mt-3 text-sm text-red-300 bg-red-700/40 border border-red-500/40 rounded-md p-3" role="alert">
+            {{ _(error_detail) }}
+        </p>
+        {% endif %}
+
+        {% if is_csrf_error %}
+        <p class="mt-4 text-sm text-text-secondary">
+            {{ _('This page was open for a while and its security token is no longer valid. Reload the page and submit the form again — nothing was changed.') }}
+        </p>
+        {% endif %}
+
+        <div class="mt-6 flex flex-wrap gap-3">
+            <a href="{{ retry_url }}" class="px-4 py-2 text-sm font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">
+                {{ _('Reload page') }}
+            </a>
+            <a href="{{ home_url }}" class="px-4 py-2 text-sm font-medium text-text-secondary border border-border-color rounded-md hover:bg-gray-700/50 hover:text-text-primary transition-colors duration-200">
+                {{ _('Back to start') }}
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+-- This is a command file for pgloader to migrate data from SQLite to PostgreSQL.
+--
+-- USAGE:
+-- 1. Complete steps 1-5 of "Migrating SQLite -> PostgreSQL" in Readme.md. The schema
+--    must already exist in PostgreSQL (created by `alembic upgrade head`) — this file
+--    loads data only.
+-- 2. Edit the file paths and connection strings below to match your setup.
+-- 3. Run from your project root: `pgloader doc/db_migrate_to_pg.load`
+
+LOAD DATABASE
+    -- SOURCE: The absolute path to your backup SQLite database file.
+    FROM sqlite:////opt/PyOVMS/backups/ovms_py_to_migrate.db
+
+    -- TARGET: The connection string for your PostgreSQL database.
+    -- This should match the DATABASE_URL in your .env file.
+    INTO postgresql://pyovms_user:your_secure_password@localhost:5432/pyovms_db
+
+WITH
+    -- Options to ensure a smooth data-only migration
+    data only,           -- We already created the schema with Alembic
+    truncate,            -- Clears the tables before inserting data
+    disable triggers;    -- Speeds up the data loading by disabling triggers

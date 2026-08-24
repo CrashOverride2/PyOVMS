@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _(page_title) }}{% endblock %}
+
+{% block content %}
+    {% if info_box_settings.enabled and info_box_settings.content %}
+    <div class="mb-8 p-5 rounded-lg border 
+        {% if info_box_settings.type == 'info' %}bg-blue-900/40 border-blue-700/60 text-blue-200{% endif %}
+        {% if info_box_settings.type == 'success' %}bg-green-900/40 border-green-700/60 text-green-200{% endif %}
+        {% if info_box_settings.type == 'warning' %}bg-yellow-900/40 border-yellow-700/60 text-yellow-200{% endif %}
+        {% if info_box_settings.type == 'danger' %}bg-red-900/40 border-red-700/60 text-red-200{% endif %}
+    ">
+        <h2 class="font-bold text-xl mb-2">{{ info_box_settings.title }}</h2>
+        <div class="prose prose-sm max-w-none text-current">
+            {{ info_box_html|safe }}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if vehicles %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+            {% for vehicle in vehicles %}
+            <div class="bg-card-bg border border-border-color rounded-lg p-4 shadow-md hover:border-neon-blue/70 hover:shadow-neon-glow-blue transition-all duration-300 ease-in-out flex flex-col justify-between">
+                <div>
+                    <div class="mb-3">
+                        <h2 class="text-lg font-semibold text-neon-blue truncate" title="{{ vehicle.vehicle_name or vehicle.vehicle_id }}">
+                            <a href="{{ url_for('ui_vehicle_detail_page', vehicle_module_id=vehicle.vehicle_id) }}" class="hover:underline">
+                                {{ vehicle.vehicle_name or vehicle.vehicle_id }}
+                            </a>
+                        </h2>
+                        <div class="mt-1">
+                        {% if vehicle.authenticated %}
+                            <span class="px-2 py-0.5 text-xs font-medium text-green-300 bg-green-700/70 border border-green-500/50 rounded-full">
+                                {{ _('Online') }} <span class="font-bold">({{ vehicle.connection_type }})</span>
+                            </span>
+                        {% else %}
+                             <span class="px-2 py-0.5 text-xs font-medium text-red-300 bg-red-700/70 border border-red-500/50 rounded-full">{{ _('Offline') }}</span>
+                        {% endif %}
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-text-secondary mb-0.5">{{ _('ID') }}: <span class="text-text-primary">{{ vehicle.vehicle_id }}</span></p>
+                    {% if is_admin %}
+                    <p class="text-xs text-text-secondary mb-2">{{ _('Owner') }}: <span class="text-text-primary">{{ vehicle.owner_username or 'N/A' }}</span></p>
+                    {% endif %}
+
+
+                    <div class="text-sm space-y-1 mb-3">
+                        {% if vehicle.latest_status_parsed and 'soc' in vehicle.latest_status_parsed and vehicle.latest_status_parsed.soc != "N/A" and vehicle.latest_status_parsed.soc is not none %}
+                            <p class="text-text-secondary">{{ _('SOC') }}: <span class="font-semibold text-base {% if vehicle.latest_status_parsed.soc|int >= 70 %}text-green-400{% elif vehicle.latest_status_parsed.soc|int >= 30 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ vehicle.latest_status_parsed.soc }}%</span></p>
+                        {% else %}
+                             <p class="text-text-secondary">{{ _('SOC') }}: <span class="font-medium text-gray-300">{{ _('N/A') }}</span></p>
+                        {% endif %}
+
+                        {% if vehicle.latest_diag_parsed and vehicle.latest_diag_parsed.vehicle_12v and vehicle.latest_diag_parsed.vehicle_12v != "N/A" %}
+                            <p class="text-text-secondary">{{ _('12V Battery') }}: <span class="font-medium text-gray-300">{{ vehicle.latest_diag_parsed.vehicle_12v }} V</span></p>
+                        {% else %}
+                             <p class="text-text-secondary">{{ _('12V Battery') }}: <span class="font-medium text-gray-300">{{_('N/A')}}</span></p>
+                        {% endif %}
+                        
+                        <p class="text-text-secondary">{{ _('Last Seen') }}: <span class="font-medium text-gray-300">{{ (vehicle.last_seen_v3, vehicle.last_seen_tcp) | latest_timestamp | datetimeformat if (vehicle.last_seen_v3 or vehicle.last_seen_tcp) else _('Never') }}</span></p>
+
+                    </div>
+                </div>
+
+                <div class="mt-auto pt-3 border-t border-border-color/30 flex space-x-2">
+                     <a href="{{ url_for('ui_vehicle_detail_page', vehicle_module_id=vehicle.vehicle_id) }}"
+                        class="flex-1 text-center px-3 py-1.5 text-xs font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">
+                        {{ _('Details') }}
+                     </a>
+                     <a href="{{ url_for('ui_edit_vehicle_form', vehicle_db_id=vehicle.id) }}"
+                        class="flex-1 text-center px-3 py-1.5 text-xs font-medium text-neon-magenta border border-neon-magenta rounded-md hover:bg-neon-magenta hover:text-dark-bg transition-colors duration-200">
+                        {{ _('Edit') }}
+                     </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-text-secondary text-center py-10">{{ _('No vehicles registered for your account.') }} <a href="{{ url_for('ui_add_vehicle_form') }}" class="text-neon-blue hover:underline font-semibold">{{ _('Add one now!') }}</a></p>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _(page_title) }}{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-card-bg p-8 rounded-lg shadow-xl border border-neon-blue/50 mt-12">
+    <h1 class="text-3xl font-bold mb-2 text-center text-neon-blue">{{ _(page_title) }}</h1>
+    <p class="text-center text-text-secondary mb-6">{{ _('For user:') }} <strong class="text-text-primary">{{ username_for_totp }}</strong></p>
+
+    {% if request.query_params.get('error_message') %}
+    <div class="bg-red-700/70 border border-red-500/50 text-red-200 px-4 py-3 rounded relative mb-4" role="alert">
+        <strong class="font-bold">{{ _('Error!') }}</strong>
+        <span class="block sm:inline">{{ request.query_params.get('error_message') }}</span>
+    </div>
+    {% endif %}
+
+    <form action="{{ url_for('ui_login_totp_submit') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="space-y-6">
+            <div>
+                <label for="totp_code" class="block text-sm font-medium text-text-secondary">{{ _('Authenticator Code') }}</label>
+                <input type="text" name="totp_code" id="totp_code" required inputmode="numeric"
+                       minlength="6" maxlength="6" pattern="\d{6}" title="{{ _('Enter a 6-digit code') }}"
+                       class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-blue focus:ring-1 focus:ring-neon-blue sm:text-sm tracking-widest text-center text-lg"
+                       placeholder="123456" autocomplete="one-time-code" autofocus>
+            </div>
+        </div>
+
+        <div class="mt-8">
+            <button type="submit"
+                    class="w-full px-4 py-2.5 text-sm font-medium text-dark-bg bg-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue-darker hover:border-neon-blue-darker hover:shadow-lg hover:shadow-neon-blue/40 transition-all duration-200">
+                {{ _('Verify Code') }}
+            </button>
+        </div>
+    </form>
+    <p class="mt-6 text-center text-sm">
+        <a href="{{ url_for('ui_login_form') }}" class="font-medium text-neon-magenta hover:text-neon-magenta-darker">{{ _('Cancel and return to login') }}</a>
+    </p>
+</div>
+{% endblock %}

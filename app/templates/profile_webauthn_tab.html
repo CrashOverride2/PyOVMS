@@ -1,0 +1,87 @@
+<!-- WebAuthn/Security Keys Tab Content -->
+<div data-tab-panel="webauthn" class="hidden space-y-6">
+    <div class="bg-card-bg p-6 rounded-lg border border-neon-green/50 shadow-lg">
+        <h2 class="text-xl font-semibold text-neon-green mb-4">{{ _('Security Keys (WebAuthn/FIDO2)') }}</h2>
+        <p class="text-sm text-text-secondary mb-6">
+            {{ _('Add hardware security keys or use built-in biometric authenticators (Touch ID, Face ID, Windows Hello) for passwordless login.') }}
+        </p>
+
+        <!-- Add New Credential Button -->
+        <div class="mb-6">
+            <a href="{{ url_for('ui_webauthn_register') }}"
+               class="inline-flex items-center px-4 py-2 text-sm font-medium text-dark-bg bg-neon-green border border-neon-green rounded-md hover:bg-neon-green-darker transition-colors">
+                <svg class="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
+                {{ _('Add Security Key') }}
+            </a>
+        </div>
+
+        <!-- Registered Credentials List -->
+        {% if webauthn_credentials and webauthn_credentials|length > 0 %}
+        <div class="space-y-3">
+            <h3 class="text-sm font-semibold text-text-secondary uppercase tracking-wider">{{ _('Registered Security Keys') }}</h3>
+
+            {% for credential in webauthn_credentials %}
+            <div class="flex items-center justify-between p-4 bg-input-bg/50 rounded-md border border-border-color/50 hover:border-neon-green/50 transition-colors">
+                <div class="flex items-center space-x-3">
+                    <div class="flex-shrink-0">
+                        <svg class="h-8 w-8 text-neon-green" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-text-primary">
+                            {{ credential.credential_name or _('Unnamed Security Key') }}
+                            <span class="ml-2 px-2 py-0.5 text-xs rounded-full {% if credential.usage_mode == 'passwordless' %}bg-neon-green/20 text-neon-green{% else %}bg-neon-blue/20 text-neon-blue{% endif %}">
+                                {{ _('Passwordless') if credential.usage_mode == 'passwordless' else _('2FA') }}
+                            </span>
+                        </p>
+                        <div class="text-xs text-text-secondary space-x-3">
+                            <span>{{ _('Added:') }} {{ credential.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                            {% if credential.last_used_at %}
+                            <span>{{ _('Last used:') }} {{ credential.last_used_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                            {% else %}
+                            <span>{{ _('Never used') }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="text-xs text-text-secondary mt-1">
+                            <span title="{{ _('Number of times this key has been used. High numbers are normal for platform authenticators (Touch ID, Windows Hello) as they increment on each use.') }}">{{ _('Sign count:') }} {{ credential.sign_count }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Delete Button -->
+                <form action="{{ url_for('ui_webauthn_delete', credential_id=credential.id) }}" method="post"
+                      class="js-confirm-form"
+                      data-confirm-message='{{ _("Are you sure you want to remove this security key?") | tojson | safe }}'>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit"
+                            class="px-3 py-1.5 text-xs font-medium text-red-400 border border-red-400 rounded-md hover:bg-red-400 hover:text-dark-bg transition-colors">
+                        {{ _('Remove') }}
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-4 bg-blue-900/40 border border-blue-700/60 rounded-md">
+            <p class="text-sm text-blue-200">
+                {{ _('No security keys registered yet. Click "Add Security Key" above to get started.') }}
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- Information Box -->
+        <div class="mt-6 p-4 bg-blue-900/40 border border-blue-700/60 rounded-md">
+            <h3 class="font-semibold text-neon-blue mb-2">{{ _('About WebAuthn Security Keys') }}</h3>
+            <ul class="list-disc list-inside text-sm text-blue-200 space-y-1">
+                <li>{{ _('Hardware keys like YubiKey, Google Titan, or Feitian') }}</li>
+                <li>{{ _('Built-in authenticators: Touch ID (Mac), Face ID (iPhone), Windows Hello') }}</li>
+                <li>{{ _('Phishing-resistant - cannot be tricked by fake websites') }}</li>
+                <li>{{ _('Can be used as primary login method (passwordless)') }}</li>
+                <li>{{ _('Recommended: Register at least 2 keys for backup access') }}</li>
+            </ul>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _(page_title) }}{% endblock %}
+
+{% block head_extra_styles %}
+<style nonce="{{ request.state.csp_nonce }}">
+.cpu-bar { width: {{ system_stats.cpu_percent }}%; }
+.memory-bar { width: {{ system_stats.memory_percent }}%; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-8" x-data="adminDashboard">
+    <div class="flex justify-between items-center">
+        <h1 class="text-2xl md:text-3xl font-bold text-neon-green">{{ _(page_title) }}</h1>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- System Health -->
+        <div class="bg-card-bg p-5 rounded-lg shadow-md border border-border-color">
+            <h2 class="text-lg font-semibold text-neon-green mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.492a.75.75 0 01-.398.92l-2.008.995a.75.75 0 01-.92-.398L9.22 15H5a2 2 0 01-2-2V5zm2-1a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V5a1 1 0 00-1-1H5z" clip-rule="evenodd" /></svg>
+                {{ _('System Health') }}
+            </h2>
+            <div class="space-y-3 text-sm">
+                <div>
+                    <div class="flex justify-between mb-1"><span class="text-text-secondary">{{ _('CPU Load') }}</span><span class="text-text-primary">{{ "%.1f"|format(system_stats.cpu_percent) }}%</span></div>
+                    <div class="w-full bg-gray-700 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full cpu-bar"></div></div>
+                </div>
+                <div>
+                    <div class="flex justify-between mb-1"><span class="text-text-secondary">{{ _('Memory Usage') }}</span><span class="text-text-primary">{{ "%.1f"|format(system_stats.memory_percent) }}%</span></div>
+                    <div class="w-full bg-gray-700 rounded-full h-2.5"><div class="bg-purple-500 h-2.5 rounded-full memory-bar"></div></div>
+                    <div class="text-xs text-right text-text-secondary mt-1">{{ system_stats.memory_used_gb }} / {{ system_stats.memory_total_gb }} GB</div>
+                </div>
+                <p class="text-text-secondary pt-1">{{ _('Uptime:') }} <span class="text-text-primary font-medium">{{ system_stats.uptime }}</span></p>
+            </div>
+        </div>
+
+        <!-- Live Counts -->
+        <div class="bg-card-bg p-5 rounded-lg shadow-md border border-border-color">
+            <h2 class="text-lg font-semibold text-neon-yellow mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zM10 11a6 6 0 016 6H4a6 6 0 016-6z" /></svg>
+                {{ _('Live Counts') }}
+            </h2>
+            <dl class="text-sm space-y-2">
+                <div class="flex justify-between"><dt class="text-text-secondary">{{ _('Total Users') }}</dt><dd class="font-semibold text-text-primary">{{ live_counts.total_users }}</dd></div>
+                <div class="flex justify-between"><dt class="text-text-secondary">{{ _('Total Vehicles') }}</dt><dd class="font-semibold text-text-primary">{{ live_counts.total_vehicles }}</dd></div>
+                <div class="flex justify-between"><dt class="text-text-secondary">{{ _('Vehicles Online') }}</dt><dd class="font-semibold text-green-400">{{ live_counts.total_online }}</dd></div>
+                <div class="flex justify-between pl-4"><dt class="text-text-secondary text-xs"> ▸ {{ _('V2 (TCP)') }}</dt><dd class="font-semibold text-green-400 text-xs">{{ live_counts.v2_online }}</dd></div>
+                <div class="flex justify-between pl-4"><dt class="text-text-secondary text-xs"> ▸ {{ _('V3 (MQTT)') }}</dt><dd class="font-semibold text-green-400 text-xs">{{ live_counts.v3_online }}</dd></div>
+                <div class="flex justify-between pt-1 border-t border-border-color/30"><dt class="text-text-secondary">{{ _('MQTT Auth') }}</dt><dd class="font-semibold {{ 'text-green-400' if live_counts.mqtt_auth_enabled else 'text-red-400' }}">{{ _('Enabled') if live_counts.mqtt_auth_enabled else _('Disabled') }}</dd></div>
+            </dl>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-card-bg p-5 rounded-lg shadow-md border border-border-color">
+            <h2 class="text-lg font-semibold text-neon-magenta mb-4 flex items-center">
+                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6.672 1.903A.75.75 0 017.25 2.5h5.5a.75.75 0 01.578.903l-1.25 3.5A.75.75 0 0111.5 7.5h-3a.75.75 0 01-.578-.903l-1.25-3.5zM3.25 9.75a.75.75 0 01.75-.75h12a.75.75 0 010 1.5h-12a.75.75 0 01-.75-.75zM2.5 13.25a.75.75 0 01.75-.75h14a.75.75 0 010 1.5h-14a.75.75 0 01-.75-.75z" clip-rule="evenodd" /></svg>
+                {{ _('Quick Actions') }}
+            </h2>
+            <div class="space-y-2">
+                <a href="{{ url_for('ui_add_vehicle_form') }}" class="block w-full text-center px-4 py-2 text-sm font-medium bg-neon-magenta/10 text-neon-magenta border border-neon-magenta/50 rounded-md hover:bg-neon-magenta/30 transition-colors">{{ _('Add New Vehicle') }}</a>
+                <a href="{{ url_for('ui_admin_logs') }}" class="block w-full text-center px-4 py-2 text-sm font-medium bg-neon-blue/10 text-neon-blue border border-neon-blue/50 rounded-md hover:bg-neon-blue/30 transition-colors">{{ _('View Live Logs') }}</a>
+                <a href="{{ url_for('ui_security_events_dashboard') }}" class="block w-full text-center px-4 py-2 text-sm font-medium bg-red-500/10 text-red-400 border border-red-500/50 rounded-md hover:bg-red-500/30 transition-colors">{{ _('Security Dashboard') }}</a>
+                <a href="{{ url_for('ui_blocked_ips') }}" class="block w-full text-center px-4 py-2 text-sm font-medium bg-orange-500/10 text-orange-400 border border-orange-500/50 rounded-md hover:bg-orange-500/30 transition-colors">{{ _('Blocked IPs') }}</a>
+                <a href="{{ url_for('ui_totp_key_rotation_page') }}" class="block w-full text-center px-4 py-2 text-sm font-medium bg-purple-500/10 text-purple-400 border border-purple-500/50 rounded-md hover:bg-purple-500/30 transition-colors">{{ _('TOTP Key Rotation') }}</a>
+                <button @click="openInfoBoxModal" class="block w-full text-center px-4 py-2 text-sm font-medium bg-yellow-500/10 text-yellow-500 border border-yellow-500/50 rounded-md hover:bg-yellow-500/30 transition-colors">{{ _('Info Box Settings') }}</button>
+                <button @click="openDisposableEmailModal" class="block w-full text-center px-4 py-2 text-sm font-medium {% if disposable_email_state.config.enabled %}bg-red-500/10 text-red-400 border-red-500/50{% else %}bg-gray-500/10 text-gray-400 border-gray-500/50{% endif %} border rounded-md hover:bg-opacity-30 transition-colors">
+                    {{ _('Disposable Email Filter') }} ({{ _('Enabled') if disposable_email_state.config.enabled else _('Disabled') }})
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- All Vehicles Table -->
+    <div>
+        <h2 class="text-xl font-semibold text-neon-green mb-4">{{ _('All Vehicles') }}</h2>
+        {% set pending_count = lifecycle_delete_ids | length %}
+        {% set inactive_count = lifecycle_warn_ids | length %}
+        {% if pending_count > 0 or inactive_count > 0 %}
+        <div class="mb-3 flex flex-wrap gap-2 text-xs">
+            {% if pending_count > 0 %}
+            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-700/30 border border-red-600/50 text-red-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                {{ pending_count }} {{ _('vehicle(s) pending auto-deletion') }}
+            </span>
+            {% endif %}
+            {% if inactive_count > 0 %}
+            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-700/30 border border-yellow-600/50 text-yellow-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" /></svg>
+                {{ inactive_count }} {{ _('vehicle(s) inactive 365+ days (warning will be sent)') }}
+            </span>
+            {% endif %}
+        </div>
+        {% endif %}
+        <div class="overflow-x-auto bg-card-bg rounded-lg border border-border-color shadow-md">
+            <table class="min-w-full divide-y divide-border-color/50 text-sm">
+                <thead class="bg-input-bg">
+                    <tr>
+                        <th class="px-4 py-2 text-left font-medium text-text-secondary">{{ _('Status') }}</th>
+                        <th class="px-4 py-2 text-left font-medium text-text-secondary">{{ _('Vehicle ID') }}</th>
+                        <th class="px-4 py-2 text-left font-medium text-text-secondary">{{ _('Name') }}</th>
+                        <th class="px-4 py-2 text-left font-medium text-text-secondary">{{ _('Owner') }}</th>
+                        <th class="px-4 py-2 text-left font-medium text-text-secondary">{{ _('Last Seen (V2/V3)') }}</th>
+                        <th class="px-4 py-2 text-left font-medium text-text-secondary">{{ _('Lifecycle') }}</th>
+                        <th class="px-4 py-2 text-left font-medium text-text-secondary">{{ _('Actions') }}</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-card-bg divide-y divide-border-color/30">
+                    {% for vehicle in all_vehicles %}
+                    <tr class="{% if vehicle.id in lifecycle_delete_ids %}bg-red-900/10{% elif vehicle.id in lifecycle_warn_ids %}bg-yellow-900/10{% endif %}">
+                        <td class="px-4 py-2 whitespace-nowrap">
+                            <span class="inline-flex items-center text-xs leading-5 font-semibold rounded-full {{ 'bg-green-700/70 text-green-300' if vehicle.authenticated else 'bg-red-700/70 text-red-300' }}">
+                                <span class="px-2 py-0.5">
+                                    {% if vehicle.authenticated %}
+                                        {{ _('Online') }} <span class="font-bold">({{ vehicle.connection_type }})</span>
+                                    {% else %}
+                                        {{ _('Offline') }}
+                                    {% endif %}
+                                </span>
+                            </span>
+                        </td>
+                        <td class="px-4 py-2 whitespace-nowrap text-text-primary font-mono">{{ vehicle.vehicle_id }}</td>
+                        <td class="px-4 py-2 text-text-primary max-w-[10rem] break-words">{{ vehicle.vehicle_name or '' }}</td>
+                        <td class="px-4 py-2 whitespace-nowrap text-text-secondary">{{ vehicle.owner_username or 'N/A' }}</td>
+                        <td class="px-4 py-2 text-text-secondary">
+                            {% if vehicle.last_seen_tcp or vehicle.last_seen_v3 %}
+                            <div class="space-y-0.5">
+                                {% if vehicle.last_seen_tcp %}
+                                <div class="text-xs"><span class="text-text-secondary/60">V2:</span> {{ vehicle.last_seen_tcp | datetimeformat }}</div>
+                                {% endif %}
+                                {% if vehicle.last_seen_v3 %}
+                                <div class="text-xs"><span class="text-text-secondary/60">V3:</span> {{ vehicle.last_seen_v3 | datetimeformat }}</div>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <span class="text-text-secondary/50">{{ _('Never') }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-2 whitespace-nowrap">
+                            {% if vehicle.id in lifecycle_delete_ids %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-red-700/40 text-red-300 border border-red-600/50" title="{{ _('Warning sent') }}: {{ vehicle.unused_reminder_sent_at | datetimeformat if vehicle.unused_reminder_sent_at else '' }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                                {{ _('Pending deletion') }}
+                            </span>
+                            {% elif vehicle.id in lifecycle_warn_ids %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-700/40 text-yellow-300 border border-yellow-600/50">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" /></svg>
+                                {{ _('Inactive 365d+') }}
+                            </span>
+                            {% elif vehicle.unused_reminder_sent_at %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-700/40 text-orange-300 border border-orange-600/50" title="{{ _('Warning sent') }}: {{ vehicle.unused_reminder_sent_at | datetimeformat }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                                {{ _('Warning sent') }}
+                            </span>
+                            {% else %}
+                            <span class="text-text-secondary/40 text-xs">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-2 whitespace-nowrap font-medium space-x-2">
+                            <a href="{{ url_for('ui_edit_vehicle_form', vehicle_db_id=vehicle.id) }}" class="text-neon-magenta hover:text-neon-magenta-darker text-xs">{{ _('Edit') }}</a>
+                            {% if vehicle.unused_reminder_sent_at %}
+                            <form method="post" action="{{ url_for('ui_admin_clear_vehicle_auto_delete', vehicle_db_id=vehicle.id) }}" class="inline" onsubmit="return confirm('{{ _('Cancel auto-delete marking for') }} {{ vehicle.vehicle_id }}?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <button type="submit" class="px-2 py-0.5 text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-500/50 rounded-md hover:bg-orange-500/30 transition-colors">{{ _('Cancel deletion') }}</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-text-secondary">{{ _('No vehicles found on the server.') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Info Box Modal -->
+    <template x-teleport="body">
+    <div x-show="showInfoBoxModal" x-cloak
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 backdrop-blur-sm"
+        x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+        <div @click.away="closeInfoBoxModal"
+            class="bg-card-bg rounded-lg shadow-xl border border-border-color p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto custom-scrollbar"
+            x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100" x-transition:leave="ease-in duration-200"
+            x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
+
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-neon-magenta">{{ _('Server Info Box Settings') }}</h2>
+                <button @click="closeInfoBoxModal" class="text-gray-400 hover:text-white">&times;</button>
+            </div>
+
+            <p class="text-sm text-text-secondary mb-4">{{ _('Display a message to all users on their dashboard. Useful for maintenance announcements or general information. Supports Markdown formatting.') }}</p>
+
+            <form action="{{ url_for('ui_admin_update_infobox') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div class="space-y-4">
+                    <div class="flex items-center"><input id="info_box_enabled" name="info_box_enabled" type="checkbox" value="true" {% if info_box_settings.enabled %}checked{% endif %} class="h-4 w-4 text-neon-magenta border-gray-500 rounded focus:ring-neon-magenta"><label for="info_box_enabled" class="ml-2 block text-sm text-text-primary">{{ _('Enable Info Box') }}</label></div>
+                    <div><label for="info_box_title" class="block text-sm font-medium text-text-secondary">{{ _('Info Box Title') }}</label><input type="text" name="info_box_title" id="info_box_title" value="{{ info_box_settings.title }}" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-magenta focus:ring-1 focus:ring-neon-magenta sm:text-sm"></div>
+                    <div><label for="info_box_type" class="block text-sm font-medium text-text-secondary">{{ _('Info Box Style') }}</label><select id="info_box_type" name="info_box_type" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-magenta focus:ring-1 focus:ring-neon-magenta sm:text-sm"><option value="info" {% if info_box_settings.type == 'info' %}selected{% endif %}>{{ _('Info (Blue)') }}</option><option value="success" {% if info_box_settings.type == 'success' %}selected{% endif %}>{{ _('Success (Green)') }}</option><option value="warning" {% if info_box_settings.type == 'warning' %}selected{% endif %}>{{ _('Warning (Yellow)') }}</option><option value="danger" {% if info_box_settings.type == 'danger' %}selected{% endif %}>{{ _('Danger (Red)') }}</option></select></div>
+                    <div><label for="info_box_content" class="block text-sm font-medium text-text-secondary">{{ _('Content (Markdown supported)') }}</label><textarea name="info_box_content" id="info_box_content" rows="6" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-magenta focus:ring-1 focus:ring-neon-magenta sm:text-sm font-mono">{{ info_box_settings.content }}</textarea></div>
+                    <div class="flex justify-end space-x-3"><button type="button" @click="closeInfoBoxModal" class="px-4 py-2 text-sm font-medium text-text-secondary border border-border-color rounded-md hover:bg-border-color hover:text-text-primary transition-colors">{{ _('Cancel') }}</button><button type="submit" class="px-4 py-2 text-sm font-medium text-dark-bg bg-neon-magenta border border-neon-magenta rounded-md hover:bg-neon-magenta-darker transition-colors">{{ _('Save Settings') }}</button></div>
+                </div>
+            </form>
+            {% if info_box_settings.enabled and info_box_settings.content %}<div class="mt-6"><h3 class="text-lg font-semibold text-text-primary mb-2">{{ _('Live Preview') }}</h3><div class="p-4 rounded-lg border {% if info_box_settings.type == 'info' %}bg-blue-900/40 border-blue-700/60 text-blue-200{% endif %} {% if info_box_settings.type == 'success' %}bg-green-900/40 border-green-700/60 text-green-200{% endif %} {% if info_box_settings.type == 'warning' %}bg-yellow-900/40 border-yellow-700/60 text-yellow-200{% endif %} {% if info_box_settings.type == 'danger' %}bg-red-900/40 border-red-700/60 text-red-200{% endif %}"><h4 class="font-bold text-lg mb-2">{{ info_box_settings.title }}</h4><div class="prose prose-sm max-w-none text-current">{{ info_box_html_preview|safe }}</div></div></div>{% endif %}
+        </div>
+    </div>
+    </template>
+
+    <!-- Disposable Email Filter Modal -->
+    <template x-teleport="body">
+    <div x-show="showDisposableEmailModal" x-cloak
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 backdrop-blur-sm"
+        x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+        <div @click.away="closeDisposableEmailModal"
+            class="bg-card-bg rounded-lg shadow-xl border border-border-color p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto custom-scrollbar"
+            x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100" x-transition:leave="ease-in duration-200"
+            x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
+
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-red-400">{{ _('Disposable Email Protection') }}</h2>
+                <button @click="closeDisposableEmailModal" class="text-gray-400 hover:text-white">&times;</button>
+            </div>
+
+            <p class="text-sm text-text-secondary mb-4">{{ _("Block sign-ups from disposable email providers using a community maintained list.") }}</p>
+
+            <form action="{{ url_for('ui_admin_update_disposable_email_settings') }}" method="post" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+                <div class="flex items-center">
+                    <input id="enable_disposable_email_filter" name="enable_disposable_email_filter" type="checkbox" value="true" {% if disposable_email_state.config.enabled %}checked{% endif %} class="h-5 w-5 text-red-400 border-gray-500 rounded focus:ring-red-400">
+                    <label for="enable_disposable_email_filter" class="ml-3 text-sm font-medium text-text-primary">{{ _('Enable disposable email blocking') }}</label>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="disposable_email_source" class="block text-sm font-medium text-text-secondary">{{ _('Source') }}</label>
+                        <select id="disposable_email_source" name="disposable_email_source" :value="source" @change="setSource($event.target.value)" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-red-400 focus:ring-1 focus:ring-red-400 sm:text-sm">
+                            <option value="remote" {% if disposable_email_state.config.source == 'remote' %}selected{% endif %}>{{ _('Remote text file with auto-refresh') }}</option>
+                            <option value="local" {% if disposable_email_state.config.source == 'local' %}selected{% endif %}>{{ _('Local file (manual)') }}</option>
+                        </select>
+                        <p class="text-xs text-text-secondary mt-1">{{ _('Use a remote list or point to a local copy you manage yourself.') }}</p>
+                    </div>
+                    <div>
+                        <label for="disposable_email_refresh_hours" class="block text-sm font-medium text-text-secondary">{{ _('Refresh interval (hours)') }}</label>
+                        <input type="number" min="0" id="disposable_email_refresh_hours" name="disposable_email_refresh_hours" value="{{ disposable_email_state.config.refresh_hours }}" :disabled="disableRemoteFields" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-red-400 focus:ring-1 focus:ring-red-400 sm:text-sm">
+                        <p class="text-xs text-text-secondary mt-1">{{ _('Set to 0 to disable scheduled refreshes (manual only).') }}</p>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="disposable_email_remote_url" class="block text-sm font-medium text-text-secondary">{{ _('Remote list URL') }}</label>
+                    <input type="text" id="disposable_email_remote_url" name="disposable_email_remote_url" value="{{ disposable_email_state.config.remote_url }}" :disabled="disableRemoteFields" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-red-400 focus:ring-1 focus:ring-red-400 sm:text-sm font-mono">
+                    <p class="text-xs text-text-secondary mt-1">{{ _('A recommendation is the disposable-email-domains project on GitHub.') }}</p>
+                </div>
+
+                <div>
+                    <label for="disposable_email_local_path" class="block text-sm font-medium text-text-secondary">{{ _('Local list path') }}</label>
+                    <input type="text" id="disposable_email_local_path" name="disposable_email_local_path" value="{{ disposable_email_state.config.local_path }}" :disabled="disableLocalFields" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-red-400 focus:ring-1 focus:ring-red-400 sm:text-sm font-mono">
+                    <p class="text-xs text-text-secondary mt-1">{{ _('Path to a newline-separated domain list on this server.') }}</p>
+                </div>
+
+                <div>
+                    <label for="disposable_email_whitelist" class="block text-sm font-medium text-text-secondary">{{ _('Local allowlist (domains)') }}</label>
+                    <textarea id="disposable_email_whitelist" name="disposable_email_whitelist" rows="4" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-red-400 focus:ring-1 focus:ring-red-400 sm:text-sm font-mono" placeholder="example.com&#10;mycompany.test">{{ disposable_email_state.whitelist | join('\n') }}</textarea>
+                    <p class="text-xs text-text-secondary mt-1">{{ _('One domain per line. These always bypass the blocklist.') }}</p>
+                </div>
+
+                <div class="bg-input-bg border border-border-color rounded-md p-3 text-sm text-text-secondary space-y-1">
+                    <div class="flex items-center justify-between">
+                        <span>{{ _('Cached domains') }}</span>
+                        <span class="text-text-primary font-semibold">{{ disposable_email_state.cached_count }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span>{{ _('Last fetch') }}</span>
+                        <span class="text-text-primary">{{ disposable_email_state.config.last_fetched_at | datetimeformat if disposable_email_state.config.last_fetched_at else _('Not fetched yet') }}</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button type="button" @click="closeDisposableEmailModal" class="px-4 py-2 text-sm font-medium text-text-secondary border border-border-color rounded-md hover:bg-border-color hover:text-text-primary transition-colors">{{ _('Cancel') }}</button>
+                    <button type="submit" name="refresh_now" value="true" :disabled="disableRemoteFields" class="px-4 py-2 text-sm font-medium text-dark-bg bg-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{{ _('Save & Refresh Now') }}</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-dark-bg bg-red-500 border border-red-500 rounded-md hover:bg-red-600 transition-colors">{{ _('Save Settings') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    </template>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ request.state.csp_nonce }}">
+document.addEventListener('alpine:init', () => {
+    Alpine.data('adminDashboard', () => ({
+        showInfoBoxModal: false,
+        showDisposableEmailModal: false,
+        source: {{ disposable_email_state.config.source | tojson | safe }},
+        disableRemoteFields: false,
+        disableLocalFields: true,
+        init() {
+            this.refreshDisposableSourceState();
+            this.$watch('source', () => this.refreshDisposableSourceState());
+        },
+        refreshDisposableSourceState() {
+            this.disableRemoteFields = this.source !== 'remote';
+            this.disableLocalFields = this.source !== 'local';
+        },
+        setSource(value) { this.source = value; },
+        openInfoBoxModal() { this.showInfoBoxModal = true; },
+        closeInfoBoxModal() { this.showInfoBoxModal = false; },
+        openDisposableEmailModal() { this.showDisposableEmailModal = true; },
+        closeDisposableEmailModal() { this.showDisposableEmailModal = false; }
+    }));
+});
+</script>
+{% endblock %}

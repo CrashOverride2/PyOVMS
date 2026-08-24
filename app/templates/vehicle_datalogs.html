@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Data Logs') }}: {{ vehicle.vehicle_id }}{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if charts_json %}
+<script src="{{ url_for('static', path='/js/chart.umd.js') }}"></script>
+<script nonce="{{ request.state.csp_nonce }}">
+document.addEventListener('DOMContentLoaded', () => {
+    const dataEl = document.getElementById('datalog-charts-data');
+    if (!dataEl) return;
+    const charts = JSON.parse(dataEl.textContent);
+    const gridColor = 'rgba(148, 163, 184, 0.12)';
+    const tickColor = '#94a3b8';
+    charts.forEach((c, i) => {
+        const canvas = document.getElementById('datalog-chart-' + i);
+        if (!canvas) return;
+        new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: c.labels,
+                datasets: [{
+                    label: c.label,
+                    data: c.data,
+                    borderColor: c.color,
+                    backgroundColor: c.color,
+                    borderWidth: 2,
+                    pointRadius: 2,
+                    pointHoverRadius: 5,
+                    spanGaps: true,
+                    tension: 0.15
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: {
+                        ticks: { color: tickColor, maxTicksLimit: 8, maxRotation: 0, autoSkip: true },
+                        grid: { color: gridColor }
+                    },
+                    y: {
+                        title: { display: true, text: c.label, color: tickColor },
+                        ticks: { color: tickColor },
+                        grid: { color: gridColor }
+                    }
+                }
+            }
+        });
+    });
+});
+</script>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-6">
+    <div class="flex justify-between items-center mb-1">
+        <h1 class="text-2xl font-bold text-text-primary">{{ _('Data Logs') }}: {{ vehicle.vehicle_id }}</h1>
+        <a href="{{ url_for('ui_vehicle_detail_page', vehicle_module_id=vehicle.vehicle_id) }}?tab=logs"
+            class="px-3 py-1.5 text-xs font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">
+            &larr; {{ _('Back to Vehicle') }}
+        </a>
+    </div>
+    <p class="text-sm text-text-secondary mb-6">{{ _('History records the vehicle module sends as data notifications (e.g. trip and charge session logs). Records are delivered reliably even across LTE outages.') }}</p>
+
+    <div class="bg-input-bg p-5 rounded-md border border-neon-blue/70 shadow-md mb-6">
+        <h2 class="text-lg font-semibold text-neon-blue mb-3">{{ _('Record Types') }}</h2>
+        {% if summary %}
+        <div class="flex flex-wrap gap-2">
+            {% for s in summary %}
+            <a href="{{ url_for('ui_vehicle_datalogs_page', vehicle_module_id=vehicle.vehicle_id) }}?type={{ s.h_recordtype | urlencode }}"
+                class="px-3 py-1.5 text-xs font-mono rounded-md border transition-colors duration-200
+                {{ 'bg-neon-blue text-dark-bg border-neon-blue' if s.h_recordtype == selected_type else 'text-text-primary border-border-color hover:border-neon-blue hover:text-neon-blue' }}">
+                {{ s.h_recordtype }}
+                <span class="{{ 'text-dark-bg/70' if s.h_recordtype == selected_type else 'text-text-secondary' }}">({{ s.totalrecs }})</span>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-text-secondary">
+            {{ _('No history records stored yet. Most vehicles need the logs to be enabled on the module, e.g.:') }}
+            <code class="bg-black/40 px-1 rounded">config set notify log.trip.storetime 30</code>,
+            <code class="bg-black/40 px-1 rounded">config set notify log.grid.storetime 30</code>
+        </p>
+        {% endif %}
+    </div>
+
+    {% if selected_type and charts %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        {% for chart in charts %}
+        <div class="bg-input-bg p-4 rounded-md border border-border-color shadow-md">
+            <h3 class="text-sm font-semibold text-text-primary mb-2">{{ chart.title }}</h3>
+            <div class="relative h-56">
+                <canvas id="datalog-chart-{{ loop.index0 }}"></canvas>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <script id="datalog-charts-data" type="application/json">{{ charts_json | safe }}</script>
+    {% endif %}
+
+    {% if selected_type %}
+    <div class="bg-input-bg p-5 rounded-md border border-border-color shadow-md">
+        <div class="flex justify-between items-center mb-1">
+            <h2 class="text-lg font-semibold text-text-primary font-mono">{{ selected_type }}</h2>
+            {% if records %}
+            <a href="{{ url_for('ui_vehicle_datalogs_export', vehicle_module_id=vehicle.vehicle_id) }}?type={{ selected_type | urlencode }}"
+                class="px-3 py-1.5 text-xs font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">
+                {{ _('Export CSV') }}
+            </a>
+            {% endif %}
+        </div>
+        {% if description %}
+        <p class="text-xs text-text-secondary mb-4">{{ description }}</p>
+        {% else %}
+        <div class="mb-4"></div>
+        {% endif %}
+
+        {% if records %}
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="min-w-full text-xs font-mono">
+                <thead>
+                    <tr class="text-left text-text-secondary border-b border-border-color">
+                        <th class="py-2 pr-4 whitespace-nowrap">{{ _('Timestamp') }}</th>
+                        <th class="py-2 pr-4 whitespace-nowrap">{{ _('Record #') }}</th>
+                        {% for h in headers %}
+                        <th class="py-2 pr-4 whitespace-nowrap">{{ h }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in records %}
+                    <tr class="border-b border-border-color/40 hover:bg-gray-700/30">
+                        <td class="py-1.5 pr-4 whitespace-nowrap text-text-primary">{{ r.timestamp | datetimeformat }}</td>
+                        <td class="py-1.5 pr-4 whitespace-nowrap text-text-secondary">{{ r.record_number if r.record_number is not none else '' }}</td>
+                        {% for f in r.fields %}
+                        <td class="py-1.5 pr-4 whitespace-nowrap text-text-primary">{{ f }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="flex justify-between items-center mt-4">
+            <div>
+                {% if page > 1 %}
+                <a href="{{ url_for('ui_vehicle_datalogs_page', vehicle_module_id=vehicle.vehicle_id) }}?type={{ selected_type | urlencode }}&page={{ page - 1 }}"
+                    class="px-3 py-1.5 text-xs font-medium text-text-primary border border-border-color rounded-md hover:border-neon-blue hover:text-neon-blue transition-colors">
+                    &larr; {{ _('Newer') }}
+                </a>
+                {% endif %}
+            </div>
+            <span class="text-xs text-text-secondary">{{ _('Page') }} {{ page }}</span>
+            <div>
+                {% if has_more %}
+                <a href="{{ url_for('ui_vehicle_datalogs_page', vehicle_module_id=vehicle.vehicle_id) }}?type={{ selected_type | urlencode }}&page={{ page + 1 }}"
+                    class="px-3 py-1.5 text-xs font-medium text-text-primary border border-border-color rounded-md hover:border-neon-blue hover:text-neon-blue transition-colors">
+                    {{ _('Older') }} &rarr;
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <p class="text-sm text-text-secondary">{{ _('No records of this type found.') }}</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

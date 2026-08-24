@@ -1,0 +1,138 @@
+<div class="bg-input-bg p-5 rounded-md border border-neon-blue/70 shadow-md mb-6">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-neon-blue">{{ _('Vehicle Data Logs') }}</h2>
+        {% if datalog_summary %}
+        <a href="{{ url_for('ui_vehicle_datalogs_page', vehicle_module_id=vehicle.vehicle_id) }}"
+            class="px-3 py-1.5 text-xs font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">
+            {{ _('Open Data Log Browser') }}
+        </a>
+        {% endif %}
+    </div>
+
+    {% if datalog_summary %}
+    <div class="overflow-x-auto custom-scrollbar">
+        <table class="min-w-full text-sm">
+            <thead>
+                <tr class="text-left text-text-secondary text-xs uppercase tracking-wider border-b border-border-color">
+                    <th class="py-2 pr-4">{{ _('Record Type') }}</th>
+                    <th class="py-2 pr-4 text-right">{{ _('Records') }}</th>
+                    <th class="py-2 pr-4 whitespace-nowrap">{{ _('First') }}</th>
+                    <th class="py-2 pr-4 whitespace-nowrap">{{ _('Last') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in datalog_summary %}
+                <tr class="border-b border-border-color/40 hover:bg-gray-700/30">
+                    <td class="py-2 pr-4">
+                        <a href="{{ url_for('ui_vehicle_datalogs_page', vehicle_module_id=vehicle.vehicle_id) }}?type={{ s.h_recordtype | urlencode }}"
+                            class="font-mono text-neon-blue hover:underline">{{ s.h_recordtype }}</a>
+                    </td>
+                    <td class="py-2 pr-4 text-right text-text-primary">{{ s.totalrecs }}</td>
+                    <td class="py-2 pr-4 whitespace-nowrap text-text-secondary">{{ s.first }}</td>
+                    <td class="py-2 pr-4 whitespace-nowrap text-text-secondary">{{ s.last }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-sm text-text-secondary">
+        {{ _('No history records stored yet. Enable the standard session logs on the module with:') }}
+        <code class="bg-black/40 px-1 rounded">config set notify log.trip.storetime 30</code>
+        {{ _('and') }}
+        <code class="bg-black/40 px-1 rounded">config set notify log.grid.storetime 30</code>
+        {{ _('(days to keep).') }}
+    </p>
+    {% endif %}
+</div>
+
+<div class="bg-input-bg p-5 rounded-md border border-neon-blue/70 shadow-md">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-neon-blue">{{ _('Crash & Debug Logs') }}</h2>
+        {% if crash_logs %}
+        <a href="{{ url_for('ui_download_crash_logs', vehicle_db_id=vehicle.id) }}"
+            class="px-3 py-1.5 text-xs font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">
+            {{ _('Download Crash Logs (CSV)') }}
+        </a>
+        {% endif %}
+    </div>
+
+    {% if crash_logs %}
+    <h3 class="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-2">{{ _('Crash Reports') }}</h3>
+    <div class="space-y-2 mb-6">
+        {% for log in crash_logs %}
+        {% set is_v3 = log.record_type.startswith('V3') %}
+        <details class="bg-gray-800/30 rounded-md group">
+            <summary class="w-full text-left p-3 flex justify-between items-center hover:bg-gray-700/50 rounded-md transition-colors cursor-pointer list-none">
+                <div class="flex items-center gap-3">
+                    <span class="font-semibold text-text-primary">{{ log.timestamp | datetimeformat }}</span>
+                    <span class="px-1.5 py-0.5 text-xs font-mono rounded {{ 'bg-purple-900/60 text-purple-300' if is_v3 else 'bg-amber-900/60 text-amber-300' }}">
+                        {{ 'V3' if is_v3 else 'V2' }}
+                    </span>
+                    <span class="text-sm {{ 'text-red-400' if 'abort' in log.parsed.reason_text.lower() or log.parsed.is_abort else 'text-yellow-400' }}">
+                        {{ log.parsed.reason_text or 'Crash' }}
+                    </span>
+                </div>
+                <svg class="w-5 h-5 text-text-secondary transform transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </summary>
+            <div class="p-3 border-t border-border-color text-xs">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 font-mono">
+                    <div><span class="font-semibold text-text-secondary">{{ _('Firmware:') }}</span> <span
+                            class="text-text-primary">{{ log.parsed.firmware }}</span></div>
+                    <div><span class="font-semibold text-text-secondary">{{ _('Build ID:') }}</span> <span
+                            class="text-text-primary">{{ log.parsed.build_id }}</span></div>
+                    <div><span class="font-semibold text-text-secondary">{{ _('Reason:') }}</span> <span
+                            class="text-text-primary">{{ log.parsed.reason_code }} ({{ log.parsed.reason_text
+                            }})</span></div>
+                    <div><span class="font-semibold text-text-secondary">{{ _('Abort:') }}</span> <span
+                            class="{{ 'text-red-400' if log.parsed.is_abort else 'text-green-400' }}">{{ 'Yes'
+                            if log.parsed.is_abort else 'No' }}</span></div>
+                    <div><span class="font-semibold text-text-secondary">{{ _('Crash Task:') }}</span> <span
+                            class="text-text-primary">{{ log.parsed.crash_task_name }} ({{
+                            log.parsed.crash_task_prio }})</span></div>
+                    <div><span class="font-semibold text-text-secondary">{{ _('Running Task:') }}</span> <span
+                            class="text-text-primary">{{ log.parsed.running_task_name }} ({{
+                            log.parsed.running_task_prio }})</span></div>
+                </div>
+                <p class="font-semibold text-text-secondary mt-2">{{ _('Backtrace:') }}</p>
+                <pre class="bg-black p-2 rounded overflow-x-auto text-gray-300">{{ log.parsed.backtrace }}</pre>
+            </div>
+        </details>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if debug_logs %}
+    <h3 class="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-2 {% if crash_logs %}border-t border-border-color pt-4{% endif %}">{{ _('Debug Data') }}</h3>
+    <div class="space-y-2">
+        {% for log in debug_logs %}
+        {% set is_v3 = log.record_type.startswith('V3') %}
+        <details class="bg-gray-800/30 rounded-md group">
+            <summary class="w-full text-left p-3 flex justify-between items-center hover:bg-gray-700/50 rounded-md transition-colors cursor-pointer list-none">
+                <div class="flex items-center gap-3">
+                    <span class="font-semibold text-text-primary">{{ log.timestamp | datetimeformat }}</span>
+                    <span class="px-1.5 py-0.5 text-xs font-mono rounded {{ 'bg-purple-900/60 text-purple-300' if is_v3 else 'bg-amber-900/60 text-amber-300' }}">
+                        {{ 'V3' if is_v3 else 'V2' }}
+                    </span>
+                    <span class="text-sm text-blue-400">{{ log.record_type }}</span>
+                </div>
+                <svg class="w-5 h-5 text-text-secondary transform transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </summary>
+            <div class="p-3 border-t border-border-color text-xs">
+                <pre class="bg-black p-2 rounded overflow-x-auto text-gray-300 whitespace-pre-wrap break-all">{{ log.data }}</pre>
+            </div>
+        </details>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not crash_logs and not debug_logs %}
+    <p class="text-sm text-text-secondary">{{ _('No crash or debug logs found for this vehicle.') }}</p>
+    {% endif %}
+</div>

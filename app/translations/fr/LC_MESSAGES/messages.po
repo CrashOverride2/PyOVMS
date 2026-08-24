@@ -1,0 +1,4446 @@
+# French translations for PROJECT.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-08-24 01:42+0200\n"
+"PO-Revision-Date: 2026-06-01 22:55+0200\n"
+"Last-Translator: PyOVMS i18n\n"
+"Language: fr\n"
+"Language-Team: fr <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+# | msgid "New User Registration"
+#: app/notifications/mail/admin.py:26
+msgid "New User Registration on PyOVMS"
+msgstr "Nouvelle inscription d'utilisateur sur PyOVMS"
+
+# | msgid "OVMS Security Alert - IP Address Blocked"
+#: app/notifications/mail/admin.py:27
+msgid "OVMS Security Alert: IP Blocked"
+msgstr "Alerte de sécurité OVMS : adresse IP bloquée"
+
+#: app/notifications/mail/user.py:63
+msgid "Verify Your PyOVMS Account"
+msgstr "Vérifiez votre compte PyOVMS"
+
+#: app/notifications/mail/user.py:94
+#: app/templates/email/password_reset_body.html:22
+#: app/templates/email/password_reset_body.txt:1
+msgid "Password Reset Request"
+msgstr "Demande de réinitialisation du mot de passe"
+
+#: app/notifications/mail/user.py:115
+#: app/templates/email/unused_vehicle_warning.html:25
+msgid "Inactive Vehicle Notice"
+msgstr "Avis de véhicule inactif"
+
+# | msgid "Vehicle Name"
+# | msgid "Vehicle name"
+#: app/notifications/mail/user.py:133
+msgid "Vehicle Removed"
+msgstr "Véhicule supprimé"
+
+#: app/notifications/mail/user.py:150
+#: app/templates/email/account_deletion_warning.html:22
+msgid "Account Deletion Notice"
+msgstr "Avis de suppression de compte"
+
+#: app/routers/ui/registration.py:109 app/routers/ui/users.py:122
+#: app/routers/ui/users.py:224
+msgid "Disposable email addresses are not allowed."
+msgstr "Les adresses e-mail jetables ne sont pas autorisées."
+
+#: app/routers/ui/vehicles.py:236 app/routers/ui/vehicles.py:338
+msgid "Invalid value"
+msgstr "Valeur non valide"
+
+#: app/routers/ui/vehicles.py:239 app/routers/ui/vehicles.py:341
+msgid "Server password is too long (max 64 characters)"
+msgstr "Le mot de passe du serveur est trop long (max. 64 caractères)"
+
+#: app/routers/ui/vehicles.py:241
+msgid "Server password is required"
+msgstr "Le mot de passe du serveur est requis"
+
+#: app/routers/ui/vehicles.py:243 app/routers/ui/vehicles.py:345
+msgid "Server password"
+msgstr "Mot de passe du serveur"
+
+#: app/routers/ui/vehicles.py:343
+msgid "Server password cannot be empty"
+msgstr "Le mot de passe du serveur ne peut pas être vide"
+
+#: app/templates/_charge_list.html:3
+msgid "Individual Charge Sessions"
+msgstr "Sessions de charge individuelles"
+
+#: app/templates/_charge_list.html:6
+msgid "Loading charge logs..."
+msgstr "Chargement des journaux de charge..."
+
+#: app/templates/_charge_list.html:14
+msgid "No charge logs have been recorded for this vehicle yet."
+msgstr "Aucun journal de charge n'a encore été enregistré pour ce véhicule."
+
+#: app/templates/_charge_list.html:21
+msgid "Export All (CSV)"
+msgstr "Tout exporter (CSV)"
+
+#: app/templates/_charge_list.html:30
+msgid "Delete Charge"
+msgstr "Supprimer la charge"
+
+#: app/templates/_charge_list.html:37 app/templates/charge_detail.html:496
+#: app/templates/trip_detail.html:29
+msgid "Start Time"
+msgstr "Heure de début"
+
+#: app/templates/_charge_list.html:41 app/templates/_trip_list.html:51
+#: app/templates/charge_detail.html:504 app/templates/trip_detail.html:31
+msgid "Duration"
+msgstr "Durée"
+
+#: app/templates/_charge_list.html:45 app/templates/index.html:50
+#: app/templates/index.html:52
+msgid "SOC"
+msgstr "SOC"
+
+#: app/templates/_charge_list.html:53 app/templates/_charge_statistics.html:76
+#: app/templates/charge_detail.html:524
+msgid "Energy Charged"
+msgstr "Énergie chargée"
+
+#: app/templates/_charge_list.html:67 app/templates/_trip_list.html:68
+#: app/templates/_trip_search_heatmap.html:102
+msgid "Previous"
+msgstr "Précédent"
+
+#: app/templates/_charge_list.html:70 app/templates/_trip_list.html:74
+#: app/templates/_trip_search_heatmap.html:105
+#: app/templates/vehicle_datalogs.html:161
+msgid "Page"
+msgstr "Page"
+
+#: app/templates/_charge_list.html:70 app/templates/_trip_list.html:74
+#: app/templates/_trip_search_heatmap.html:105
+msgid "of"
+msgstr "sur"
+
+#: app/templates/_charge_list.html:75 app/templates/_trip_list.html:81
+#: app/templates/_trip_search_heatmap.html:109
+#: app/templates/add_vehicle_wizard.html:104
+#: app/templates/add_vehicle_wizard.html:181
+msgid "Next"
+msgstr "Suivant"
+
+#: app/templates/_charge_statistics.html:2
+msgid "Charge Statistics"
+msgstr "Statistiques de charge"
+
+#: app/templates/_charge_statistics.html:4
+#: app/templates/_trip_statistics.html:4
+msgid "Loading statistics..."
+msgstr "Chargement des statistiques..."
+
+#: app/templates/_charge_statistics.html:32
+msgid "No charge data for this period."
+msgstr "Aucune donnée de charge pour cette période."
+
+#: app/templates/_charge_statistics.html:38
+#: app/templates/_trip_statistics.html:51
+msgid "Lifetime Totals"
+msgstr "Totaux cumulés"
+
+#: app/templates/_charge_statistics.html:41
+msgid "Total Sessions"
+msgstr "Sessions totales"
+
+#: app/templates/_charge_statistics.html:45
+msgid "Total Energy Charged"
+msgstr "Énergie totale chargée"
+
+#: app/templates/_charge_statistics.html:49
+msgid "Total Time Charging"
+msgstr "Temps total de charge"
+
+#: app/templates/_charge_statistics.html:53
+msgid "Avg. Energy / Session"
+msgstr "Énergie moy. / session"
+
+#: app/templates/_charge_statistics.html:57
+msgid "Avg. Duration / Session"
+msgstr "Durée moy. / session"
+
+#: app/templates/_charge_statistics.html:61
+msgid "Avg. SOC Gained"
+msgstr "SOC moy. gagné"
+
+#: app/templates/_charge_statistics.html:72
+msgid "Charge Sessions"
+msgstr "Sessions de charge"
+
+#: app/templates/_charge_statistics.html:84
+msgid "Click a bar on the chart to see monthly details."
+msgstr "Cliquez sur une barre du graphique pour voir les détails mensuels."
+
+#: app/templates/_trip_list.html:2
+msgid "Loading trips..."
+msgstr "Chargement des trajets..."
+
+#: app/templates/_trip_list.html:10
+msgid "No trips have been recorded for this vehicle yet."
+msgstr "Aucun trajet n'a encore été enregistré pour ce véhicule."
+
+#: app/templates/_trip_list.html:21
+msgid "Delete Trip"
+msgstr "Supprimer le trajet"
+
+#: app/templates/_trip_list.html:52 app/templates/trip_detail.html:32
+msgid "Distance"
+msgstr "Distance"
+
+#: app/templates/_trip_list.html:53 app/templates/_trip_statistics.html:120
+#: app/templates/trip_detail.html:33
+msgid "Avg. Speed"
+msgstr "Vitesse moy."
+
+#: app/templates/_trip_list.html:54 app/templates/trip_detail.html:36
+msgid "SOC Used"
+msgstr "SOC utilisé"
+
+#: app/templates/_trip_list.html:55 app/templates/trip_detail.html:37
+msgid "Energy Used"
+msgstr "Énergie utilisée"
+
+#: app/templates/_trip_list.html:56
+msgid "Consumption"
+msgstr "Consommation"
+
+#: app/templates/_trip_search_heatmap.html:2
+msgid "Trip Search & Heatmap"
+msgstr "Recherche de trajets et carte de chaleur"
+
+#: app/templates/_trip_search_heatmap.html:10
+msgid "Search Type"
+msgstr "Type de recherche"
+
+#: app/templates/_trip_search_heatmap.html:12
+msgid "Starts within radius"
+msgstr "Commence dans le rayon"
+
+#: app/templates/_trip_search_heatmap.html:13
+msgid "Ends within radius"
+msgstr "Se termine dans le rayon"
+
+#: app/templates/_trip_search_heatmap.html:14
+msgid "Starts within bounding box"
+msgstr "Commence dans la zone délimitée"
+
+#: app/templates/_trip_search_heatmap.html:15
+msgid "Ends within bounding box"
+msgstr "Se termine dans la zone délimitée"
+
+#: app/templates/_trip_search_heatmap.html:23
+msgid "Latitude"
+msgstr "Latitude"
+
+#: app/templates/_trip_search_heatmap.html:27
+msgid "Longitude"
+msgstr "Longitude"
+
+#: app/templates/_trip_search_heatmap.html:31
+msgid "Or click/drag a marker on the map to set coordinates."
+msgstr ""
+"Ou cliquez/faites glisser un marqueur sur la carte pour définir les "
+"coordonnées."
+
+#: app/templates/_trip_search_heatmap.html:34
+msgid "Radius (meters)"
+msgstr "Rayon (mètres)"
+
+#: app/templates/_trip_search_heatmap.html:41
+msgid "Bounding Box"
+msgstr "Zone délimitée"
+
+#: app/templates/_trip_search_heatmap.html:43
+msgid "e.g., -0.5,51.3,0.3,51.7"
+msgstr "p. ex., -0.5,51.3,0.3,51.7"
+
+#: app/templates/_trip_search_heatmap.html:46
+msgid "Draw Box on Map"
+msgstr "Dessiner une zone sur la carte"
+
+#: app/templates/_trip_search_heatmap.html:47
+msgid "Cancel Drawing"
+msgstr "Annuler le dessin"
+
+#: app/templates/_trip_search_heatmap.html:49
+msgid "Click map to set first corner."
+msgstr "Cliquez sur la carte pour définir le premier coin."
+
+#: app/templates/_trip_search_heatmap.html:50
+msgid "Click map to set second corner."
+msgstr "Cliquez sur la carte pour définir le deuxième coin."
+
+#: app/templates/_trip_search_heatmap.html:54
+msgid "Search Trips"
+msgstr "Rechercher des trajets"
+
+#: app/templates/_trip_search_heatmap.html:60
+msgid "Or, visualize all trip data for this vehicle."
+msgstr "Ou visualisez toutes les données de trajet de ce véhicule."
+
+#: app/templates/_trip_search_heatmap.html:62
+msgid "Show Heatmap"
+msgstr "Afficher la carte de chaleur"
+
+#: app/templates/_trip_search_heatmap.html:65
+msgid "Clear Map & Search"
+msgstr "Effacer la carte et la recherche"
+
+#: app/templates/_trip_search_heatmap.html:73
+msgid "Loading..."
+msgstr "Chargement..."
+
+#: app/templates/_trip_search_heatmap.html:80
+msgid "Search Results"
+msgstr "Résultats de recherche"
+
+#: app/templates/_trip_search_heatmap.html:91
+msgid "from search point"
+msgstr "depuis le point de recherche"
+
+#: app/templates/_trip_statistics.html:2
+msgid "Trip Statistics"
+msgstr "Statistiques de trajets"
+
+#: app/templates/_trip_statistics.html:19
+msgid "Daily"
+msgstr "Quotidien"
+
+#: app/templates/_trip_statistics.html:22
+msgid "Weekly"
+msgstr "Hebdomadaire"
+
+#: app/templates/_trip_statistics.html:25
+msgid "Monthly"
+msgstr "Mensuel"
+
+#: app/templates/_trip_statistics.html:45
+msgid "No trip data for this period."
+msgstr "Aucune donnée de trajet pour cette période."
+
+#: app/templates/_trip_statistics.html:54
+#: app/templates/_trip_statistics.html:103
+msgid "Total Distance"
+msgstr "Distance totale"
+
+#: app/templates/_trip_statistics.html:59
+#: app/templates/_trip_statistics.html:109
+msgid "Total Duration"
+msgstr "Durée totale"
+
+#: app/templates/_trip_statistics.html:64
+msgid "Total Trips"
+msgstr "Trajets totaux"
+
+#: app/templates/_trip_statistics.html:69
+#: app/templates/_trip_statistics.html:126
+msgid "Total Energy"
+msgstr "Énergie totale"
+
+#: app/templates/_trip_statistics.html:74
+#: app/templates/_trip_statistics.html:132
+msgid "Total SOC Used"
+msgstr "SOC total utilisé"
+
+#: app/templates/_trip_statistics.html:79
+#: app/templates/_trip_statistics.html:138
+msgid "Longest Trip"
+msgstr "Trajet le plus long"
+
+#: app/templates/_trip_statistics.html:84
+#: app/templates/_trip_statistics.html:144
+msgid "Shortest Trip"
+msgstr "Trajet le plus court"
+
+#: app/templates/_trip_statistics.html:89
+#: app/templates/_trip_statistics.html:151
+msgid "Busiest Day"
+msgstr "Jour le plus actif"
+
+#: app/templates/_trip_statistics.html:115
+msgid "Number of Trips"
+msgstr "Nombre de trajets"
+
+#: app/templates/_trip_statistics.html:160
+msgid "Click a bar on the chart to see details."
+msgstr "Cliquez sur une barre du graphique pour voir les détails."
+
+#: app/templates/_vehicle_cell_stats.html:3
+msgid "Battery Cell Voltages"
+msgstr "Tensions des cellules de la batterie"
+
+#: app/templates/_vehicle_cell_stats.html:5
+#: app/templates/_vehicle_cell_stats.html:32
+msgid "Min:"
+msgstr "Min :"
+
+#: app/templates/_vehicle_cell_stats.html:7
+#: app/templates/_vehicle_cell_stats.html:34
+msgid "Max:"
+msgstr "Max :"
+
+#: app/templates/_vehicle_cell_stats.html:9
+#: app/templates/_vehicle_cell_stats.html:36
+msgid "Count:"
+msgstr "Nombre :"
+
+#: app/templates/_vehicle_cell_stats.html:30
+msgid "Battery Cell Temperatures"
+msgstr "Températures des cellules de la batterie"
+
+#: app/templates/_vehicle_cell_stats.html:56
+msgid "No V3 cell data available for this vehicle."
+msgstr "Aucune donnée de cellule V3 disponible pour ce véhicule."
+
+#: app/templates/_vehicle_logs.html:3
+msgid "Vehicle Data Logs"
+msgstr "Journaux de données du véhicule"
+
+#: app/templates/_vehicle_logs.html:7
+msgid "Open Data Log Browser"
+msgstr "Ouvrir l’explorateur de journaux"
+
+#: app/templates/_vehicle_logs.html:17
+msgid "Record Type"
+msgstr "Type d’enregistrement"
+
+#: app/templates/_vehicle_logs.html:18
+msgid "Records"
+msgstr "Enregistrements"
+
+#: app/templates/_vehicle_logs.html:19
+msgid "First"
+msgstr "Premier"
+
+#: app/templates/_vehicle_logs.html:20
+msgid "Last"
+msgstr "Dernier"
+
+#: app/templates/_vehicle_logs.html:40
+msgid ""
+"No history records stored yet. Enable the standard session logs on the "
+"module with:"
+msgstr ""
+"Aucun enregistrement historique pour le moment. Activez les journaux de "
+"session standard sur le module avec :"
+
+#: app/templates/_vehicle_logs.html:42
+msgid "and"
+msgstr "et"
+
+#: app/templates/_vehicle_logs.html:44
+msgid "(days to keep)."
+msgstr "(durée de conservation en jours)."
+
+#: app/templates/_vehicle_logs.html:51
+msgid "Crash & Debug Logs"
+msgstr "Journaux de plantage et de débogage"
+
+#: app/templates/_vehicle_logs.html:55
+msgid "Download Crash Logs (CSV)"
+msgstr "Télécharger les journaux de plantage (CSV)"
+
+#: app/templates/_vehicle_logs.html:61
+msgid "Crash Reports"
+msgstr "Rapports de plantage"
+
+#: app/templates/_vehicle_logs.html:83
+msgid "Firmware:"
+msgstr "Micrologiciel :"
+
+#: app/templates/_vehicle_logs.html:85
+msgid "Build ID:"
+msgstr "ID de build :"
+
+#: app/templates/_vehicle_logs.html:87
+msgid "Reason:"
+msgstr "Raison :"
+
+#: app/templates/_vehicle_logs.html:90
+msgid "Abort:"
+msgstr "Abandon :"
+
+#: app/templates/_vehicle_logs.html:93
+msgid "Crash Task:"
+msgstr "Tâche du plantage :"
+
+#: app/templates/_vehicle_logs.html:96
+msgid "Running Task:"
+msgstr "Tâche en cours :"
+
+#: app/templates/_vehicle_logs.html:100
+msgid "Backtrace:"
+msgstr "Trace :"
+
+#: app/templates/_vehicle_logs.html:109
+msgid "Debug Data"
+msgstr "Données de débogage"
+
+#: app/templates/_vehicle_logs.html:136
+msgid "No crash or debug logs found for this vehicle."
+msgstr "Aucun journal de plantage ou de débogage trouvé pour ce véhicule."
+
+#: app/templates/_vehicle_metrics.html:2
+msgid "All Metrics (Last Known Values)"
+msgstr "Toutes les métriques (dernières valeurs connues)"
+
+#: app/templates/_vehicle_metrics.html:5
+msgid "Data Source:"
+msgstr "Source de données :"
+
+#: app/templates/_vehicle_metrics.html:10
+msgid "V2 (Cached)"
+msgstr "V2 (en cache)"
+
+#: app/templates/_vehicle_metrics.html:16
+msgid "V3 (Live MQTT)"
+msgstr "V3 (MQTT en direct)"
+
+#: app/templates/_vehicle_metrics.html:21
+msgid "V2 Metrics (from Cache)"
+msgstr "Métriques V2 (depuis le cache)"
+
+#: app/templates/_vehicle_metrics.html:43
+msgid "No V2 metrics data available."
+msgstr "Aucune donnée de métriques V2 disponible."
+
+#: app/templates/_vehicle_metrics.html:48
+msgid "V3 Metrics (from MQTT)"
+msgstr "Métriques V3 (depuis MQTT)"
+
+#: app/templates/_vehicle_metrics.html:71
+msgid "No V3 metrics data available. Is the vehicle online via MQTT?"
+msgstr ""
+"Aucune donnée de métriques V3 disponible. Le véhicule est-il en ligne via"
+" MQTT ?"
+
+#: app/templates/_vehicle_notifications.html:2
+msgid "Notification Settings"
+msgstr "Paramètres de notification"
+
+#: app/templates/_vehicle_notifications.html:13
+#: app/templates/_vehicle_notifications.html:16
+msgid "Token registered"
+msgstr "Jeton enregistré"
+
+#: app/templates/_vehicle_notifications.html:25
+msgid "Device ID"
+msgstr "ID de l'appareil"
+
+#: app/templates/_vehicle_notifications.html:29
+msgid "Remove this notification?"
+msgstr "Supprimer cette notification ?"
+
+#: app/templates/_vehicle_notifications.html:31
+#: app/templates/profile_webauthn_tab.html:61
+msgid "Remove"
+msgstr "Supprimer"
+
+#: app/templates/_vehicle_notifications.html:37
+msgid "No notifications configured."
+msgstr "Aucune notification configurée."
+
+#: app/templates/_vehicle_notifications.html:45
+msgid "Add ntfy"
+msgstr "Ajouter ntfy"
+
+#: app/templates/_vehicle_notifications.html:48
+msgid "Email server not configured globally"
+msgstr "Le serveur de messagerie n'est pas configuré globalement"
+
+#: app/templates/_vehicle_notifications.html:50
+msgid "Add Email"
+msgstr "Ajouter un e-mail"
+
+#: app/templates/_vehicle_notifications.html:60
+msgid "NTFY Topic"
+msgstr "Sujet NTFY"
+
+#: app/templates/_vehicle_notifications.html:65
+msgid "Server URL"
+msgstr "URL du serveur"
+
+#: app/templates/_vehicle_notifications.html:71
+msgid "Auth Method"
+msgstr "Méthode d'authentification"
+
+#: app/templates/_vehicle_notifications.html:74
+msgid "None"
+msgstr "Aucun"
+
+#: app/templates/_vehicle_notifications.html:75
+#: app/templates/_vehicle_notifications.html:81
+msgid "Bearer Token"
+msgstr "Jeton Bearer"
+
+#: app/templates/_vehicle_notifications.html:76
+msgid "Basic Auth"
+msgstr "Authentification basique"
+
+#: app/templates/_vehicle_notifications.html:77
+msgid "Query Parameter"
+msgstr "Paramètre de requête"
+
+#: app/templates/_vehicle_notifications.html:82
+#: app/templates/_vehicle_notifications.html:104
+msgid "Token"
+msgstr "Jeton"
+
+#: app/templates/_vehicle_notifications.html:87
+#: app/templates/_vehicle_notifications.html:88 app/templates/edit_user.html:16
+#: app/templates/email/admin_lifecycle_account.html:46
+#: app/templates/email/admin_lifecycle_account.txt:8
+#: app/templates/email/admin_lifecycle_account.txt:17
+#: app/templates/email/admin_new_user_notification.html:32
+#: app/templates/email/admin_new_user_notification.txt:7
+#: app/templates/login.html:20 app/templates/profile.html:46
+#: app/templates/register.html:20 app/templates/users_management.html:40
+msgid "Username"
+msgstr "Nom d'utilisateur"
+
+#: app/templates/_vehicle_notifications.html:92
+#: app/templates/confirm_password.html:21 app/templates/edit_user.html:40
+#: app/templates/login.html:27 app/templates/register.html:34
+msgid "Password"
+msgstr "Mot de passe"
+
+#: app/templates/_vehicle_notifications.html:99
+msgid "Query Param Name"
+msgstr "Nom du paramètre de requête"
+
+#: app/templates/_vehicle_notifications.html:110
+#: app/templates/_vehicle_notifications.html:126
+msgid "Add"
+msgstr "Ajouter"
+
+#: app/templates/_vehicle_notifications.html:111
+#: app/templates/_vehicle_notifications.html:127
+#: app/templates/admin_dashboard.html:208
+#: app/templates/admin_dashboard.html:290 app/templates/charge_detail.html:588
+#: app/templates/confirm_password.html:32 app/templates/trip_detail.html:84
+#: app/templates/vehicle_detail.html:129 app/templates/vehicle_detail.html:163
+msgid "Cancel"
+msgstr "Annuler"
+
+#: app/templates/_vehicle_notifications.html:121
+#: app/templates/forgot_password.html:21 app/templates/register.html:27
+msgid "Email Address"
+msgstr "Adresse e-mail"
+
+#: app/templates/_vehicle_notifications.html:132
+msgid ""
+"Push tokens (FCM, APNs, UnifiedPush) are registered automatically by the "
+"app."
+msgstr ""
+"Les jetons push (FCM, APNs, UnifiedPush) sont enregistrés automatiquement"
+" par l'application."
+
+#: app/templates/_vehicle_overview.html:3
+msgid "Connection"
+msgstr "Connexion"
+
+#: app/templates/_vehicle_overview.html:7
+msgid "V2 (TCP) Online:"
+msgstr "V2 (TCP) en ligne :"
+
+#: app/templates/_vehicle_overview.html:8
+#: app/templates/_vehicle_overview.html:13 app/templates/profile.html:93
+#: app/templates/users_management.html:59
+#: app/templates/users_management.html:64
+#: app/templates/users_management.html:77
+msgid "Yes"
+msgstr "Oui"
+
+#: app/templates/_vehicle_overview.html:9
+#: app/templates/_vehicle_overview.html:14 app/templates/profile.html:93
+#: app/templates/users_management.html:59
+#: app/templates/users_management.html:64
+#: app/templates/users_management.html:79
+msgid "No"
+msgstr "Non"
+
+#: app/templates/_vehicle_overview.html:12
+msgid "V3 (MQTT) Online:"
+msgstr "V3 (MQTT) en ligne :"
+
+#: app/templates/_vehicle_overview.html:17
+msgid "Last Seen (TCP):"
+msgstr "Dernière connexion (TCP) :"
+
+#: app/templates/_vehicle_overview.html:18
+#: app/templates/_vehicle_overview.html:22 app/templates/index.html:52
+#: app/templates/index.html:58
+msgid "N/A"
+msgstr "N/D"
+
+#: app/templates/_vehicle_overview.html:21
+msgid "Last Seen (V3):"
+msgstr "Dernière connexion (V3) :"
+
+#: app/templates/_vehicle_overview.html:28
+msgid "Key Metrics"
+msgstr "Métriques clés"
+
+#: app/templates/_vehicle_overview.html:30
+msgid "SOC:"
+msgstr "SOC :"
+
+#: app/templates/_vehicle_overview.html:34
+msgid "Est. Range:"
+msgstr "Autonomie est. :"
+
+#: app/templates/_vehicle_overview.html:37
+msgid "12V Battery:"
+msgstr "Batterie 12V :"
+
+#: app/templates/_vehicle_overview.html:40
+msgid "Battery Voltage:"
+msgstr "Tension de la batterie :"
+
+#: app/templates/_vehicle_overview.html:43
+msgid "Battery Current:"
+msgstr "Courant de la batterie :"
+
+#: app/templates/_vehicle_overview.html:46
+msgid "Battery SOH:"
+msgstr "SOH de la batterie :"
+
+#: app/templates/_vehicle_overview.html:49
+msgid "Line Voltage:"
+msgstr "Tension secteur :"
+
+#: app/templates/_vehicle_overview.html:52
+msgid "Charge Current:"
+msgstr "Courant de charge :"
+
+#: app/templates/_vehicle_overview.html:55
+msgid "Charge State:"
+msgstr "État de charge :"
+
+#: app/templates/_vehicle_overview.html:58
+msgid "Charge Mode:"
+msgstr "Mode de charge :"
+
+#: app/templates/_vehicle_overview.html:61
+msgid "Position:"
+msgstr "Position :"
+
+#: app/templates/_vehicle_overview.html:70
+msgid "Tire Pressure & Temperature (TPMS)"
+msgstr "Pression et température des pneus (TPMS)"
+
+#: app/templates/_vehicle_terminal.html:2
+msgid "Command Terminal"
+msgstr "Terminal de commandes"
+
+#: app/templates/_vehicle_terminal.html:6
+msgid "Terminal Protocol:"
+msgstr "Protocole du terminal :"
+
+#: app/templates/_vehicle_terminal.html:10
+#: app/templates/admin_dashboard.html:50
+msgid "V2 (TCP)"
+msgstr "V2 (TCP)"
+
+#: app/templates/_vehicle_terminal.html:15
+#: app/templates/admin_dashboard.html:51
+msgid "V3 (MQTT)"
+msgstr "V3 (MQTT)"
+
+#: app/templates/_vehicle_terminal.html:42
+msgid "Send"
+msgstr "Envoyer"
+
+#: app/templates/_vehicle_trips.html:4
+msgid "Individual Trips"
+msgstr "Trajets individuels"
+
+#: app/templates/add_vehicle_wizard.html:3
+#: app/templates/add_vehicle_wizard.html:12
+#: app/templates/admin_dashboard.html:63
+msgid "Add New Vehicle"
+msgstr "Ajouter un nouveau véhicule"
+
+#: app/templates/add_vehicle_wizard.html:9
+#: app/templates/add_vehicle_wizard.html:176
+#: app/templates/add_vehicle_wizard.html:564 app/templates/edit_vehicle.html:8
+#: app/templates/profile.html:9
+msgid "Back"
+msgstr "Retour"
+
+#: app/templates/add_vehicle_wizard.html:13
+msgid "Let's get your OVMS module connected to this server."
+msgstr "Connectons votre module OVMS à ce serveur."
+
+#: app/templates/add_vehicle_wizard.html:38
+msgid "Step 1: Choose Protocol"
+msgstr "Étape 1 : Choisissez le protocole"
+
+#: app/templates/add_vehicle_wizard.html:39
+msgid "Which protocol will your OVMS module use to connect to this server?"
+msgstr ""
+"Quel protocole votre module OVMS utilisera-t-il pour se connecter à ce "
+"serveur ?"
+
+#: app/templates/add_vehicle_wizard.html:49
+msgid "Direct TCP connection. Classic OVMS protocol, works everywhere."
+msgstr "Connexion TCP directe. Protocole OVMS classique, fonctionne partout."
+
+#: app/templates/add_vehicle_wizard.html:55
+#: app/templates/add_vehicle_wizard.html:72
+#: app/templates/add_vehicle_wizard.html:94
+msgid "Select"
+msgstr "Sélectionner"
+
+#: app/templates/add_vehicle_wizard.html:65
+msgid "MQTT-based. More efficient, real-time metrics."
+msgstr "Basé sur MQTT. Plus efficace, métriques en temps réel."
+
+#: app/templates/add_vehicle_wizard.html:66
+msgid "MQTT not configured on this server."
+msgstr "MQTT n'est pas configuré sur ce serveur."
+
+#: app/templates/add_vehicle_wizard.html:84
+msgid "Recommended"
+msgstr "Recommandé"
+
+#: app/templates/add_vehicle_wizard.html:87
+msgid "Both"
+msgstr "Les deux"
+
+#: app/templates/add_vehicle_wizard.html:88
+msgid "V2 + V3 simultaneously. Best coverage and redundancy."
+msgstr "V2 + V3 simultanément. Meilleure couverture et redondance."
+
+#: app/templates/add_vehicle_wizard.html:114
+msgid "Step 2: Module Credentials"
+msgstr "Étape 2 : Identifiants du module"
+
+#: app/templates/add_vehicle_wizard.html:115
+msgid ""
+"We've generated a unique ID and password for your module. Feel free to "
+"change them."
+msgstr ""
+"Nous avons généré un ID et un mot de passe uniques pour votre module. "
+"Vous pouvez les modifier librement."
+
+#: app/templates/add_vehicle_wizard.html:121
+msgid "Vehicle / Module ID"
+msgstr "ID du véhicule / module"
+
+#: app/templates/add_vehicle_wizard.html:129
+#: app/templates/add_vehicle_wizard.html:150
+#: app/templates/add_vehicle_wizard.html:222
+#: app/templates/add_vehicle_wizard.html:235
+#: app/templates/add_vehicle_wizard.html:247
+#: app/templates/add_vehicle_wizard.html:260
+#: app/templates/add_vehicle_wizard.html:325
+#: app/templates/add_vehicle_wizard.html:347
+#: app/templates/add_vehicle_wizard.html:359
+#: app/templates/add_vehicle_wizard.html:371
+#: app/templates/add_vehicle_wizard.html:383
+#: app/templates/add_vehicle_wizard.html:497
+#: app/templates/add_vehicle_wizard.html:505
+#: app/templates/edit_vehicle.html:114 app/templates/edit_vehicle.html:131
+#: app/templates/edit_vehicle.html:152 app/templates/edit_vehicle.html:161
+#: app/templates/profile.html:190 app/templates/profile.html:199
+#: app/templates/totp_key_rotation.html:206
+msgid "Copy"
+msgstr "Copier"
+
+#: app/templates/add_vehicle_wizard.html:131
+msgid "Generate new ID"
+msgstr "Générer un nouvel ID"
+
+#: app/templates/add_vehicle_wizard.html:133
+msgid "Letters A–Z, digits, and hyphens only. Max 32 characters."
+msgstr "Lettres A–Z, chiffres et tirets uniquement. Max. 32 caractères."
+
+#: app/templates/add_vehicle_wizard.html:138
+msgid "Server Password"
+msgstr "Mot de passe du serveur"
+
+#: app/templates/add_vehicle_wizard.html:152
+msgid "Generate new password"
+msgstr "Générer un nouveau mot de passe"
+
+#: app/templates/add_vehicle_wizard.html:154
+msgid "Authenticates your module with this server. Store it securely."
+msgstr "Authentifie votre module auprès de ce serveur. Conservez-le en lieu sûr."
+
+#: app/templates/add_vehicle_wizard.html:159
+#: app/templates/email/admin_lifecycle_vehicle.html:51
+#: app/templates/email/admin_lifecycle_vehicle.txt:9
+#: app/templates/email/admin_lifecycle_vehicle.txt:20
+#: app/templates/email/unused_vehicle_warning.html:42
+#: app/templates/email/vehicle_auto_deleted.html:42
+msgid "Vehicle Name"
+msgstr "Nom du véhicule"
+
+#: app/templates/add_vehicle_wizard.html:159
+msgid "optional display name"
+msgstr "nom d'affichage facultatif"
+
+#: app/templates/add_vehicle_wizard.html:163
+msgid "e.g., My Renault Zoe"
+msgstr "p. ex., Ma Renault Zoe"
+
+#: app/templates/add_vehicle_wizard.html:168
+msgid "Keep these values handy!"
+msgstr "Gardez ces valeurs à portée de main !"
+
+#: app/templates/add_vehicle_wizard.html:169
+msgid ""
+"You'll need to enter the Vehicle ID and password into your module's web "
+"interface in the next step."
+msgstr ""
+"Vous devrez saisir l'ID du véhicule et le mot de passe dans l'interface "
+"web de votre module à l'étape suivante."
+
+#: app/templates/add_vehicle_wizard.html:191
+msgid "Step 3: Configure Your Module"
+msgstr "Étape 3 : Configurez votre module"
+
+#: app/templates/add_vehicle_wizard.html:192
+msgid ""
+"Open the web interface of your OVMS module (usually at 192.168.4.1 while "
+"connected to its Wi-Fi) and enter the highlighted values."
+msgstr ""
+"Ouvrez l'interface web de votre module OVMS (généralement à 192.168.4.1 "
+"lorsque vous êtes connecté à son Wi-Fi) et saisissez les valeurs "
+"surlignées."
+
+#: app/templates/add_vehicle_wizard.html:197
+#: app/templates/add_vehicle_wizard.html:299
+#: app/templates/add_vehicle_wizard.html:407
+msgid "Navigate to:"
+msgstr "Accédez à :"
+
+#: app/templates/add_vehicle_wizard.html:292
+msgid ""
+"The blue-highlighted fields contain your values. After saving, also "
+"enable \"Start server V2\" in Auto start configuration (see below)."
+msgstr ""
+"Les champs surlignés en bleu contiennent vos valeurs. Après "
+"l'enregistrement, activez également « Start server V2 » dans la "
+"configuration de démarrage automatique (voir ci-dessous)."
+
+#: app/templates/add_vehicle_wizard.html:400
+msgid ""
+"The blue-highlighted fields contain your values. After saving, also "
+"enable \"Start server V3\" in Auto start configuration (see below)."
+msgstr ""
+"Les champs surlignés en bleu contiennent vos valeurs. Après "
+"l'enregistrement, activez également « Start server V3 » dans la "
+"configuration de démarrage automatique (voir ci-dessous)."
+
+#: app/templates/add_vehicle_wizard.html:488
+#: app/templates/edit_vehicle.html:142
+msgid "Module CLI Helper"
+msgstr "Assistant CLI du module"
+
+#: app/templates/add_vehicle_wizard.html:492
+msgid ""
+"Alternatively, use your module's terminal (Shell tab) to configure the "
+"server connection with these commands. Values update as you edit your "
+"credentials."
+msgstr ""
+"Vous pouvez également utiliser le terminal de votre module (onglet Shell)"
+" pour configurer la connexion au serveur avec ces commandes. Les valeurs "
+"se mettent à jour lorsque vous modifiez vos identifiants."
+
+#: app/templates/add_vehicle_wizard.html:496
+#: app/templates/edit_vehicle.html:151
+msgid "V2 Server CLI Configuration"
+msgstr "Configuration CLI du serveur V2"
+
+#: app/templates/add_vehicle_wizard.html:504
+#: app/templates/edit_vehicle.html:160
+msgid "V3 Server CLI Configuration"
+msgstr "Configuration CLI du serveur V3"
+
+#: app/templates/add_vehicle_wizard.html:517
+msgid "Additional Settings"
+msgstr "Paramètres supplémentaires"
+
+#: app/templates/add_vehicle_wizard.html:517
+msgid "optional"
+msgstr "facultatif"
+
+#: app/templates/add_vehicle_wizard.html:524 app/templates/edit_vehicle.html:33
+msgid "Vehicle Owner"
+msgstr "Propriétaire du véhicule"
+
+#: app/templates/add_vehicle_wizard.html:526
+msgid "Select a user…"
+msgstr "Sélectionner un utilisateur…"
+
+#: app/templates/add_vehicle_wizard.html:533
+msgid ""
+"Assign this vehicle to a registered user. Administrators cannot own "
+"vehicles."
+msgstr ""
+"Attribuez ce véhicule à un utilisateur enregistré. Les administrateurs ne"
+" peuvent pas posséder de véhicule."
+
+#: app/templates/add_vehicle_wizard.html:537
+msgid ""
+"Notification recipients (ntfy, email, push) can be configured from the "
+"vehicle detail page after saving."
+msgstr ""
+"Les destinataires des notifications (ntfy, e-mail, push) peuvent être "
+"configurés depuis la page de détails du véhicule après l'enregistrement."
+
+#: app/templates/add_vehicle_wizard.html:540
+#: app/templates/edit_vehicle.html:170
+msgid "Optional Services"
+msgstr "Services facultatifs"
+
+#: app/templates/add_vehicle_wizard.html:545
+#: app/templates/edit_vehicle.html:176
+msgid "Enable Trip Tracking"
+msgstr "Activer le suivi des trajets"
+
+#: app/templates/add_vehicle_wizard.html:550
+#: app/templates/edit_vehicle.html:183
+msgid "Enable Charge Logging"
+msgstr "Activer la journalisation des charges"
+
+#: app/templates/add_vehicle_wizard.html:568
+msgid "Save Vehicle"
+msgstr "Enregistrer le véhicule"
+
+#: app/templates/add_vehicle_wizard.html:766
+msgid "Copied to clipboard!"
+msgstr "Copié dans le presse-papiers !"
+
+#: app/templates/admin_dashboard.html:24
+msgid "System Health"
+msgstr "État du système"
+
+#: app/templates/admin_dashboard.html:28
+msgid "CPU Load"
+msgstr "Charge CPU"
+
+#: app/templates/admin_dashboard.html:32
+msgid "Memory Usage"
+msgstr "Utilisation de la mémoire"
+
+#: app/templates/admin_dashboard.html:36
+msgid "Uptime:"
+msgstr "Temps de fonctionnement :"
+
+#: app/templates/admin_dashboard.html:44
+msgid "Live Counts"
+msgstr "Compteurs en direct"
+
+#: app/templates/admin_dashboard.html:47
+msgid "Total Users"
+msgstr "Utilisateurs totaux"
+
+#: app/templates/admin_dashboard.html:48
+msgid "Total Vehicles"
+msgstr "Véhicules totaux"
+
+#: app/templates/admin_dashboard.html:49
+msgid "Vehicles Online"
+msgstr "Véhicules en ligne"
+
+#: app/templates/admin_dashboard.html:52
+msgid "MQTT Auth"
+msgstr "Authentification MQTT"
+
+#: app/templates/admin_dashboard.html:52 app/templates/admin_dashboard.html:70
+msgid "Enabled"
+msgstr "Activé"
+
+#: app/templates/admin_dashboard.html:52 app/templates/admin_dashboard.html:70
+msgid "Disabled"
+msgstr "Désactivé"
+
+#: app/templates/admin_dashboard.html:60
+msgid "Quick Actions"
+msgstr "Actions rapides"
+
+#: app/templates/admin_dashboard.html:64
+msgid "View Live Logs"
+msgstr "Voir les journaux en direct"
+
+#: app/templates/admin_dashboard.html:65
+msgid "Security Dashboard"
+msgstr "Tableau de bord de sécurité"
+
+#: app/templates/admin_dashboard.html:66 app/templates/blocked_ips.html:13
+msgid "Blocked IPs"
+msgstr "IP bloquées"
+
+#: app/templates/admin_dashboard.html:67
+msgid "TOTP Key Rotation"
+msgstr "Rotation des clés TOTP"
+
+#: app/templates/admin_dashboard.html:68
+msgid "Info Box Settings"
+msgstr "Paramètres de la boîte d'information"
+
+#: app/templates/admin_dashboard.html:70
+msgid "Disposable Email Filter"
+msgstr "Filtre d'e-mails jetables"
+
+#: app/templates/admin_dashboard.html:78
+msgid "All Vehicles"
+msgstr "Tous les véhicules"
+
+#: app/templates/admin_dashboard.html:86
+msgid "vehicle(s) pending auto-deletion"
+msgstr "véhicule(s) en attente de suppression automatique"
+
+#: app/templates/admin_dashboard.html:92
+msgid "vehicle(s) inactive 365+ days (warning will be sent)"
+msgstr "véhicule(s) inactif(s) depuis 365+ jours (un avertissement sera envoyé)"
+
+#: app/templates/admin_dashboard.html:101
+#: app/templates/autoprovision_management.html:28
+#: app/templates/security_events_dashboard.html:90
+msgid "Status"
+msgstr "Statut"
+
+#: app/templates/admin_dashboard.html:102
+#: app/templates/email/admin_lifecycle_vehicle.html:46
+#: app/templates/email/admin_lifecycle_vehicle.txt:8
+#: app/templates/email/admin_lifecycle_vehicle.txt:19
+#: app/templates/email/unused_vehicle_warning.html:37
+#: app/templates/email/unused_vehicle_warning.txt:8
+#: app/templates/email/vehicle_auto_deleted.html:37
+#: app/templates/email/vehicle_auto_deleted.txt:8
+msgid "Vehicle ID"
+msgstr "ID véhicule"
+
+#: app/templates/admin_dashboard.html:103
+msgid "Name"
+msgstr "Nom"
+
+#: app/templates/admin_dashboard.html:104
+#: app/templates/autoprovision_management.html:31
+#: app/templates/edit_vehicle.html:12
+#: app/templates/email/admin_lifecycle_vehicle.html:56
+#: app/templates/email/admin_lifecycle_vehicle.txt:10
+#: app/templates/email/admin_lifecycle_vehicle.txt:21
+#: app/templates/index.html:44
+msgid "Owner"
+msgstr "Propriétaire"
+
+#: app/templates/admin_dashboard.html:105
+msgid "Last Seen (V2/V3)"
+msgstr "Dernière activité (V2/V3)"
+
+#: app/templates/admin_dashboard.html:106
+#: app/templates/users_management.html:47
+msgid "Lifecycle"
+msgstr "Cycle de vie"
+
+#: app/templates/admin_dashboard.html:107
+#: app/templates/autoprovision_management.html:33
+#: app/templates/users_management.html:48
+msgid "Actions"
+msgstr "Actions"
+
+#: app/templates/admin_dashboard.html:117 app/templates/index.html:34
+msgid "Online"
+msgstr "En ligne"
+
+#: app/templates/admin_dashboard.html:119 app/templates/index.html:37
+msgid "Offline"
+msgstr "Hors ligne"
+
+#: app/templates/admin_dashboard.html:138 app/templates/index.html:61
+#: app/templates/profile.html:253 app/templates/profile.html:256
+#: app/templates/users_management.html:71
+msgid "Never"
+msgstr "Jamais"
+
+#: app/templates/admin_dashboard.html:143
+#: app/templates/admin_dashboard.html:153
+#: app/templates/admin_dashboard.html:155
+#: app/templates/users_management.html:84
+#: app/templates/users_management.html:94
+#: app/templates/users_management.html:96
+msgid "Warning sent"
+msgstr "Avertissement envoyé"
+
+#: app/templates/admin_dashboard.html:145
+#: app/templates/users_management.html:86
+msgid "Pending deletion"
+msgstr "Suppression en attente"
+
+#: app/templates/admin_dashboard.html:150
+msgid "Inactive 365d+"
+msgstr "Inactif 365j+"
+
+#: app/templates/admin_dashboard.html:162
+#: app/templates/autoprovision_management.html:49 app/templates/index.html:73
+#: app/templates/users_management.html:103
+msgid "Edit"
+msgstr "Modifier"
+
+#: app/templates/admin_dashboard.html:164
+#: app/templates/users_management.html:105
+msgid "Cancel auto-delete marking for"
+msgstr "Annuler le marquage de suppression automatique pour"
+
+#: app/templates/admin_dashboard.html:166
+#: app/templates/users_management.html:107
+msgid "Cancel deletion"
+msgstr "Annuler la suppression"
+
+#: app/templates/admin_dashboard.html:173
+msgid "No vehicles found on the server."
+msgstr "Aucun véhicule trouvé sur le serveur."
+
+#: app/templates/admin_dashboard.html:195
+msgid "Server Info Box Settings"
+msgstr "Paramètres de la boîte d'information du serveur"
+
+#: app/templates/admin_dashboard.html:199
+msgid ""
+"Display a message to all users on their dashboard. Useful for maintenance"
+" announcements or general information. Supports Markdown formatting."
+msgstr ""
+"Affichez un message à tous les utilisateurs sur leur tableau de bord. "
+"Utile pour les annonces de maintenance ou les informations générales. "
+"Prend en charge la mise en forme Markdown."
+
+#: app/templates/admin_dashboard.html:204
+msgid "Enable Info Box"
+msgstr "Activer la boîte d'information"
+
+#: app/templates/admin_dashboard.html:205
+msgid "Info Box Title"
+msgstr "Titre de la boîte d'information"
+
+#: app/templates/admin_dashboard.html:206
+msgid "Info Box Style"
+msgstr "Style de la boîte d'information"
+
+#: app/templates/admin_dashboard.html:206
+msgid "Info (Blue)"
+msgstr "Info (bleu)"
+
+#: app/templates/admin_dashboard.html:206
+msgid "Success (Green)"
+msgstr "Succès (vert)"
+
+#: app/templates/admin_dashboard.html:206
+msgid "Warning (Yellow)"
+msgstr "Avertissement (jaune)"
+
+#: app/templates/admin_dashboard.html:206
+msgid "Danger (Red)"
+msgstr "Danger (rouge)"
+
+#: app/templates/admin_dashboard.html:207
+msgid "Content (Markdown supported)"
+msgstr "Contenu (Markdown pris en charge)"
+
+#: app/templates/admin_dashboard.html:208
+#: app/templates/admin_dashboard.html:292
+msgid "Save Settings"
+msgstr "Enregistrer les paramètres"
+
+#: app/templates/admin_dashboard.html:211
+msgid "Live Preview"
+msgstr "Aperçu en direct"
+
+#: app/templates/admin_dashboard.html:230
+msgid "Disposable Email Protection"
+msgstr "Protection contre les e-mails jetables"
+
+#: app/templates/admin_dashboard.html:234
+msgid ""
+"Block sign-ups from disposable email providers using a community "
+"maintained list."
+msgstr ""
+"Bloquez les inscriptions provenant de fournisseurs d'e-mails jetables à "
+"l'aide d'une liste maintenue par la communauté."
+
+#: app/templates/admin_dashboard.html:241
+msgid "Enable disposable email blocking"
+msgstr "Activer le blocage des e-mails jetables"
+
+#: app/templates/admin_dashboard.html:246
+msgid "Source"
+msgstr "Source"
+
+#: app/templates/admin_dashboard.html:248
+msgid "Remote text file with auto-refresh"
+msgstr "Fichier texte distant avec actualisation automatique"
+
+#: app/templates/admin_dashboard.html:249
+msgid "Local file (manual)"
+msgstr "Fichier local (manuel)"
+
+#: app/templates/admin_dashboard.html:251
+msgid "Use a remote list or point to a local copy you manage yourself."
+msgstr ""
+"Utilisez une liste distante ou pointez vers une copie locale que vous "
+"gérez vous-même."
+
+#: app/templates/admin_dashboard.html:254
+msgid "Refresh interval (hours)"
+msgstr "Intervalle d'actualisation (heures)"
+
+#: app/templates/admin_dashboard.html:256
+msgid "Set to 0 to disable scheduled refreshes (manual only)."
+msgstr ""
+"Réglez sur 0 pour désactiver les actualisations programmées (manuel "
+"uniquement)."
+
+#: app/templates/admin_dashboard.html:261
+msgid "Remote list URL"
+msgstr "URL de la liste distante"
+
+#: app/templates/admin_dashboard.html:263
+msgid "A recommendation is the disposable-email-domains project on GitHub."
+msgstr "Le projet disposable-email-domains sur GitHub est une recommandation."
+
+#: app/templates/admin_dashboard.html:267
+msgid "Local list path"
+msgstr "Chemin de la liste locale"
+
+#: app/templates/admin_dashboard.html:269
+msgid "Path to a newline-separated domain list on this server."
+msgstr ""
+"Chemin vers une liste de domaines séparés par des sauts de ligne sur ce "
+"serveur."
+
+#: app/templates/admin_dashboard.html:273
+msgid "Local allowlist (domains)"
+msgstr "Liste d'autorisation locale (domaines)"
+
+#: app/templates/admin_dashboard.html:275
+msgid "One domain per line. These always bypass the blocklist."
+msgstr "Un domaine par ligne. Ceux-ci contournent toujours la liste de blocage."
+
+#: app/templates/admin_dashboard.html:280
+msgid "Cached domains"
+msgstr "Domaines en cache"
+
+#: app/templates/admin_dashboard.html:284
+msgid "Last fetch"
+msgstr "Dernière récupération"
+
+#: app/templates/admin_dashboard.html:285
+msgid "Not fetched yet"
+msgstr "Pas encore récupéré"
+
+#: app/templates/admin_dashboard.html:291
+msgid "Save & Refresh Now"
+msgstr "Enregistrer et actualiser maintenant"
+
+#: app/templates/admin_logs.html:63
+#: app/templates/autoprovision_management.html:8
+#: app/templates/blocked_ips.html:11
+#: app/templates/security_events_dashboard.html:8
+#: app/templates/totp_key_rotation.html:18
+#: app/templates/users_management.html:8
+msgid "Admin Dashboard"
+msgstr "Tableau de bord d'administration"
+
+#: app/templates/admin_logs.html:68 app/templates/profile.html:91
+msgid "Status:"
+msgstr "Statut :"
+
+#: app/templates/admin_logs.html:72
+msgid "lines"
+msgstr "lignes"
+
+#: app/templates/admin_logs.html:87
+msgid "Clear"
+msgstr "Effacer"
+
+#: app/templates/admin_logs.html:91 app/templates/admin_logs.html:92
+msgid "Disconnect"
+msgstr "Déconnecter"
+
+#: app/templates/admin_logs.html:100
+msgid "Total Lines"
+msgstr "Lignes totales"
+
+#: app/templates/admin_logs.html:104
+msgid "INFO"
+msgstr "INFO"
+
+#: app/templates/admin_logs.html:108
+msgid "WARNING"
+msgstr "AVERTISSEMENT"
+
+#: app/templates/admin_logs.html:112
+msgid "ERROR"
+msgstr "ERREUR"
+
+#: app/templates/admin_logs.html:116
+msgid "CRITICAL"
+msgstr "CRITIQUE"
+
+#: app/templates/admin_logs.html:145
+msgid "Streaming logs..."
+msgstr "Diffusion des journaux..."
+
+#: app/templates/admin_logs.html:146
+msgid "Streaming Paused"
+msgstr "Diffusion en pause"
+
+#: app/templates/admin_logs.html:147 app/templates/vehicle_detail.html:233
+msgid "Connecting..."
+msgstr "Connexion..."
+
+#: app/templates/admin_logs.html:148
+#: app/templates/security_events_dashboard.html:142
+#: app/templates/vehicle_detail.html:235
+msgid "Error"
+msgstr "Erreur"
+
+#: app/templates/admin_logs.html:149
+msgid "Pause Stream"
+msgstr "Mettre la diffusion en pause"
+
+#: app/templates/admin_logs.html:150
+msgid "Resume Stream"
+msgstr "Reprendre la diffusion"
+
+#: app/templates/admin_logs.html:151
+msgid "Auto-scroll: ON"
+msgstr "Défilement automatique : ACTIVÉ"
+
+#: app/templates/admin_logs.html:152
+msgid "Auto-scroll: OFF"
+msgstr "Défilement automatique : DÉSACTIVÉ"
+
+#: app/templates/autoprovision_management.html:13
+msgid "Add New Profile"
+msgstr "Ajouter un nouveau profil"
+
+#: app/templates/autoprovision_management.html:19
+msgid ""
+"Auto-provisioning profiles allow a vehicle module to configure itself "
+"automatically by sending an `AP-C` command with a pre-shared key. If the "
+"key is valid, the server responds with the necessary configuration "
+"parameters. This simplifies initial device setup."
+msgstr ""
+"Les profils d'approvisionnement automatique permettent à un module de "
+"véhicule de se configurer automatiquement en envoyant une commande `AP-C`"
+" avec une clé pré-partagée. Si la clé est valide, le serveur répond avec "
+"les paramètres de configuration nécessaires. Cela simplifie la "
+"configuration initiale de l'appareil."
+
+#: app/templates/autoprovision_management.html:29
+msgid "Provisioning Key"
+msgstr "Clé d'approvisionnement"
+
+#: app/templates/autoprovision_management.html:30
+#: app/templates/edit_autoprovision_profile.html:24
+msgid "Target Vehicle ID"
+msgstr "ID du véhicule cible"
+
+#: app/templates/autoprovision_management.html:32
+msgid "Created"
+msgstr "Créé"
+
+#: app/templates/autoprovision_management.html:41 app/templates/profile.html:91
+#: app/templates/profile.html:242 app/templates/users_management.html:44
+msgid "Active"
+msgstr "Actif"
+
+#: app/templates/autoprovision_management.html:41 app/templates/profile.html:91
+msgid "Inactive"
+msgstr "Inactif"
+
+#: app/templates/autoprovision_management.html:50
+#, python-format
+msgid "Are you sure you want to delete profile '%(key)s'? This cannot be undone."
+msgstr ""
+"Êtes-vous sûr de vouloir supprimer le profil « %(key)s » ? Cette action "
+"est irréversible."
+
+#: app/templates/autoprovision_management.html:53
+#: app/templates/profile.html:265 app/templates/users_management.html:114
+msgid "Delete"
+msgstr "Supprimer"
+
+#: app/templates/autoprovision_management.html:62
+msgid "No auto-provisioning profiles found."
+msgstr "Aucun profil d'approvisionnement automatique trouvé."
+
+#: app/templates/base.html:6 app/templates/error.html:3
+msgid "PyOVMS Control"
+msgstr "PyOVMS Control"
+
+#: app/templates/base.html:24
+msgid "System Sans"
+msgstr "Police système"
+
+#: app/templates/base.html:25
+msgid "Roboto Mono"
+msgstr "Roboto Mono"
+
+#: app/templates/base.html:26
+msgid "DroidSans Mono"
+msgstr "DroidSans Mono"
+
+#: app/templates/base.html:173
+msgid "Hi,"
+msgstr "Bonjour,"
+
+#: app/templates/base.html:177 app/templates/vehicle_detail.html:31
+msgid "Dashboard"
+msgstr "Tableau de bord"
+
+#: app/templates/base.html:183 app/templates/users_management.html:43
+msgid "Admin"
+msgstr "Administration"
+
+#: app/templates/base.html:187
+msgid "Users"
+msgstr "Utilisateurs"
+
+#: app/templates/base.html:191
+msgid "Auto-Provision"
+msgstr "Approvisionnement automatique"
+
+#: app/templates/base.html:196 app/templates/edit_vehicle.html:194
+msgid "Add Vehicle"
+msgstr "Ajouter un véhicule"
+
+#: app/templates/base.html:200
+msgid "My Profile"
+msgstr "Mon profil"
+
+#: app/templates/base.html:204
+msgid "Logout"
+msgstr "Déconnexion"
+
+#: app/templates/base.html:209 app/templates/login.html:40
+msgid "Login"
+msgstr "Connexion"
+
+#: app/templates/base.html:213 app/templates/register.html:53
+msgid "Register"
+msgstr "S'inscrire"
+
+#: app/templates/base.html:224 app/templates/forgot_password.html:12
+#: app/templates/login.html:11 app/templates/login_totp.html:12
+#: app/templates/login_webauthn_2fa.html:12 app/templates/register.html:11
+#: app/templates/reset_password.html:12
+msgid "Error!"
+msgstr "Erreur !"
+
+#: app/templates/base.html:229
+msgid "Success!"
+msgstr "Succès !"
+
+#: app/templates/base.html:234
+msgid "Info:"
+msgstr "Info :"
+
+#: app/templates/base.html:257
+msgid "Donation"
+msgstr "Don"
+
+#: app/templates/base.html:265
+msgid "Firmware Repo"
+msgstr "Dépôt de micrologiciel"
+
+#: app/templates/base.html:273 app/templates/privacy_policy.html:3
+msgid "Privacy Policy"
+msgstr "Politique de confidentialité"
+
+#: app/templates/base.html:282
+msgid "Source Code"
+msgstr "Code source"
+
+#: app/templates/base.html:288
+msgid "Swagger Docs"
+msgstr "Documentation Swagger"
+
+#: app/templates/base.html:293
+msgid "ReDoc"
+msgstr "ReDoc"
+
+#: app/templates/blocked_ips.html:14
+msgid "View and manage rate-limited IP addresses. Blocks survive server restarts."
+msgstr ""
+"Affichez et gérez les adresses IP à débit limité. Les blocages persistent"
+" après les redémarrages du serveur."
+
+#: app/templates/blocked_ips.html:19
+#: app/templates/security_events_dashboard.html:11
+msgid "Refresh"
+msgstr "Actualiser"
+
+#: app/templates/blocked_ips.html:30
+msgid "Manually Block an IP"
+msgstr "Bloquer une IP manuellement"
+
+#: app/templates/blocked_ips.html:33 app/templates/blocked_ips.html:77
+#: app/templates/email/admin_ip_blocked.html:41
+#: app/templates/email/admin_ip_blocked.txt:8
+#: app/templates/security_events_dashboard.html:88
+#: app/templates/security_events_dashboard.html:116
+msgid "IP Address"
+msgstr "Adresse IP"
+
+#: app/templates/blocked_ips.html:38
+msgid "Duration (minutes)"
+msgstr "Durée (minutes)"
+
+#: app/templates/blocked_ips.html:43 app/templates/blocked_ips.html:78
+msgid "Reason"
+msgstr "Raison"
+
+#: app/templates/blocked_ips.html:49
+msgid "Block IP"
+msgstr "Bloquer l'IP"
+
+#: app/templates/blocked_ips.html:50
+msgid "Blocking…"
+msgstr "Blocage…"
+
+#: app/templates/blocked_ips.html:58
+msgid "Currently Blocked IPs"
+msgstr "IP actuellement bloquées"
+
+#: app/templates/blocked_ips.html:64
+msgid "Loading…"
+msgstr "Chargement…"
+
+#: app/templates/blocked_ips.html:69
+msgid "No IPs are currently blocked."
+msgstr "Aucune IP n'est actuellement bloquée."
+
+#: app/templates/blocked_ips.html:79
+#: app/templates/security_events_dashboard.html:117
+msgid "Blocked At"
+msgstr "Bloqué le"
+
+#: app/templates/blocked_ips.html:80
+msgid "Unblocks At"
+msgstr "Débloqué le"
+
+#: app/templates/blocked_ips.html:81
+msgid "Time Remaining"
+msgstr "Temps restant"
+
+#: app/templates/blocked_ips.html:82
+msgid "Action"
+msgstr "Action"
+
+#: app/templates/blocked_ips.html:99
+msgid "Unblock"
+msgstr "Débloquer"
+
+#: app/templates/charge_detail.html:3
+msgid "Charge Details"
+msgstr "Détails de la charge"
+
+#: app/templates/charge_detail.html:19
+msgid "Charge session deleted successfully."
+msgstr "Session de charge supprimée avec succès."
+
+#: app/templates/charge_detail.html:112
+msgid "Failed to load charge details (Status: "
+msgstr "Échec du chargement des détails de la charge (Statut : "
+
+#: app/templates/charge_detail.html:152
+msgid "SOC (%)"
+msgstr "SOC (%)"
+
+#: app/templates/charge_detail.html:157
+msgid "Power (kW)"
+msgstr "Puissance (kW)"
+
+#: app/templates/charge_detail.html:165
+msgid "Battery (°C)"
+msgstr "Batterie (°C)"
+
+#: app/templates/charge_detail.html:290
+msgid "Chart is not available for export."
+msgstr "Le graphique n'est pas disponible pour l'exportation."
+
+#: app/templates/charge_detail.html:317 app/templates/vehicle_detail.html:1023
+msgid "Error deleting charge log: "
+msgstr "Erreur lors de la suppression du journal de charge : "
+
+#: app/templates/charge_detail.html:320 app/templates/trip_detail.html:333
+#: app/templates/vehicle_detail.html:838 app/templates/vehicle_detail.html:1026
+msgid "Network error: "
+msgstr "Erreur réseau : "
+
+#: app/templates/charge_detail.html:454
+msgid "Charge Start Location"
+msgstr "Lieu de début de charge"
+
+#: app/templates/charge_detail.html:471
+msgid "Back to All Charges"
+msgstr "Retour à toutes les charges"
+
+#: app/templates/charge_detail.html:474
+msgid "Loading charge details..."
+msgstr "Chargement des détails de la charge..."
+
+#: app/templates/charge_detail.html:482
+msgid "Charge Session"
+msgstr "Session de charge"
+
+#: app/templates/charge_detail.html:493 app/templates/trip_detail.html:27
+msgid "Summary"
+msgstr "Résumé"
+
+#: app/templates/charge_detail.html:500 app/templates/trip_detail.html:30
+msgid "End Time"
+msgstr "Heure de fin"
+
+#: app/templates/charge_detail.html:509 app/templates/trip_detail.html:34
+msgid "Start SOC"
+msgstr "SOC initial"
+
+#: app/templates/charge_detail.html:513 app/templates/trip_detail.html:35
+msgid "End SOC"
+msgstr "SOC final"
+
+#: app/templates/charge_detail.html:517
+msgid "SOC Gained"
+msgstr "SOC gagné"
+
+#: app/templates/charge_detail.html:528
+msgid "Max Power"
+msgstr "Puissance max."
+
+#: app/templates/charge_detail.html:532
+msgid "Avg. Power"
+msgstr "Puissance moy."
+
+#: app/templates/charge_detail.html:537
+msgid "Start Odometer"
+msgstr "Odomètre initial"
+
+#: app/templates/charge_detail.html:541
+msgid "Start Location"
+msgstr "Lieu de début"
+
+#: app/templates/charge_detail.html:547
+msgid "Export Chart (PNG)"
+msgstr "Exporter le graphique (PNG)"
+
+#: app/templates/charge_detail.html:550
+msgid "Export Location (GPX)"
+msgstr "Exporter la position (GPX)"
+
+#: app/templates/charge_detail.html:553
+msgid "Export Location (KML)"
+msgstr "Exporter la position (KML)"
+
+#: app/templates/charge_detail.html:556
+msgid "Delete This Charge Session"
+msgstr "Supprimer cette session de charge"
+
+#: app/templates/charge_detail.html:583 app/templates/trip_detail.html:79
+#: app/templates/vehicle_detail.html:117 app/templates/vehicle_detail.html:151
+msgid "Confirm Deletion"
+msgstr "Confirmer la suppression"
+
+#: app/templates/charge_detail.html:584 app/templates/vehicle_detail.html:152
+msgid ""
+"Are you sure you want to permanently delete this charge session? This "
+"action cannot be undone."
+msgstr ""
+"Êtes-vous sûr de vouloir supprimer définitivement cette session de charge"
+" ? Cette action est irréversible."
+
+#: app/templates/charge_detail.html:591 app/templates/vehicle_detail.html:166
+msgid "Yes, Delete Charge"
+msgstr "Oui, supprimer la charge"
+
+#: app/templates/confirm_password.html:6
+msgid "Confirm your password"
+msgstr "Confirmez votre mot de passe"
+
+#: app/templates/confirm_password.html:8
+msgid ""
+"This change affects how your account can be signed into, so please "
+"confirm your password before continuing."
+msgstr ""
+"Cette modification affecte la manière dont vous vous connectez à votre "
+"compte. Veuillez donc confirmer votre mot de passe avant de continuer."
+
+#: app/templates/confirm_password.html:28
+msgid "Confirm"
+msgstr "Confirmer"
+
+#: app/templates/edit_autoprovision_profile.html:8
+msgid "Back to Profiles"
+msgstr "Retour aux profils"
+
+#: app/templates/edit_autoprovision_profile.html:16
+msgid "Provisioning Key (Shared Secret)"
+msgstr "Clé d'approvisionnement (secret partagé)"
+
+#: app/templates/edit_autoprovision_profile.html:20
+msgid "A strong, unique key for the module"
+msgstr "Une clé forte et unique pour le module"
+
+#: app/templates/edit_autoprovision_profile.html:28
+msgid "The Vehicle ID to create/update (e.g., MYCAR)"
+msgstr "L'ID du véhicule à créer/mettre à jour (p. ex., MYCAR)"
+
+#: app/templates/edit_autoprovision_profile.html:32
+msgid "Target Server Password"
+msgstr "Mot de passe du serveur cible"
+
+#: app/templates/edit_autoprovision_profile.html:36
+msgid "The password the vehicle will use"
+msgstr "Le mot de passe que le véhicule utilisera"
+
+#: app/templates/edit_autoprovision_profile.html:40
+msgid "Optional Overrides"
+msgstr "Remplacements facultatifs"
+
+#: app/templates/edit_autoprovision_profile.html:43
+msgid "Target Vehicle Name (Display Name)"
+msgstr "Nom du véhicule cible (nom d'affichage)"
+
+#: app/templates/edit_autoprovision_profile.html:47
+msgid "e.g., My Provisioned Car"
+msgstr "p. ex., Ma voiture approvisionnée"
+
+#: app/templates/edit_autoprovision_profile.html:51
+msgid "Target Module Password (Paranoid Mode)"
+msgstr "Mot de passe du module cible (mode paranoïaque)"
+
+#: app/templates/edit_autoprovision_profile.html:55
+msgid "Optional register password for module"
+msgstr "Mot de passe d'enregistrement facultatif pour le module"
+
+#: app/templates/edit_autoprovision_profile.html:63
+#: app/templates/edit_user.html:78
+msgid "Is Active?"
+msgstr "Est actif ?"
+
+#: app/templates/edit_autoprovision_profile.html:71
+#: app/templates/profile.html:84
+msgid "Update Profile"
+msgstr "Mettre à jour le profil"
+
+#: app/templates/edit_autoprovision_profile.html:71
+msgid "Add Profile"
+msgstr "Ajouter un profil"
+
+#: app/templates/edit_user.html:8
+msgid "User Management"
+msgstr "Gestion des utilisateurs"
+
+#: app/templates/edit_user.html:20
+msgid "Unique username"
+msgstr "Nom d'utilisateur unique"
+
+#: app/templates/edit_user.html:24
+#: app/templates/email/admin_lifecycle_account.html:50
+#: app/templates/email/admin_lifecycle_account.txt:9
+#: app/templates/email/admin_lifecycle_account.txt:18
+#: app/templates/email/admin_new_user_notification.html:36
+#: app/templates/email/admin_new_user_notification.txt:8
+#: app/templates/profile.html:59 app/templates/users_management.html:41
+msgid "Email"
+msgstr "E-mail"
+
+#: app/templates/edit_user.html:28
+msgid "user@example.com"
+msgstr "utilisateur@exemple.com"
+
+#: app/templates/edit_user.html:32
+msgid "Full Name (Optional)"
+msgstr "Nom complet (facultatif)"
+
+#: app/templates/edit_user.html:36
+msgid "User's full name"
+msgstr "Nom complet de l'utilisateur"
+
+#: app/templates/edit_user.html:44
+msgid "New password (leave blank if not changing)"
+msgstr "Nouveau mot de passe (laisser vide si inchangé)"
+
+#: app/templates/edit_user.html:44
+msgid "Set password"
+msgstr "Définir le mot de passe"
+
+#: app/templates/edit_user.html:46
+msgid "Leave blank to keep current. Otherwise, new password must be"
+msgstr ""
+"Laissez vide pour conserver l'actuel. Sinon, le nouveau mot de passe doit"
+" comporter"
+
+#: app/templates/edit_user.html:46
+msgid "Must be"
+msgstr "Doit comporter"
+
+#: app/templates/edit_user.html:47
+#, python-format
+msgid ""
+"12 to 128 characters long. Include uppercase, lowercase, a digit, and a "
+"special character (e.g., !@#$%%^&*)."
+msgstr ""
+"12 à 128 caractères. Incluez des majuscules, des minuscules, un chiffre "
+"et un caractère spécial (p. ex., !@#$%%^&*)."
+
+#: app/templates/edit_user.html:52 app/templates/profile.html:66
+msgid "Timezone"
+msgstr "Fuseau horaire"
+
+#: app/templates/edit_user.html:65
+msgid "Cannot change own admin status"
+msgstr "Impossible de modifier votre propre statut d'administrateur"
+
+#: app/templates/edit_user.html:68
+msgid "Is Admin?"
+msgstr "Est administrateur ?"
+
+#: app/templates/edit_user.html:69 app/templates/edit_user.html:79
+msgid "Cannot change self"
+msgstr "Impossible de se modifier soi-même"
+
+#: app/templates/edit_user.html:75
+msgid "Cannot deactivate self"
+msgstr "Impossible de se désactiver soi-même"
+
+#: app/templates/edit_user.html:88
+msgid "Update User"
+msgstr "Mettre à jour l'utilisateur"
+
+#: app/templates/edit_user.html:88
+msgid "Add User"
+msgstr "Ajouter un utilisateur"
+
+#: app/templates/edit_vehicle.html:18
+msgid "General"
+msgstr "Général"
+
+#: app/templates/edit_vehicle.html:19
+msgid "Connectivity"
+msgstr "Connectivité"
+
+#: app/templates/edit_vehicle.html:20 app/templates/profile.html:134
+msgid "Danger Zone"
+msgstr "Zone de danger"
+
+#: app/templates/edit_vehicle.html:28
+msgid "General Settings"
+msgstr "Paramètres généraux"
+
+#: app/templates/edit_vehicle.html:41
+msgid "As an admin, you must assign this vehicle to a user."
+msgstr ""
+"En tant qu'administrateur, vous devez attribuer ce véhicule à un "
+"utilisateur."
+
+#: app/templates/edit_vehicle.html:45
+msgid "No Users Available"
+msgstr "Aucun utilisateur disponible"
+
+#: app/templates/edit_vehicle.html:46
+msgid "There are no non-admin users to assign a vehicle to. Please"
+msgstr ""
+"Il n'y a aucun utilisateur non administrateur auquel attribuer un "
+"véhicule. Veuillez"
+
+#: app/templates/edit_vehicle.html:46
+msgid "create a user"
+msgstr "créer un utilisateur"
+
+#: app/templates/edit_vehicle.html:46
+msgid "first."
+msgstr "d'abord."
+
+#: app/templates/edit_vehicle.html:51
+msgid "Vehicle/Module ID (Unique)"
+msgstr "ID du véhicule/module (unique)"
+
+#: app/templates/edit_vehicle.html:53 app/templates/edit_vehicle.html:54
+msgid "The Vehicle ID cannot be changed after creation."
+msgstr "L'ID du véhicule ne peut pas être modifié après sa création."
+
+#: app/templates/edit_vehicle.html:56
+msgid "e.g., TESTCAR"
+msgstr "p. ex., TESTCAR"
+
+#: app/templates/edit_vehicle.html:60
+msgid "Vehicle Name (Display Name)"
+msgstr "Nom du véhicule (nom d'affichage)"
+
+#: app/templates/edit_vehicle.html:61
+msgid "e.g., My Tesla Model 3"
+msgstr "p. ex., Ma Tesla Model 3"
+
+#: app/templates/edit_vehicle.html:64
+msgid "Server Password (for V2 & V3/MQTT Auth)"
+msgstr "Mot de passe du serveur (pour l'authentification V2 et V3/MQTT)"
+
+#: app/templates/edit_vehicle.html:65 app/templates/edit_vehicle.html:75
+msgid "Leave blank if not changing"
+msgstr "Laisser vide si inchangé"
+
+#: app/templates/edit_vehicle.html:65
+msgid "Required for new vehicle"
+msgstr "Requis pour un nouveau véhicule"
+
+#: app/templates/edit_vehicle.html:66
+msgid "Leave blank to keep the current server password."
+msgstr "Laissez vide pour conserver le mot de passe actuel du serveur."
+
+#: app/templates/edit_vehicle.html:70
+msgid "Advanced Security (Paranoid Mode)"
+msgstr "Sécurité avancée (mode paranoïaque)"
+
+#: app/templates/edit_vehicle.html:74
+msgid ""
+"\"Paranoid mode\" is an optional security feature where the module "
+"requires a password for all commands. The module sends a token to the "
+"server, which the server uses with the Module Password to encrypt a "
+"response."
+msgstr ""
+"Le « mode paranoïaque » est une fonction de sécurité facultative dans "
+"laquelle le module exige un mot de passe pour toutes les commandes. Le "
+"module envoie un jeton au serveur, que le serveur utilise avec le mot de "
+"passe du module pour chiffrer une réponse."
+
+#: app/templates/edit_vehicle.html:75
+msgid "Module Password"
+msgstr "Mot de passe du module"
+
+#: app/templates/edit_vehicle.html:75
+msgid "Also known as the \"register password\" in some module configs."
+msgstr ""
+"Également appelé « register password » dans certaines configurations de "
+"module."
+
+#: app/templates/edit_vehicle.html:76
+msgid "Paranoid Token (Auto-populated by module)"
+msgstr "Jeton paranoïaque (rempli automatiquement par le module)"
+
+#: app/templates/edit_vehicle.html:76
+msgid ""
+"This value is sent by the vehicle when it's in paranoid mode and is "
+"generally not edited manually."
+msgstr ""
+"Cette valeur est envoyée par le véhicule lorsqu'il est en mode "
+"paranoïaque et n'est généralement pas modifiée manuellement."
+
+#: app/templates/edit_vehicle.html:83
+msgid "Connectivity Settings"
+msgstr "Paramètres de connectivité"
+
+#: app/templates/edit_vehicle.html:86
+msgid "Communication Protocol"
+msgstr "Protocole de communication"
+
+#: app/templates/edit_vehicle.html:87
+msgid "Select which protocol(s) this vehicle will use to connect."
+msgstr ""
+"Sélectionnez le ou les protocoles que ce véhicule utilisera pour se "
+"connecter."
+
+#: app/templates/edit_vehicle.html:89
+msgid "V2 (TCP) & V3 (MQTT)"
+msgstr "V2 (TCP) et V3 (MQTT)"
+
+#: app/templates/edit_vehicle.html:89
+msgid "V3 Not Configured"
+msgstr "V3 non configuré"
+
+#: app/templates/edit_vehicle.html:90
+msgid "V2 Only (TCP)"
+msgstr "V2 uniquement (TCP)"
+
+#: app/templates/edit_vehicle.html:91
+msgid "V3 Only (MQTT)"
+msgstr "V3 uniquement (MQTT)"
+
+#: app/templates/edit_vehicle.html:91
+msgid "Not Configured"
+msgstr "Non configuré"
+
+#: app/templates/edit_vehicle.html:95
+msgid "Notification Source"
+msgstr "Source des notifications"
+
+#: app/templates/edit_vehicle.html:96
+msgid ""
+"When both protocols are active, choose which one sends alerts to avoid "
+"duplicates."
+msgstr ""
+"Lorsque les deux protocoles sont actifs, choisissez celui qui envoie les "
+"alertes pour éviter les doublons."
+
+#: app/templates/edit_vehicle.html:97
+msgid "Prefer V3 (MQTT)"
+msgstr "Préférer V3 (MQTT)"
+
+#: app/templates/edit_vehicle.html:97
+msgid "Prefer V2 (TCP)"
+msgstr "Préférer V2 (TCP)"
+
+#: app/templates/edit_vehicle.html:102
+msgid "V3/MQTT Configuration Details"
+msgstr "Détails de configuration V3/MQTT"
+
+#: app/templates/edit_vehicle.html:107
+msgid "Use the following details to configure V3/MQTT on your vehicle module."
+msgstr ""
+"Utilisez les détails suivants pour configurer V3/MQTT sur votre module de"
+" véhicule."
+
+#: app/templates/edit_vehicle.html:111
+msgid "MQTT Username"
+msgstr "Nom d'utilisateur MQTT"
+
+#: app/templates/edit_vehicle.html:113 app/templates/edit_vehicle.html:130
+#: app/templates/edit_vehicle.html:271
+msgid "<VEHICLE ID>"
+msgstr "<ID DU VÉHICULE>"
+
+#: app/templates/edit_vehicle.html:120
+msgid "MQTT Password"
+msgstr "Mot de passe MQTT"
+
+#: app/templates/edit_vehicle.html:122
+msgid "Use the \"Server Password\" from the General tab."
+msgstr "Utilisez le « Mot de passe du serveur » de l'onglet Général."
+
+#: app/templates/edit_vehicle.html:128
+msgid "MQTT Topic Prefix"
+msgstr "Préfixe de sujet MQTT"
+
+#: app/templates/edit_vehicle.html:133
+msgid "Note: The trailing slash (/) is required!"
+msgstr "Remarque : la barre oblique finale (/) est obligatoire !"
+
+#: app/templates/edit_vehicle.html:146
+msgid ""
+"Use these commands in your module's terminal to quickly configure the "
+"server connection. The values will update as you type in the form above."
+msgstr ""
+"Utilisez ces commandes dans le terminal de votre module pour configurer "
+"rapidement la connexion au serveur. Les valeurs se mettront à jour au fur"
+" et à mesure que vous saisissez dans le formulaire ci-dessus."
+
+#: app/templates/edit_vehicle.html:178
+msgid "Allow the Karto service to record and analyze trip data for this vehicle."
+msgstr ""
+"Autoriser le service Karto à enregistrer et analyser les données de "
+"trajet de ce véhicule."
+
+#: app/templates/edit_vehicle.html:185
+msgid "Record charging sessions for this vehicle."
+msgstr "Enregistrer les sessions de charge de ce véhicule."
+
+#: app/templates/edit_vehicle.html:194
+msgid "Update Vehicle"
+msgstr "Mettre à jour le véhicule"
+
+#: app/templates/edit_vehicle.html:203
+msgid "Delete This Vehicle"
+msgstr "Supprimer ce véhicule"
+
+#: app/templates/edit_vehicle.html:204
+msgid ""
+"Deleting this vehicle is a permanent action. All of its historical data "
+"will be immediately and irreversibly erased."
+msgstr ""
+"La suppression de ce véhicule est une action permanente. Toutes ses "
+"données historiques seront immédiatement et irréversiblement effacées."
+
+#: app/templates/edit_vehicle.html:205
+#, python-format
+msgid "To confirm, please type <strong>%(id)s</strong> into the box below."
+msgstr ""
+"Pour confirmer, veuillez saisir <strong>%(id)s</strong> dans le champ ci-"
+"dessous."
+
+#: app/templates/edit_vehicle.html:209
+#, python-format
+msgid "Type %(id)s to confirm"
+msgstr "Saisissez %(id)s pour confirmer"
+
+#: app/templates/edit_vehicle.html:210
+#, python-format
+msgid "Type %(id)s here"
+msgstr "Saisissez %(id)s ici"
+
+#: app/templates/edit_vehicle.html:214
+msgid "Delete Vehicle Permanently"
+msgstr "Supprimer définitivement le véhicule"
+
+#: app/templates/edit_vehicle.html:220
+msgid "The danger zone is available after the vehicle has been created."
+msgstr "La zone de danger est disponible après la création du véhicule."
+
+#: app/templates/edit_vehicle.html:272
+msgid "<Server Password>"
+msgstr "<Mot de passe du serveur>"
+
+#: app/templates/edit_vehicle.html:370 app/templates/profile.html:364
+#: app/templates/totp_key_rotation.html:304
+msgid "Copied!"
+msgstr "Copié !"
+
+#: app/templates/error.html:6
+msgid "Security token expired"
+msgstr "Jeton de sécurité expiré"
+
+#: app/templates/error.html:8
+msgid "Page not found"
+msgstr "Page introuvable"
+
+#: app/templates/error.html:10
+msgid "Not permitted"
+msgstr "Non autorisé"
+
+#: app/templates/error.html:12
+msgid "Invalid form submission"
+msgstr "Envoi de formulaire invalide"
+
+#: app/templates/error.html:14
+msgid "Something went wrong"
+msgstr "Une erreur est survenue"
+
+#: app/templates/error.html:16
+msgid "Request could not be completed"
+msgstr "La requête n'a pas pu aboutir"
+
+#: app/templates/error.html:27
+msgid "The form was submitted with missing or unexpected fields."
+msgstr "Le formulaire a été envoyé avec des champs manquants ou inattendus."
+
+#: app/templates/error.html:37
+msgid ""
+"This page was open for a while and its security token is no longer valid."
+" Reload the page and submit the form again — nothing was changed."
+msgstr ""
+"Cette page est restée ouverte un certain temps et son jeton de sécurité "
+"n'est plus valide. Rechargez la page et renvoyez le formulaire — rien n'a"
+" été modifié."
+
+#: app/templates/error.html:43
+msgid "Reload page"
+msgstr "Recharger la page"
+
+#: app/templates/error.html:46
+msgid "Back to start"
+msgstr "Retour à l'accueil"
+
+#: app/templates/forgot_password.html:7
+msgid "Forgot Password"
+msgstr "Mot de passe oublié"
+
+#: app/templates/forgot_password.html:8
+msgid ""
+"Enter your email address and we will send you instructions to reset your "
+"password."
+msgstr ""
+"Saisissez votre adresse e-mail et nous vous enverrons des instructions "
+"pour réinitialiser votre mot de passe."
+
+#: app/templates/forgot_password.html:24 app/templates/profile.html:63
+#: app/templates/register.html:31
+msgid "your@email.com"
+msgstr "votre@email.com"
+
+#: app/templates/forgot_password.html:31
+msgid "Send Reset Instructions"
+msgstr "Envoyer les instructions de réinitialisation"
+
+#: app/templates/forgot_password.html:37
+msgid "Remember your password?"
+msgstr "Vous vous souvenez de votre mot de passe ?"
+
+#: app/templates/forgot_password.html:37
+#: app/templates/forgot_password_sent.html:22
+#: app/templates/register_success.html:24 app/templates/reset_password.html:44
+#: app/templates/reset_password_invalid.html:33
+msgid "Back to Login"
+msgstr "Retour à la connexion"
+
+#: app/templates/forgot_password_sent.html:13
+msgid "Check Your Email"
+msgstr "Vérifiez votre e-mail"
+
+#: app/templates/forgot_password_sent.html:15
+msgid ""
+"If an account with that email exists, we have sent password reset "
+"instructions. Please check your inbox and spam folder."
+msgstr ""
+"Si un compte avec cet e-mail existe, nous avons envoyé des instructions "
+"de réinitialisation du mot de passe. Veuillez vérifier votre boîte de "
+"réception et votre dossier spam."
+
+#: app/templates/forgot_password_sent.html:18
+#, python-format
+msgid "The reset link will expire in %(hours)s hour(s)."
+msgstr "Le lien de réinitialisation expirera dans %(hours)s heure(s)."
+
+#: app/templates/index.html:42
+msgid "ID"
+msgstr "ID"
+
+#: app/templates/index.html:56 app/templates/index.html:58
+msgid "12V Battery"
+msgstr "Batterie 12V"
+
+#: app/templates/email/admin_lifecycle_vehicle.html:65
+#: app/templates/email/unused_vehicle_warning.html:47
+#: app/templates/index.html:61
+msgid "Last Seen"
+msgstr "Dernière connexion"
+
+#: app/templates/email/admin_ip_blocked.txt:6 app/templates/index.html:69
+msgid "Details"
+msgstr "Détails"
+
+#: app/templates/index.html:80
+msgid "No vehicles registered for your account."
+msgstr "Aucun véhicule enregistré pour votre compte."
+
+#: app/templates/index.html:80
+msgid "Add one now!"
+msgstr "Ajoutez-en un maintenant !"
+
+#: app/templates/login.html:23
+msgid "Your username"
+msgstr "Votre nom d'utilisateur"
+
+#: app/templates/login.html:30
+msgid "Your password"
+msgstr "Votre mot de passe"
+
+#: app/templates/login.html:32
+msgid "Forgot password?"
+msgstr "Mot de passe oublié ?"
+
+#: app/templates/login.html:52
+msgid "Or"
+msgstr "Ou"
+
+#: app/templates/login.html:62
+msgid "Sign in with Security Key"
+msgstr "Se connecter avec une clé de sécurité"
+
+#: app/templates/login.html:69
+msgid "Don't have an account?"
+msgstr "Vous n'avez pas de compte ?"
+
+#: app/templates/login.html:69
+msgid "Register here"
+msgstr "Inscrivez-vous ici"
+
+#: app/templates/login_totp.html:8 app/templates/login_webauthn_2fa.html:8
+msgid "For user:"
+msgstr "Pour l'utilisateur :"
+
+#: app/templates/login_totp.html:21
+msgid "Authenticator Code"
+msgstr "Code de l'authentificateur"
+
+#: app/templates/login_totp.html:23 app/templates/profile_totp_setup.html:39
+msgid "Enter a 6-digit code"
+msgstr "Saisissez un code à 6 chiffres"
+
+#: app/templates/login_totp.html:32
+msgid "Verify Code"
+msgstr "Vérifier le code"
+
+#: app/templates/login_totp.html:37 app/templates/login_webauthn_2fa.html:56
+msgid "Cancel and return to login"
+msgstr "Annuler et revenir à la connexion"
+
+#: app/templates/login_webauthn_2fa.html:25
+#: app/templates/webauthn_login.html:18
+msgid ""
+"Insert your security key or prepare your biometric authenticator, then "
+"click the button below."
+msgstr ""
+"Insérez votre clé de sécurité ou préparez votre authentificateur "
+"biométrique, puis cliquez sur le bouton ci-dessous."
+
+#: app/templates/login_webauthn_2fa.html:48
+#: app/templates/webauthn_login.html:41 app/templates/webauthn_register.html:82
+msgid "Browser Not Supported"
+msgstr "Navigateur non pris en charge"
+
+#: app/templates/login_webauthn_2fa.html:50
+#: app/templates/webauthn_login.html:43
+msgid "Your browser does not support WebAuthn/FIDO2. Please use a modern browser."
+msgstr ""
+"Votre navigateur ne prend pas en charge WebAuthn/FIDO2. Veuillez utiliser"
+" un navigateur moderne."
+
+#: app/templates/login_webauthn_2fa.html:70
+#: app/templates/login_webauthn_2fa.html:90
+#: app/templates/webauthn_login.html:70 app/templates/webauthn_login.html:97
+msgid "Authenticate with Security Key"
+msgstr "S'authentifier avec une clé de sécurité"
+
+#: app/templates/login_webauthn_2fa.html:89
+#: app/templates/webauthn_login.html:96
+msgid "Authenticating..."
+msgstr "Authentification..."
+
+#: app/templates/login_webauthn_2fa.html:112
+#: app/templates/webauthn_login.html:119
+msgid "Failed to start authentication"
+msgstr "Échec du démarrage de l'authentification"
+
+#: app/templates/login_webauthn_2fa.html:151
+#: app/templates/webauthn_login.html:158
+msgid "Authentication failed"
+msgstr "Échec de l'authentification"
+
+#: app/templates/login_webauthn_2fa.html:168
+#: app/templates/webauthn_login.html:173
+msgid "Authentication failed. Please try again."
+msgstr "Échec de l'authentification. Veuillez réessayer."
+
+#: app/templates/profile.html:18 app/templates/profile.html:41
+msgid "User Information"
+msgstr "Informations sur l'utilisateur"
+
+#: app/templates/profile.html:22 app/templates/profile.html:98
+#: app/templates/profile.html:127
+msgid "Change Password"
+msgstr "Changer le mot de passe"
+
+#: app/templates/profile.html:26 app/templates/profile.html:164
+msgid "API Keys"
+msgstr "Clés API"
+
+#: app/templates/profile.html:30
+msgid "Two-Factor Auth"
+msgstr "Authentification à deux facteurs"
+
+#: app/templates/profile.html:34
+msgid "Security Keys"
+msgstr "Clés de sécurité"
+
+#: app/templates/profile.html:52 app/templates/users_management.html:42
+msgid "Full Name"
+msgstr "Nom complet"
+
+#: app/templates/profile.html:56
+msgid "Your full name"
+msgstr "Votre nom complet"
+
+#: app/templates/profile.html:74
+msgid "Distance Units"
+msgstr "Unités de distance"
+
+#: app/templates/profile.html:76
+msgid "Metric (km, kph)"
+msgstr "Métrique (km, km/h)"
+
+#: app/templates/profile.html:77
+msgid "Imperial (mi, mph)"
+msgstr "Impérial (mi, mph)"
+
+#: app/templates/profile.html:90
+msgid "Role:"
+msgstr "Rôle :"
+
+#: app/templates/profile.html:90
+msgid "Administrator"
+msgstr "Administrateur"
+
+#: app/templates/profile.html:90
+msgid "User"
+msgstr "Utilisateur"
+
+#: app/templates/profile.html:92
+msgid "Joined:"
+msgstr "Inscrit le :"
+
+#: app/templates/profile.html:93
+msgid "TOTP Enabled:"
+msgstr "TOTP activé :"
+
+#: app/templates/profile.html:103
+msgid "Current Password"
+msgstr "Mot de passe actuel"
+
+#: app/templates/profile.html:106
+msgid "Your current password"
+msgstr "Votre mot de passe actuel"
+
+#: app/templates/profile.html:109 app/templates/reset_password.html:21
+msgid "New Password"
+msgstr "Nouveau mot de passe"
+
+#: app/templates/profile.html:112
+msgid "Enter new password"
+msgstr "Saisissez le nouveau mot de passe"
+
+#: app/templates/profile.html:114 app/templates/register.html:39
+#, python-format
+msgid ""
+"Must be 12 to 128 characters long. Include uppercase, lowercase, a digit,"
+" and a special character (e.g., !@#$%%^&*)."
+msgstr ""
+"Doit comporter de 12 à 128 caractères. Incluez des majuscules, des "
+"minuscules, un chiffre et un caractère spécial (p. ex., !@#$%%^&*)."
+
+#: app/templates/profile.html:118
+msgid "Confirm New Password"
+msgstr "Confirmer le nouveau mot de passe"
+
+#: app/templates/profile.html:121
+msgid "Repeat new password"
+msgstr "Répétez le nouveau mot de passe"
+
+#: app/templates/profile.html:136
+msgid ""
+"Deleting your account is a permanent action. All of your vehicles, API "
+"keys, and historical data will be immediately and irreversibly erased."
+msgstr ""
+"La suppression de votre compte est une action permanente. Tous vos "
+"véhicules, clés API et données historiques seront immédiatement et "
+"irréversiblement effacés."
+
+#: app/templates/profile.html:139
+msgid "To confirm, please type <strong>DELETE</strong> into the box below."
+msgstr ""
+"Pour confirmer, veuillez saisir <strong>DELETE</strong> dans le champ ci-"
+"dessous."
+
+#: app/templates/profile.html:144
+msgid "Type DELETE to confirm"
+msgstr "Saisissez DELETE pour confirmer"
+
+#: app/templates/profile.html:147
+msgid "Type DELETE here"
+msgstr "Saisissez DELETE ici"
+
+#: app/templates/profile.html:156
+msgid "Delete My Account"
+msgstr "Supprimer mon compte"
+
+#: app/templates/profile.html:165
+msgid ""
+"Manage your API keys for programmatic access. Store keys securely as they"
+" are shown only once."
+msgstr ""
+"Gérez vos clés API pour un accès programmatique. Conservez les clés en "
+"lieu sûr car elles ne sont affichées qu'une seule fois."
+
+#: app/templates/profile.html:169
+msgid "MQTT V3 Protocol Access"
+msgstr "Accès au protocole MQTT V3"
+
+#: app/templates/profile.html:170
+msgid ""
+"Your active API keys can also be used to access the MQTT broker for real-"
+"time data."
+msgstr ""
+"Vos clés API actives peuvent également être utilisées pour accéder au "
+"broker MQTT pour des données en temps réel."
+
+#: app/templates/profile.html:172
+msgid "Username:"
+msgstr "Nom d'utilisateur :"
+
+#: app/templates/profile.html:172
+msgid "The 8-character Key Prefix."
+msgstr "Le préfixe de clé à 8 caractères."
+
+#: app/templates/profile.html:173
+msgid "Password:"
+msgstr "Mot de passe :"
+
+#: app/templates/profile.html:173
+msgid "The full API Key."
+msgstr "La clé API complète."
+
+#: app/templates/profile.html:174
+msgid "Topic Access:"
+msgstr "Accès aux sujets :"
+
+#: app/templates/profile.html:182
+msgid "New API Key Created:"
+msgstr "Nouvelle clé API créée :"
+
+#: app/templates/profile.html:183
+msgid "Please store the Full API Key securely. It will not be shown again."
+msgstr ""
+"Veuillez conserver la clé API complète en lieu sûr. Elle ne sera plus "
+"affichée."
+
+#: app/templates/profile.html:187
+msgid "API Key Prefix"
+msgstr "Préfixe de clé API"
+
+#: app/templates/profile.html:196
+msgid "Full API Key"
+msgstr "Clé API complète"
+
+#: app/templates/profile.html:209
+msgid "Create New API Key"
+msgstr "Créer une nouvelle clé API"
+
+#: app/templates/profile.html:212
+msgid "Key Name"
+msgstr "Nom de la clé"
+
+#: app/templates/profile.html:215
+msgid "e.g., My Script Key"
+msgstr "p. ex., Ma clé de script"
+
+#: app/templates/profile.html:218
+msgid "Expires In (Days)"
+msgstr "Expire dans (jours)"
+
+#: app/templates/profile.html:221
+msgid "Optional, e.g., 30, 90. Leave blank for no expiry."
+msgstr "Facultatif, p. ex., 30, 90. Laissez vide pour aucune expiration."
+
+#: app/templates/profile.html:225
+msgid "Create API Key"
+msgstr "Créer une clé API"
+
+#: app/templates/profile.html:231
+msgid "Your API Keys"
+msgstr "Vos clés API"
+
+#: app/templates/profile.html:242
+msgid "Inactive/Expired"
+msgstr "Inactive/expirée"
+
+#: app/templates/profile.html:247
+msgid "Created:"
+msgstr "Créée :"
+
+#: app/templates/profile.html:249
+msgid "Expires:"
+msgstr "Expire :"
+
+#: app/templates/profile.html:251
+msgid "Expired"
+msgstr "Expirée"
+
+#: app/templates/profile.html:256 app/templates/profile_webauthn_tab.html:43
+msgid "Last used:"
+msgstr "Dernière utilisation :"
+
+#: app/templates/profile.html:258
+#, python-format
+msgid ""
+"Are you sure you want to delete API key '%(key_name)s'? This action "
+"cannot be undone."
+msgstr ""
+"Êtes-vous sûr de vouloir supprimer la clé API « %(key_name)s » ? Cette "
+"action est irréversible."
+
+#: app/templates/profile.html:273
+msgid "You have no API keys."
+msgstr "Vous n'avez aucune clé API."
+
+#: app/templates/profile.html:278 app/templates/webauthn_register.html:41
+msgid "Two-Factor Authentication (2FA)"
+msgstr "Authentification à deux facteurs (2FA)"
+
+#: app/templates/profile.html:281
+msgid "Authenticator App (TOTP)"
+msgstr "Application d'authentification (TOTP)"
+
+#: app/templates/profile.html:283
+msgid "Authenticator app is currently <strong>ENABLED</strong>."
+msgstr ""
+"L'application d'authentification est actuellement "
+"<strong>ACTIVÉE</strong>."
+
+#: app/templates/profile.html:285
+msgid "Are you sure you want to disable 2FA with your authenticator app?"
+msgstr ""
+"Êtes-vous sûr de vouloir désactiver la 2FA avec votre application "
+"d'authentification ?"
+
+#: app/templates/profile.html:289
+msgid "Disable Authenticator App"
+msgstr "Désactiver l'application d'authentification"
+
+#: app/templates/profile.html:294
+msgid "Security Recommendation"
+msgstr "Recommandation de sécurité"
+
+#: app/templates/profile.html:296
+msgid ""
+"Two-Factor Authentication is currently <strong>DISABLED</strong>. We "
+"strongly recommend enabling it to significantly improve your account's "
+"security."
+msgstr ""
+"L'authentification à deux facteurs est actuellement "
+"<strong>DÉSACTIVÉE</strong>. Nous vous recommandons vivement de l'activer"
+" pour améliorer considérablement la sécurité de votre compte."
+
+#: app/templates/profile.html:302
+msgid ""
+"Using an authenticator app (like Google Authenticator, Authy, etc.) adds "
+"\"\n"
+"                       \"an extra layer of security to your account."
+msgstr ""
+"L'utilisation d'une application d'authentification (comme Google "
+"Authenticator, Authy, etc.) ajoute une couche de sécurité supplémentaire "
+"à votre compte."
+
+#: app/templates/profile.html:307
+msgid "Enable Authenticator App"
+msgstr "Activer l'application d'authentification"
+
+#: app/templates/profile_totp_setup.html:8
+msgid "Back to Profile (2FA)"
+msgstr "Retour au profil (2FA)"
+
+#: app/templates/profile_totp_setup.html:14
+msgid "Step 1: Scan QR Code"
+msgstr "Étape 1 : Scannez le code QR"
+
+#: app/templates/profile_totp_setup.html:16
+msgid ""
+"Open your authenticator app (e.g., Google Authenticator, Authy, Microsoft"
+" Authenticator) and scan the QR code below."
+msgstr ""
+"Ouvrez votre application d'authentification (p. ex., Google "
+"Authenticator, Authy, Microsoft Authenticator) et scannez le code QR ci-"
+"dessous."
+
+#: app/templates/profile_totp_setup.html:22
+msgid "If you cannot scan the QR code, you can manually enter this key:"
+msgstr ""
+"Si vous ne pouvez pas scanner le code QR, vous pouvez saisir cette clé "
+"manuellement :"
+
+#: app/templates/profile_totp_setup.html:30
+msgid "Step 2: Verify Code"
+msgstr "Étape 2 : Vérifiez le code"
+
+#: app/templates/profile_totp_setup.html:32
+msgid ""
+"Enter the 6-digit code generated by your authenticator app to complete "
+"the setup."
+msgstr ""
+"Saisissez le code à 6 chiffres généré par votre application "
+"d'authentification pour terminer la configuration."
+
+#: app/templates/profile_totp_setup.html:37
+msgid "Verification Code"
+msgstr "Code de vérification"
+
+#: app/templates/profile_totp_setup.html:49
+msgid "Verify & Enable"
+msgstr "Vérifier et activer"
+
+#: app/templates/profile_webauthn_tab.html:4
+msgid "Security Keys (WebAuthn/FIDO2)"
+msgstr "Clés de sécurité (WebAuthn/FIDO2)"
+
+#: app/templates/profile_webauthn_tab.html:6
+msgid ""
+"Add hardware security keys or use built-in biometric authenticators "
+"(Touch ID, Face ID, Windows Hello) for passwordless login."
+msgstr ""
+"Ajoutez des clés de sécurité matérielles ou utilisez des "
+"authentificateurs biométriques intégrés (Touch ID, Face ID, Windows "
+"Hello) pour une connexion sans mot de passe."
+
+#: app/templates/profile_webauthn_tab.html:16
+msgid "Add Security Key"
+msgstr "Ajouter une clé de sécurité"
+
+#: app/templates/profile_webauthn_tab.html:23
+msgid "Registered Security Keys"
+msgstr "Clés de sécurité enregistrées"
+
+#: app/templates/profile_webauthn_tab.html:35
+msgid "Unnamed Security Key"
+msgstr "Clé de sécurité sans nom"
+
+#: app/templates/profile_webauthn_tab.html:37
+msgid "Passwordless"
+msgstr "Sans mot de passe"
+
+#: app/templates/profile_webauthn_tab.html:37
+msgid "2FA"
+msgstr "2FA"
+
+#: app/templates/profile_webauthn_tab.html:41
+msgid "Added:"
+msgstr "Ajoutée :"
+
+#: app/templates/profile_webauthn_tab.html:45
+msgid "Never used"
+msgstr "Jamais utilisée"
+
+#: app/templates/profile_webauthn_tab.html:49
+msgid ""
+"Number of times this key has been used. High numbers are normal for "
+"platform authenticators (Touch ID, Windows Hello) as they increment on "
+"each use."
+msgstr ""
+"Nombre de fois que cette clé a été utilisée. Des nombres élevés sont "
+"normaux pour les authentificateurs de plateforme (Touch ID, Windows "
+"Hello) car ils s'incrémentent à chaque utilisation."
+
+#: app/templates/profile_webauthn_tab.html:49
+msgid "Sign count:"
+msgstr "Nombre de signatures :"
+
+#: app/templates/profile_webauthn_tab.html:57
+msgid "Are you sure you want to remove this security key?"
+msgstr "Êtes-vous sûr de vouloir supprimer cette clé de sécurité ?"
+
+#: app/templates/profile_webauthn_tab.html:70
+msgid ""
+"No security keys registered yet. Click \"Add Security Key\" above to get "
+"started."
+msgstr ""
+"Aucune clé de sécurité enregistrée pour le moment. Cliquez sur « Ajouter "
+"une clé de sécurité » ci-dessus pour commencer."
+
+#: app/templates/profile_webauthn_tab.html:77
+msgid "About WebAuthn Security Keys"
+msgstr "À propos des clés de sécurité WebAuthn"
+
+#: app/templates/profile_webauthn_tab.html:79
+msgid "Hardware keys like YubiKey, Google Titan, or Feitian"
+msgstr "Clés matérielles comme YubiKey, Google Titan ou Feitian"
+
+#: app/templates/profile_webauthn_tab.html:80
+msgid "Built-in authenticators: Touch ID (Mac), Face ID (iPhone), Windows Hello"
+msgstr ""
+"Authentificateurs intégrés : Touch ID (Mac), Face ID (iPhone), Windows "
+"Hello"
+
+#: app/templates/profile_webauthn_tab.html:81
+msgid "Phishing-resistant - cannot be tricked by fake websites"
+msgstr "Résistant au phishing - ne peut pas être trompé par de faux sites web"
+
+#: app/templates/profile_webauthn_tab.html:82
+msgid "Can be used as primary login method (passwordless)"
+msgstr ""
+"Peut être utilisé comme méthode de connexion principale (sans mot de "
+"passe)"
+
+#: app/templates/profile_webauthn_tab.html:83
+msgid "Recommended: Register at least 2 keys for backup access"
+msgstr "Recommandé : enregistrez au moins 2 clés pour un accès de secours"
+
+#: app/templates/register.html:24
+msgid "Choose a username"
+msgstr "Choisissez un nom d'utilisateur"
+
+#: app/templates/register.html:37
+msgid "Enter password"
+msgstr "Saisissez le mot de passe"
+
+#: app/templates/register.html:43 app/templates/reset_password.html:28
+msgid "Confirm Password"
+msgstr "Confirmer le mot de passe"
+
+#: app/templates/register.html:46
+msgid "Repeat your password"
+msgstr "Répétez votre mot de passe"
+
+#: app/templates/register.html:58
+msgid "Already have an account?"
+msgstr "Vous avez déjà un compte ?"
+
+#: app/templates/register.html:58
+msgid "Login here"
+msgstr "Connectez-vous ici"
+
+#: app/templates/register_success.html:3
+msgid "Registration Successful"
+msgstr "Inscription réussie"
+
+#: app/templates/register_success.html:12
+msgid "Check Your Email!"
+msgstr "Vérifiez votre e-mail !"
+
+#: app/templates/register_success.html:17
+#, python-format
+msgid ""
+"We've sent an account activation link to <strong>%(email)s</strong>. "
+"Please click the link in the email to complete your registration."
+msgstr ""
+"Nous avons envoyé un lien d'activation de compte à "
+"<strong>%(email)s</strong>. Veuillez cliquer sur le lien dans l'e-mail "
+"pour terminer votre inscription."
+
+#: app/templates/register_success.html:20
+#, python-format
+msgid ""
+"The link will expire in %(valid_hours)s hours. If you don't see the "
+"email, please check your spam folder."
+msgstr ""
+"Le lien expirera dans %(valid_hours)s heures. Si vous ne voyez pas "
+"l'e-mail, veuillez vérifier votre dossier spam."
+
+#: app/templates/reset_password.html:7
+msgid "Set New Password"
+msgstr "Définir un nouveau mot de passe"
+
+#: app/templates/reset_password.html:8
+#, python-format
+msgid "Enter your new password for account: %(username)s"
+msgstr "Saisissez votre nouveau mot de passe pour le compte : %(username)s"
+
+#: app/templates/reset_password.html:24
+msgid "Minimum 12 characters"
+msgstr "Minimum 12 caractères"
+
+#: app/templates/reset_password.html:31
+msgid "Repeat your new password"
+msgstr "Répétez votre nouveau mot de passe"
+
+#: app/templates/email/password_reset_body.html:27
+#: app/templates/reset_password.html:38
+msgid "Reset Password"
+msgstr "Réinitialiser le mot de passe"
+
+#: app/templates/reset_password_invalid.html:15
+msgid "Reset Link Expired"
+msgstr "Lien de réinitialisation expiré"
+
+#: app/templates/reset_password_invalid.html:17
+msgid "This password reset link has expired. Please request a new one."
+msgstr ""
+"Ce lien de réinitialisation du mot de passe a expiré. Veuillez en "
+"demander un nouveau."
+
+#: app/templates/reset_password_invalid.html:20
+msgid "Invalid Reset Link"
+msgstr "Lien de réinitialisation non valide"
+
+#: app/templates/reset_password_invalid.html:22
+msgid "This password reset link is invalid or has already been used."
+msgstr ""
+"Ce lien de réinitialisation du mot de passe n'est pas valide ou a déjà "
+"été utilisé."
+
+#: app/templates/reset_password_invalid.html:29
+msgid "Request New Reset Link"
+msgstr "Demander un nouveau lien de réinitialisation"
+
+#: app/templates/reset_password_success.html:13
+msgid "Password Reset Successful"
+msgstr "Réinitialisation du mot de passe réussie"
+
+#: app/templates/reset_password_success.html:15
+msgid ""
+"Your password has been successfully reset. You can now log in with your "
+"new password."
+msgstr ""
+"Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant"
+" vous connecter avec votre nouveau mot de passe."
+
+#: app/templates/reset_password_success.html:19
+#: app/templates/verification_failed.html:21
+msgid "Go to Login"
+msgstr "Aller à la connexion"
+
+#: app/templates/security_events_dashboard.html:16
+msgid "Monitor security events and audit trail"
+msgstr "Surveillez les événements de sécurité et la piste d'audit"
+
+#: app/templates/security_events_dashboard.html:21
+msgid "Last Hour"
+msgstr "Dernière heure"
+
+#: app/templates/security_events_dashboard.html:23
+msgid "Last 24 Hours"
+msgstr "Dernières 24 heures"
+
+#: app/templates/security_events_dashboard.html:25
+msgid "Last Week"
+msgstr "Dernière semaine"
+
+#: app/templates/security_events_dashboard.html:27
+msgid "Last Month"
+msgstr "Dernier mois"
+
+#: app/templates/security_events_dashboard.html:35
+msgid "Total Events"
+msgstr "Événements totaux"
+
+#: app/templates/security_events_dashboard.html:47
+msgid "Warnings"
+msgstr "Avertissements"
+
+#: app/templates/security_events_dashboard.html:59
+msgid "Errors"
+msgstr "Erreurs"
+
+#: app/templates/security_events_dashboard.html:71
+#: app/templates/security_events_dashboard.html:143
+msgid "Critical"
+msgstr "Critiques"
+
+#: app/templates/security_events_dashboard.html:83
+msgid "Failed Login Attempts by IP"
+msgstr "Tentatives de connexion échouées par IP"
+
+#: app/templates/email/admin_ip_blocked.html:49
+#: app/templates/email/admin_ip_blocked.txt:10
+#: app/templates/security_events_dashboard.html:89
+msgid "Failed Attempts"
+msgstr "Tentatives échouées"
+
+#: app/templates/security_events_dashboard.html:99
+msgid "High Risk"
+msgstr "Risque élevé"
+
+#: app/templates/security_events_dashboard.html:100
+msgid "Suspicious"
+msgstr "Suspect"
+
+#: app/templates/security_events_dashboard.html:111
+msgid "Blocked IP Addresses"
+msgstr "Adresses IP bloquées"
+
+#: app/templates/security_events_dashboard.html:135
+msgid "Recent Security Events"
+msgstr "Événements de sécurité récents"
+
+#: app/templates/security_events_dashboard.html:139
+msgid "All Severities"
+msgstr "Toutes les gravités"
+
+#: app/templates/security_events_dashboard.html:140
+msgid "Info"
+msgstr "Info"
+
+#: app/templates/security_events_dashboard.html:141
+msgid "Warning"
+msgstr "Avertissement"
+
+#: app/templates/security_events_dashboard.html:159
+msgid "User:"
+msgstr "Utilisateur :"
+
+#: app/templates/security_events_dashboard.html:162
+msgid "IP:"
+msgstr "IP :"
+
+#: app/templates/security_events_dashboard.html:166
+msgid "Details:"
+msgstr "Détails :"
+
+#: app/templates/totp_key_rotation.html:22
+msgid ""
+"Manage TOTP encryption key rotation without requiring users to re-setup "
+"2FA"
+msgstr ""
+"Gérez la rotation des clés de chiffrement TOTP sans obliger les "
+"utilisateurs à reconfigurer la 2FA"
+
+#: app/templates/totp_key_rotation.html:29
+msgid "Total TOTP Users"
+msgstr "Utilisateurs TOTP totaux"
+
+#: app/templates/totp_key_rotation.html:41
+msgid "Available Key Versions"
+msgstr "Versions de clé disponibles"
+
+#: app/templates/totp_key_rotation.html:54
+msgid "Key Versions in Use"
+msgstr "Versions de clé en cours d'utilisation"
+
+#: app/templates/totp_key_rotation.html:67
+msgid "Key Version Distribution"
+msgstr "Répartition des versions de clé"
+
+#: app/templates/totp_key_rotation.html:76
+#: app/templates/totp_key_rotation.html:143
+msgid "Version"
+msgstr "Version"
+
+#: app/templates/totp_key_rotation.html:77
+msgid "users"
+msgstr "utilisateurs"
+
+#: app/templates/totp_key_rotation.html:77
+msgid "user"
+msgstr "utilisateur"
+
+#: app/templates/totp_key_rotation.html:94
+msgid "Key Rotation"
+msgstr "Rotation des clés"
+
+#: app/templates/totp_key_rotation.html:98
+msgid "Setup Required"
+msgstr "Configuration requise"
+
+#: app/templates/totp_key_rotation.html:99
+msgid ""
+"To rotate encryption keys, you need to configure a second key version. "
+"Follow these steps:"
+msgstr ""
+"Pour effectuer la rotation des clés de chiffrement, vous devez configurer"
+" une deuxième version de clé. Suivez ces étapes :"
+
+#: app/templates/totp_key_rotation.html:101
+msgid "Generate a new encryption key using the button below"
+msgstr "Générez une nouvelle clé de chiffrement à l'aide du bouton ci-dessous"
+
+#: app/templates/totp_key_rotation.html:102
+msgid "Add the new key to your .env file as TOTP_ENCRYPTION_KEY_V2=<new_key>"
+msgstr ""
+"Ajoutez la nouvelle clé à votre fichier .env sous la forme "
+"TOTP_ENCRYPTION_KEY_V2=<nouvelle_clé>"
+
+#: app/templates/totp_key_rotation.html:103
+msgid "Restart the server"
+msgstr "Redémarrez le serveur"
+
+#: app/templates/totp_key_rotation.html:104
+msgid "Return to this page to perform the rotation"
+msgstr "Revenez à cette page pour effectuer la rotation"
+
+#: app/templates/totp_key_rotation.html:111
+msgid "Generate New Encryption Key"
+msgstr "Générer une nouvelle clé de chiffrement"
+
+#: app/templates/totp_key_rotation.html:112
+msgid "Generating..."
+msgstr "Génération..."
+
+#: app/templates/totp_key_rotation.html:116
+msgid "New Key Generated"
+msgstr "Nouvelle clé générée"
+
+#: app/templates/totp_key_rotation.html:119
+msgid "Encryption Key"
+msgstr "Clé de chiffrement"
+
+#: app/templates/totp_key_rotation.html:134
+msgid ""
+"Rotate all users to a specific key version. The TOTP secret remains the "
+"same, only the encryption key changes."
+msgstr ""
+"Effectuez la rotation de tous les utilisateurs vers une version de clé "
+"spécifique. Le secret TOTP reste le même, seule la clé de chiffrement "
+"change."
+
+#: app/templates/totp_key_rotation.html:139
+msgid "Target Key Version"
+msgstr "Version de clé cible"
+
+#: app/templates/totp_key_rotation.html:151
+msgid "Rotate All Users to Selected Version"
+msgstr "Faire pivoter tous les utilisateurs vers la version sélectionnée"
+
+#: app/templates/totp_key_rotation.html:152
+msgid "Rotating..."
+msgstr "Rotation..."
+
+#: app/templates/totp_key_rotation.html:160
+msgid "Total users:"
+msgstr "Utilisateurs totaux :"
+
+#: app/templates/totp_key_rotation.html:161
+msgid "Successfully rotated:"
+msgstr "Pivotés avec succès :"
+
+#: app/templates/totp_key_rotation.html:162
+msgid "Skipped:"
+msgstr "Ignorés :"
+
+#: app/templates/totp_key_rotation.html:163
+msgid "Failed:"
+msgstr "Échoués :"
+
+#: app/templates/totp_key_rotation.html:165
+msgid "Errors:"
+msgstr "Erreurs :"
+
+#: app/templates/totp_key_rotation.html:179
+msgid "Important Notes"
+msgstr "Remarques importantes"
+
+#: app/templates/totp_key_rotation.html:181
+msgid ""
+"Users do NOT need to re-setup their 2FA. The rotation is transparent to "
+"them."
+msgstr ""
+"Les utilisateurs n'ont PAS besoin de reconfigurer leur 2FA. La rotation "
+"leur est transparente."
+
+#: app/templates/totp_key_rotation.html:182
+msgid ""
+"The TOTP secret itself never changes, only the encryption key protecting "
+"it."
+msgstr ""
+"Le secret TOTP lui-même ne change jamais, seule la clé de chiffrement qui"
+" le protège."
+
+#: app/templates/totp_key_rotation.html:183
+msgid "Always test rotation in a development environment first."
+msgstr ""
+"Testez toujours d'abord la rotation dans un environnement de "
+"développement."
+
+#: app/templates/totp_key_rotation.html:184
+msgid "Keep old encryption keys available until all users are migrated."
+msgstr ""
+"Conservez les anciennes clés de chiffrement disponibles jusqu'à ce que "
+"tous les utilisateurs soient migrés."
+
+#: app/templates/totp_key_rotation.html:185
+msgid "After successful rotation, update TOTP_ENCRYPTION_KEY in .env and restart."
+msgstr ""
+"Après une rotation réussie, mettez à jour TOTP_ENCRYPTION_KEY dans .env "
+"et redémarrez."
+
+#: app/templates/totp_key_rotation.html:210
+#: app/templates/totp_key_rotation.html:234
+msgid "Rotation Failed"
+msgstr "Échec de la rotation"
+
+#: app/templates/totp_key_rotation.html:233
+msgid "Rotation Complete"
+msgstr "Rotation terminée"
+
+#: app/templates/totp_key_rotation.html:249
+msgid "Failed to generate key"
+msgstr "Échec de la génération de la clé"
+
+#: app/templates/totp_key_rotation.html:252
+msgid "Error:"
+msgstr "Erreur :"
+
+#: app/templates/totp_key_rotation.html:260
+msgid "Are you sure you want to rotate ALL users to version"
+msgstr ""
+"Êtes-vous sûr de vouloir faire pivoter TOUS les utilisateurs vers la "
+"version"
+
+#: app/templates/trip_detail.html:11
+msgid "Loading trip details..."
+msgstr "Chargement des détails du trajet..."
+
+#: app/templates/trip_detail.html:19
+msgid "Trip Details"
+msgstr "Détails du trajet"
+
+#: app/templates/trip_detail.html:38
+msgid "Avg. Consumption"
+msgstr "Consommation moy."
+
+#: app/templates/trip_detail.html:44
+msgid "Export GPX"
+msgstr "Exporter GPX"
+
+#: app/templates/trip_detail.html:48
+msgid "Export KML"
+msgstr "Exporter KML"
+
+#: app/templates/trip_detail.html:52
+msgid "Delete This Trip"
+msgstr "Supprimer ce trajet"
+
+#: app/templates/trip_detail.html:80 app/templates/vehicle_detail.html:118
+msgid ""
+"Are you sure you want to permanently delete this trip? This action cannot"
+" be undone."
+msgstr ""
+"Êtes-vous sûr de vouloir supprimer définitivement ce trajet ? Cette "
+"action est irréversible."
+
+#: app/templates/trip_detail.html:87 app/templates/vehicle_detail.html:132
+msgid "Yes, Delete Trip"
+msgstr "Oui, supprimer le trajet"
+
+#: app/templates/trip_detail.html:107
+msgid "Back to All Trips"
+msgstr "Retour à tous les trajets"
+
+#: app/templates/trip_detail.html:108
+msgid "Back to Search"
+msgstr "Retour à la recherche"
+
+#: app/templates/trip_detail.html:109
+msgid "Trip deleted successfully."
+msgstr "Trajet supprimé avec succès."
+
+#: app/templates/trip_detail.html:196
+msgid "Failed to load trip details (Status: "
+msgstr "Échec du chargement des détails du trajet (Statut : "
+
+#: app/templates/trip_detail.html:216
+msgid "Map data not available for this trip."
+msgstr "Données de carte non disponibles pour ce trajet."
+
+#: app/templates/trip_detail.html:238 app/templates/vehicle_detail.html:2094
+msgid ""
+"Map Error: Protomaps scripts failed to load. Check the browser console "
+"and server configuration."
+msgstr ""
+"Erreur de carte : échec du chargement des scripts Protomaps. Vérifiez la "
+"console du navigateur et la configuration du serveur."
+
+#: app/templates/trip_detail.html:300 app/templates/vehicle_detail.html:2155
+msgid "Map Error: Could not initialize Protomaps layer."
+msgstr "Erreur de carte : impossible d'initialiser la couche Protomaps."
+
+#: app/templates/trip_detail.html:320
+msgid "Trip Start"
+msgstr "Début du trajet"
+
+#: app/templates/trip_detail.html:321
+msgid "Trip End"
+msgstr "Fin du trajet"
+
+#: app/templates/trip_detail.html:330 app/templates/vehicle_detail.html:835
+msgid "Error deleting trip: "
+msgstr "Erreur lors de la suppression du trajet : "
+
+#: app/templates/users_management.html:13
+msgid "Add New User"
+msgstr "Ajouter un nouvel utilisateur"
+
+#: app/templates/users_management.html:25
+msgid "account(s) pending auto-deletion"
+msgstr "compte(s) en attente de suppression automatique"
+
+#: app/templates/users_management.html:31
+msgid "account(s) inactive 30+ days (warning will be sent)"
+msgstr "compte(s) inactif(s) depuis 30+ jours (un avertissement sera envoyé)"
+
+#: app/templates/users_management.html:45
+msgid "Last Login"
+msgstr "Dernière connexion"
+
+#: app/templates/users_management.html:46
+msgid "Vehicles"
+msgstr "Véhicules"
+
+#: app/templates/users_management.html:91
+msgid "Inactive 30d+"
+msgstr "Inactif 30j+"
+
+#: app/templates/users_management.html:111
+#, python-format
+msgid "Are you sure you want to delete user %(username)s? This cannot be undone."
+msgstr ""
+"Êtes-vous sûr de vouloir supprimer l'utilisateur %(username)s ? Cette "
+"action est irréversible."
+
+#: app/templates/users_management.html:124
+msgid "No users found (except possibly yourself if you are the only admin)."
+msgstr ""
+"Aucun utilisateur trouvé (sauf éventuellement vous-même si vous êtes le "
+"seul administrateur)."
+
+#: app/templates/vehicle_datalogs.html:3 app/templates/vehicle_datalogs.html:65
+msgid "Data Logs"
+msgstr "Journaux de données"
+
+#: app/templates/vehicle_datalogs.html:68
+msgid "Back to Vehicle"
+msgstr "Retour au véhicule"
+
+#: app/templates/vehicle_datalogs.html:71
+msgid ""
+"History records the vehicle module sends as data notifications (e.g. trip"
+" and charge session logs). Records are delivered reliably even across LTE"
+" outages."
+msgstr ""
+"Enregistrements historiques envoyés par le module du véhicule sous forme "
+"de notifications de données (p. ex. journaux de trajets et de sessions de"
+" charge). Les enregistrements sont livrés de manière fiable, même en cas "
+"de coupure LTE."
+
+#: app/templates/vehicle_datalogs.html:74
+msgid "Record Types"
+msgstr "Types d’enregistrement"
+
+#: app/templates/vehicle_datalogs.html:88
+msgid ""
+"No history records stored yet. Most vehicles need the logs to be enabled "
+"on the module, e.g.:"
+msgstr ""
+"Aucun enregistrement historique pour le moment. Sur la plupart des "
+"véhicules, les journaux doivent d’abord être activés sur le module, p. "
+"ex. :"
+
+#: app/templates/vehicle_datalogs.html:116
+msgid "Export CSV"
+msgstr "Exporter en CSV"
+
+#: app/templates/email/admin_ip_blocked.html:57
+#: app/templates/email/admin_ip_blocked.txt:12
+#: app/templates/vehicle_datalogs.html:131
+msgid "Timestamp"
+msgstr "Horodatage"
+
+#: app/templates/vehicle_datalogs.html:132
+msgid "Record #"
+msgstr "N° d’enregistrement"
+
+#: app/templates/vehicle_datalogs.html:157
+msgid "Newer"
+msgstr "Plus récents"
+
+#: app/templates/vehicle_datalogs.html:166
+msgid "Older"
+msgstr "Plus anciens"
+
+#: app/templates/vehicle_datalogs.html:172
+msgid "No records of this type found."
+msgstr "Aucun enregistrement de ce type trouvé."
+
+#: app/templates/vehicle_detail.html:35
+msgid "Edit Vehicle"
+msgstr "Modifier le véhicule"
+
+#: app/templates/vehicle_detail.html:41
+msgid "Module ID:"
+msgstr "ID du module :"
+
+#: app/templates/vehicle_detail.html:43
+msgid "Owner:"
+msgstr "Propriétaire :"
+
+#: app/templates/vehicle_detail.html:54
+msgid "Overview"
+msgstr "Aperçu"
+
+#: app/templates/vehicle_detail.html:60
+msgid "Trips"
+msgstr "Trajets"
+
+#: app/templates/vehicle_detail.html:65
+msgid "Search & Heatmap"
+msgstr "Recherche et carte de chaleur"
+
+#: app/templates/vehicle_detail.html:72
+msgid "Charges"
+msgstr "Charges"
+
+#: app/templates/vehicle_detail.html:78
+msgid "Terminal"
+msgstr "Terminal"
+
+#: app/templates/vehicle_detail.html:84
+msgid "Cell Stats"
+msgstr "Statistiques des cellules"
+
+#: app/templates/vehicle_detail.html:89
+msgid "All Metrics"
+msgstr "Toutes les métriques"
+
+#: app/templates/vehicle_detail.html:94
+msgid "Logs"
+msgstr "Journaux"
+
+#: app/templates/vehicle_detail.html:99
+msgid "Notifications"
+msgstr "Notifications"
+
+#: app/templates/vehicle_detail.html:122 app/templates/vehicle_detail.html:156
+msgid "Start Time:"
+msgstr "Heure de début :"
+
+#: app/templates/vehicle_detail.html:123 app/templates/vehicle_detail.html:1172
+#: app/templates/vehicle_detail.html:1436
+msgid "Distance:"
+msgstr "Distance :"
+
+#: app/templates/vehicle_detail.html:157
+msgid "Energy Charged:"
+msgstr "Énergie chargée :"
+
+#: app/templates/vehicle_detail.html:234
+msgid "Connected"
+msgstr "Connecté"
+
+#: app/templates/vehicle_detail.html:236
+msgid "Disconnected: "
+msgstr "Déconnecté : "
+
+#: app/templates/vehicle_detail.html:237
+msgid "Connection lost"
+msgstr "Connexion perdue"
+
+#: app/templates/vehicle_detail.html:238
+msgid "Disconnected. Reconnecting in "
+msgstr "Déconnecté. Reconnexion dans "
+
+#: app/templates/vehicle_detail.html:240
+msgid "Alert:"
+msgstr "Alerte :"
+
+#: app/templates/vehicle_detail.html:241
+msgid "Health:"
+msgstr "État :"
+
+#: app/templates/vehicle_detail.html:242 app/templates/vehicle_detail.html:536
+msgid "Details for"
+msgstr "Détails pour"
+
+#: app/templates/vehicle_detail.html:244
+msgid "Monday"
+msgstr "Lundi"
+
+#: app/templates/vehicle_detail.html:245
+msgid "Tuesday"
+msgstr "Mardi"
+
+#: app/templates/vehicle_detail.html:246
+msgid "Wednesday"
+msgstr "Mercredi"
+
+#: app/templates/vehicle_detail.html:247
+msgid "Thursday"
+msgstr "Jeudi"
+
+#: app/templates/vehicle_detail.html:248
+msgid "Friday"
+msgstr "Vendredi"
+
+#: app/templates/vehicle_detail.html:249
+msgid "Saturday"
+msgstr "Samedi"
+
+#: app/templates/vehicle_detail.html:250
+msgid "Sunday"
+msgstr "Dimanche"
+
+#: app/templates/vehicle_detail.html:254
+msgid "Enter command (e.g., wakeup or metrics list)"
+msgstr "Saisissez une commande (p. ex., wakeup ou metrics list)"
+
+#: app/templates/vehicle_detail.html:255
+msgid "V2 Offline"
+msgstr "V2 hors ligne"
+
+#: app/templates/vehicle_detail.html:256
+msgid "V3 Offline/Not Connected"
+msgstr "V3 hors ligne/non connecté"
+
+#: app/templates/vehicle_detail.html:259
+msgid "Failed to load data (Status: "
+msgstr "Échec du chargement des données (Statut : "
+
+#: app/templates/vehicle_detail.html:260 app/templates/vehicle_detail.html:970
+msgid "Service unavailable. Server sent an unexpected response (Status: "
+msgstr ""
+"Service indisponible. Le serveur a envoyé une réponse inattendue (Statut "
+": "
+
+#: app/templates/vehicle_detail.html:572
+msgid "Failed to load charge stats (Status: "
+msgstr "Échec du chargement des statistiques de charge (Statut : "
+
+#: app/templates/vehicle_detail.html:785
+msgid "Map of trip from "
+msgstr "Carte du trajet depuis "
+
+#: app/templates/vehicle_detail.html:786
+msgid "Trip map preview"
+msgstr "Aperçu de la carte du trajet"
+
+#: app/templates/vehicle_detail.html:968
+msgid "Failed to load charge logs (Status: "
+msgstr "Échec du chargement des journaux de charge (Statut : "
+
+#: app/templates/vehicle_detail.html:1253
+msgid ""
+"Map Error: A required map library failed to load. Check the browser "
+"console."
+msgstr ""
+"Erreur de carte : échec du chargement d'une bibliothèque de cartes "
+"requise. Vérifiez la console du navigateur."
+
+#: app/templates/vehicle_detail.html:1373
+msgid "No data available to generate a heatmap."
+msgstr "Aucune donnée disponible pour générer une carte de chaleur."
+
+#: app/templates/vehicle_detail.html:1388
+msgid "Latitude, Longitude, and Radius are required."
+msgstr "La latitude, la longitude et le rayon sont requis."
+
+#: app/templates/vehicle_detail.html:1391
+msgid "Bounding Box is required."
+msgstr "La zone délimitée est requise."
+
+#: app/templates/vehicle_detail.html:1400
+msgid "Search failed:"
+msgstr "Échec de la recherche :"
+
+#: app/templates/vehicle_detail.html:1436
+msgid "Trip:"
+msgstr "Trajet :"
+
+#: app/templates/vehicle_detail.html:1884
+msgid "Cell"
+msgstr "Cellule"
+
+#: app/templates/vehicle_detail.html:1904
+msgid "Sensor"
+msgstr "Capteur"
+
+#: app/templates/vehicle_detail.html:1951
+msgid "Real-time Status:"
+msgstr "État en temps réel :"
+
+#: app/templates/verification_failed.html:3
+msgid "Verification Failed"
+msgstr "Échec de la vérification"
+
+#: app/templates/verification_failed.html:12
+msgid "Account Verification Failed"
+msgstr "Échec de la vérification du compte"
+
+#: app/templates/verification_failed.html:14
+msgid ""
+"The verification link is invalid, has expired, or the account has already"
+" been activated."
+msgstr ""
+"Le lien de vérification n'est pas valide, a expiré ou le compte a déjà "
+"été activé."
+
+#: app/templates/verification_failed.html:17
+msgid ""
+"Please try logging in, or if you are unable to, you may need to register "
+"for a new account."
+msgstr ""
+"Veuillez essayer de vous connecter ou, si vous ne le pouvez pas, vous "
+"devrez peut-être créer un nouveau compte."
+
+#: app/templates/verification_failed.html:25
+msgid "Register Again"
+msgstr "S'inscrire à nouveau"
+
+#: app/templates/webauthn_login.html:8
+msgid "Use your security key or biometric authenticator"
+msgstr "Utilisez votre clé de sécurité ou votre authentificateur biométrique"
+
+#: app/templates/webauthn_login.html:50
+msgid "Or use an alternative login method"
+msgstr "Ou utilisez une autre méthode de connexion"
+
+#: app/templates/webauthn_login.html:54
+msgid "Password Login"
+msgstr "Connexion par mot de passe"
+
+#: app/templates/webauthn_login.html:171
+msgid "Authentication was cancelled"
+msgstr "L'authentification a été annulée"
+
+#: app/templates/webauthn_register.html:8
+msgid "Back to Profile (WebAuthn)"
+msgstr "Retour au profil (WebAuthn)"
+
+#: app/templates/webauthn_register.html:15
+msgid "Step 1: Configure Your Security Key"
+msgstr "Étape 1 : Configurez votre clé de sécurité"
+
+#: app/templates/webauthn_register.html:17
+msgid ""
+"Give your security key a recognizable name (e.g., \"YubiKey 5C\", \"Touch"
+" ID\", \"Windows Hello\")."
+msgstr ""
+"Donnez à votre clé de sécurité un nom reconnaissable (p. ex., « YubiKey "
+"5C », « Touch ID », « Windows Hello »)."
+
+#: app/templates/webauthn_register.html:22
+msgid "Security Key Name"
+msgstr "Nom de la clé de sécurité"
+
+#: app/templates/webauthn_register.html:25
+msgid "My Security Key"
+msgstr "Ma clé de sécurité"
+
+#: app/templates/webauthn_register.html:29
+msgid "Usage Mode"
+msgstr "Mode d'utilisation"
+
+#: app/templates/webauthn_register.html:34
+msgid "Passwordless Login"
+msgstr "Connexion sans mot de passe"
+
+#: app/templates/webauthn_register.html:35
+msgid "Login with just your security key, no password needed"
+msgstr ""
+"Connectez-vous uniquement avec votre clé de sécurité, sans mot de passe "
+"nécessaire"
+
+#: app/templates/webauthn_register.html:42
+msgid "Use security key after password login for extra security"
+msgstr ""
+"Utilisez la clé de sécurité après la connexion par mot de passe pour plus"
+" de sécurité"
+
+#: app/templates/webauthn_register.html:51
+msgid "Step 2: Register Your Security Key"
+msgstr "Étape 2 : Enregistrez votre clé de sécurité"
+
+#: app/templates/webauthn_register.html:53
+msgid ""
+"Click the button below and follow your browser's prompts to register your"
+" security key or biometric authenticator."
+msgstr ""
+"Cliquez sur le bouton ci-dessous et suivez les invites de votre "
+"navigateur pour enregistrer votre clé de sécurité ou votre "
+"authentificateur biométrique."
+
+#: app/templates/webauthn_register.html:76
+msgid "Redirecting to profile..."
+msgstr "Redirection vers le profil..."
+
+#: app/templates/webauthn_register.html:84
+msgid ""
+"Your browser does not support WebAuthn/FIDO2. Please use a modern browser"
+" like Chrome, Firefox, Safari, or Edge."
+msgstr ""
+"Votre navigateur ne prend pas en charge WebAuthn/FIDO2. Veuillez utiliser"
+" un navigateur moderne comme Chrome, Firefox, Safari ou Edge."
+
+#: app/templates/webauthn_register.html:90
+msgid "What is WebAuthn?"
+msgstr "Qu'est-ce que WebAuthn ?"
+
+#: app/templates/webauthn_register.html:92
+msgid "Hardware security keys (YubiKey, Titan Key, etc.)"
+msgstr "Clés de sécurité matérielles (YubiKey, Titan Key, etc.)"
+
+#: app/templates/webauthn_register.html:93
+msgid "Platform authenticators (Touch ID, Face ID, Windows Hello)"
+msgstr "Authentificateurs de plateforme (Touch ID, Face ID, Windows Hello)"
+
+#: app/templates/webauthn_register.html:94
+msgid "More secure than passwords - resistant to phishing"
+msgstr "Plus sécurisé que les mots de passe - résistant au phishing"
+
+#: app/templates/webauthn_register.html:95
+msgid "Can be used as primary or second factor authentication"
+msgstr "Peut être utilisé comme authentification principale ou second facteur"
+
+#: app/templates/webauthn_register.html:115
+#: app/templates/webauthn_register.html:157
+msgid "Register Security Key"
+msgstr "Enregistrer la clé de sécurité"
+
+#: app/templates/webauthn_register.html:156
+msgid "Registering..."
+msgstr "Enregistrement..."
+
+#: app/templates/webauthn_register.html:166
+msgid "Please enter a name for your security key"
+msgstr "Veuillez saisir un nom pour votre clé de sécurité"
+
+#: app/templates/webauthn_register.html:191
+msgid "Failed to start registration"
+msgstr "Échec du démarrage de l'enregistrement"
+
+#: app/templates/webauthn_register.html:245
+msgid "Failed to verify credential"
+msgstr "Échec de la vérification des identifiants"
+
+#: app/templates/webauthn_register.html:249
+msgid "Security key registered successfully!"
+msgstr "Clé de sécurité enregistrée avec succès !"
+
+#: app/templates/webauthn_register.html:258
+msgid "Registration failed. Please try again."
+msgstr "Échec de l'enregistrement. Veuillez réessayer."
+
+#: app/templates/email/account_deletion_warning.html:25
+#: app/templates/email/account_deletion_warning.txt:1
+#: app/templates/email/admin_ip_blocked.html:32
+#: app/templates/email/admin_lifecycle_account.html:36
+#: app/templates/email/admin_lifecycle_account.txt:1
+#: app/templates/email/admin_lifecycle_vehicle.html:36
+#: app/templates/email/admin_lifecycle_vehicle.txt:1
+#: app/templates/email/admin_new_user_notification.html:27
+#: app/templates/email/admin_new_user_notification.txt:3
+#: app/templates/email/password_reset_body.html:25
+#: app/templates/email/password_reset_body.txt:3
+#: app/templates/email/unused_vehicle_warning.html:28
+#: app/templates/email/unused_vehicle_warning.txt:1
+#: app/templates/email/vehicle_auto_deleted.html:28
+#: app/templates/email/vehicle_auto_deleted.txt:1
+#: app/templates/email/verification_body.html:24
+#: app/templates/email/verification_body.txt:3
+#, python-format
+msgid "Hello %(name)s,"
+msgstr "Bonjour %(name)s,"
+
+#: app/templates/email/account_deletion_warning.html:26
+#: app/templates/email/account_deletion_warning.txt:3
+#: app/templates/email/unused_vehicle_warning.html:29
+#: app/templates/email/unused_vehicle_warning.txt:3
+#: app/templates/email/vehicle_auto_deleted.html:29
+#: app/templates/email/vehicle_auto_deleted.txt:3
+msgid "This is an automated notice from your PyOVMS server."
+msgstr "Ceci est un avis automatique de votre serveur PyOVMS."
+
+#: app/templates/email/account_deletion_warning.html:29
+msgid ""
+"Your account has no registered vehicles and you have not logged in for "
+"more than 30 days."
+msgstr ""
+"Votre compte n'a aucun véhicule enregistré et vous ne vous êtes pas "
+"connecté depuis plus de 30 jours."
+
+#: app/templates/email/account_deletion_warning.html:30
+#: app/templates/email/account_deletion_warning.txt:7
+msgid ""
+"Your account will be permanently deleted in 7 days unless you log in or "
+"register a vehicle."
+msgstr ""
+"Votre compte sera définitivement supprimé dans 7 jours, sauf si vous vous"
+" connectez ou enregistrez un véhicule."
+
+#: app/templates/email/account_deletion_warning.html:33
+msgid ""
+"Inactive accounts without vehicles are automatically removed to keep the "
+"server clean."
+msgstr ""
+"Les comptes inactifs sans véhicule sont automatiquement supprimés pour "
+"garder le serveur propre."
+
+#: app/templates/email/account_deletion_warning.html:34
+msgid ""
+"Simply logging in will cancel the deletion. You can also register a new "
+"vehicle to reactivate your account."
+msgstr ""
+"Une simple connexion annulera la suppression. Vous pouvez également "
+"enregistrer un nouveau véhicule pour réactiver votre compte."
+
+#: app/templates/email/account_deletion_warning.html:36
+msgid "Log In to Keep My Account"
+msgstr "Se connecter pour conserver mon compte"
+
+#: app/templates/email/account_deletion_warning.html:38
+#: app/templates/email/account_deletion_warning.txt:12
+msgid "If you no longer need this account, no action is required."
+msgstr "Si vous n'avez plus besoin de ce compte, aucune action n'est requise."
+
+#: app/templates/email/account_deletion_warning.html:41
+#: app/templates/email/account_deletion_warning.txt:14
+#: app/templates/email/admin_ip_blocked.html:83
+#: app/templates/email/admin_ip_blocked.txt:29
+#: app/templates/email/admin_lifecycle_account.html:60
+#: app/templates/email/admin_lifecycle_account.txt:23
+#: app/templates/email/admin_lifecycle_vehicle.html:74
+#: app/templates/email/admin_lifecycle_vehicle.txt:28
+#: app/templates/email/admin_new_user_notification.html:49
+#: app/templates/email/admin_new_user_notification.txt:15
+#: app/templates/email/password_reset_body.html:38
+#: app/templates/email/password_reset_body.txt:17
+#: app/templates/email/unused_vehicle_warning.html:58
+#: app/templates/email/unused_vehicle_warning.txt:18
+#: app/templates/email/vehicle_auto_deleted.html:54
+#: app/templates/email/vehicle_auto_deleted.txt:15
+#: app/templates/email/verification_body.html:35
+#: app/templates/email/verification_body.txt:17
+msgid "PyOVMS Control Server"
+msgstr "Serveur de contrôle PyOVMS"
+
+# | msgid "" "Your account has no registered vehicles and you have not logged
+# in
+# | for " "more than 30 days."
+#: app/templates/email/account_deletion_warning.txt:5
+msgid ""
+"Your account has no registered vehicles and you have not logged in for "
+"more than 30 days. Inactive accounts without vehicles are automatically "
+"cleaned up after a grace period."
+msgstr ""
+"Votre compte ne comporte aucun véhicule enregistré et vous ne vous êtes "
+"pas connecté depuis plus de 30 jours. Les comptes inactifs sans véhicule "
+"sont automatiquement supprimés après un délai de grâce."
+
+#: app/templates/email/account_deletion_warning.txt:9
+msgid "To prevent deletion, log in at:"
+msgstr "Pour éviter la suppression, connectez-vous à l'adresse :"
+
+# | msgid "Security Keys"
+#: app/templates/email/admin_ip_blocked.html:28
+msgid "Security Alert"
+msgstr "Alerte de sécurité"
+
+# | msgid "IP Address"
+#: app/templates/email/admin_ip_blocked.html:29
+msgid "IP Address Blocked"
+msgstr "Adresse IP bloquée"
+
+# | msgid "IP Address"
+#: app/templates/email/admin_ip_blocked.html:35
+msgid "IP Address Blocked!"
+msgstr "Adresse IP bloquée !"
+
+#: app/templates/email/admin_ip_blocked.html:36
+#: app/templates/email/admin_ip_blocked.txt:4
+msgid ""
+"An IP address has been blocked due to repeated failed authentication "
+"attempts."
+msgstr ""
+"Une adresse IP a été bloquée en raison de tentatives d'authentification "
+"répétées ayant échoué."
+
+# | msgid "Authentication failed"
+#: app/templates/email/admin_ip_blocked.html:45
+#: app/templates/email/admin_ip_blocked.txt:9
+msgid "Authentication Type"
+msgstr "Type d'authentification"
+
+# | msgid "Duration"
+#: app/templates/email/admin_ip_blocked.html:53
+#: app/templates/email/admin_ip_blocked.txt:11
+msgid "Block Duration"
+msgstr "Durée du blocage"
+
+# | msgid "lines"
+#: app/templates/email/admin_ip_blocked.html:54
+#: app/templates/email/admin_ip_blocked.txt:11
+msgid "minutes"
+msgstr "minutes"
+
+# | msgid "Recommended"
+#: app/templates/email/admin_ip_blocked.html:63
+msgid "Recommended Actions"
+msgstr "Actions recommandées"
+
+#: app/templates/email/admin_ip_blocked.html:64
+msgid "If this was a legitimate user:"
+msgstr "S'il s'agit d'un utilisateur légitime :"
+
+#: app/templates/email/admin_ip_blocked.html:66
+#: app/templates/email/admin_ip_blocked.txt:17
+msgid "Wait for the block to expire"
+msgstr "Attendre l'expiration du blocage"
+
+# | msgid "Step 2: Module Credentials"
+#: app/templates/email/admin_ip_blocked.html:67
+#: app/templates/email/admin_ip_blocked.txt:18
+msgid "Use the correct credentials"
+msgstr "Utiliser les identifiants corrects"
+
+#: app/templates/email/admin_ip_blocked.html:68
+#: app/templates/email/admin_ip_blocked.txt:19
+msgid "Contact the administrator if issues persist"
+msgstr "Contacter l'administrateur si le problème persiste"
+
+#: app/templates/email/admin_ip_blocked.html:70
+#: app/templates/email/admin_ip_blocked.txt:21
+msgid "If this appears to be malicious activity, consider:"
+msgstr "S'il s'agit d'une activité malveillante, envisagez de :"
+
+#: app/templates/email/admin_ip_blocked.html:72
+#: app/templates/email/admin_ip_blocked.txt:22
+msgid "Reviewing your firewall rules"
+msgstr "Vérifier vos règles de pare-feu"
+
+#: app/templates/email/admin_ip_blocked.html:73
+#: app/templates/email/admin_ip_blocked.txt:23
+msgid "Implementing additional IP restrictions"
+msgstr "Mettre en place des restrictions IP supplémentaires"
+
+#: app/templates/email/admin_ip_blocked.html:74
+#: app/templates/email/admin_ip_blocked.txt:24
+msgid "Checking the Security Events Dashboard for patterns"
+msgstr "Rechercher des motifs récurrents dans les événements de sécurité"
+
+#: app/templates/email/admin_ip_blocked.html:78
+#: app/templates/email/admin_ip_blocked.txt:14
+#, python-format
+msgid "The blocked IP will be automatically unblocked after %(minutes)s minutes."
+msgstr ""
+"L'adresse IP bloquée sera automatiquement débloquée après %(minutes)s "
+"minutes."
+
+# | msgid "Recent Security Events"
+#: app/templates/email/admin_ip_blocked.html:80
+msgid "Open Security Events"
+msgstr "Ouvrir les événements de sécurité"
+
+#: app/templates/email/admin_ip_blocked.txt:1
+msgid "OVMS Security Alert - IP Address Blocked"
+msgstr "Alerte de sécurité OVMS – Adresse IP bloquée"
+
+#: app/templates/email/admin_ip_blocked.txt:16
+msgid "If this was a legitimate user, they should:"
+msgstr "S'il s'agit d'un utilisateur légitime, il doit :"
+
+#: app/templates/email/admin_lifecycle_account.html:28
+msgid "Deletion Warning Sent"
+msgstr "Avertissement de suppression envoyé"
+
+#: app/templates/email/admin_lifecycle_account.html:29
+msgid "Account Deletion Warning"
+msgstr "Avertissement de suppression de compte"
+
+#: app/templates/email/admin_lifecycle_account.html:31
+msgid "Account Deleted"
+msgstr "Compte supprimé"
+
+#: app/templates/email/admin_lifecycle_account.html:32
+msgid "Account Automatically Deleted"
+msgstr "Compte supprimé automatiquement"
+
+#: app/templates/email/admin_lifecycle_account.html:39
+msgid ""
+"An account deletion warning has been sent to a user because their account"
+" has no vehicles and they have not logged in for more than 30 days. The "
+"account will be automatically deleted in 7 days unless the user takes "
+"action."
+msgstr ""
+"Un avertissement de suppression de compte a été envoyé à un utilisateur "
+"car son compte n'a aucun véhicule et il ne s'est pas connecté depuis plus"
+" de 30 jours. Le compte sera automatiquement supprimé dans 7 jours, sauf "
+"si l'utilisateur prend des mesures."
+
+#: app/templates/email/admin_lifecycle_account.html:41
+msgid ""
+"A user account has been automatically deleted due to prolonged "
+"inactivity. The account had no vehicles and showed no activity for more "
+"than 37 days."
+msgstr ""
+"Un compte utilisateur a été automatiquement supprimé en raison d'une "
+"inactivité prolongée. Le compte n'avait aucun véhicule et n'a montré "
+"aucune activité depuis plus de 37 jours."
+
+#: app/templates/email/admin_lifecycle_account.html:56
+#: app/templates/email/admin_lifecycle_account.txt:21
+#: app/templates/email/admin_lifecycle_vehicle.html:71
+#: app/templates/email/admin_lifecycle_vehicle.txt:26
+#: app/templates/email/admin_new_user_notification.html:46
+#: app/templates/email/admin_new_user_notification.txt:13
+msgid "Manage Users"
+msgstr "Gérer les utilisateurs"
+
+# | msgid "Account Deletion Warning"
+#: app/templates/email/admin_lifecycle_account.txt:4
+msgid "[Lifecycle] Account deletion warning sent"
+msgstr "[Cycle de vie] Avertissement de suppression de compte envoyé"
+
+# | msgid "" "An account deletion warning has been sent to a user because
+# their
+# | account" " has no vehicles and they have not logged in for more than 30
+# | days. The " "account will be automatically deleted in 7 days unless the
+# user
+# | takes " "action."
+#: app/templates/email/admin_lifecycle_account.txt:6
+msgid ""
+"An account deletion warning has been sent to a user because their account"
+" has no vehicles and they have not logged in for more than 30 days."
+msgstr ""
+"Un avertissement de suppression de compte a été envoyé à un utilisateur, "
+"car son compte n'a aucun véhicule et il ne s'est pas connecté depuis plus"
+" de 30 jours."
+
+# | msgid "" "Your account will be permanently deleted in 7 days unless you
+# log
+# | in or " "register a vehicle."
+#: app/templates/email/admin_lifecycle_account.txt:11
+msgid ""
+"The account will be automatically deleted in 7 days unless the user logs "
+"in or creates a vehicle."
+msgstr ""
+"Le compte sera automatiquement supprimé dans 7 jours, sauf si "
+"l'utilisateur se connecte ou enregistre un véhicule."
+
+# | msgid "Account Automatically Deleted"
+#: app/templates/email/admin_lifecycle_account.txt:13
+msgid "[Lifecycle] Account automatically deleted"
+msgstr "[Cycle de vie] Compte supprimé automatiquement"
+
+# | msgid "" "A user account has been automatically deleted due to prolonged "
+# | "inactivity. The account had no vehicles and showed no activity for more "
+# | "than 37 days."
+#: app/templates/email/admin_lifecycle_account.txt:15
+msgid ""
+"A user account has been automatically deleted because the account had no "
+"vehicles and showed no activity for more than 37 days (30-day inactivity "
+"+ 7-day grace period)."
+msgstr ""
+"Un compte utilisateur a été supprimé automatiquement, car il ne "
+"comportait aucun véhicule et n'a montré aucune activité pendant plus de "
+"37 jours (30 jours d'inactivité + 7 jours de délai de grâce)."
+
+#: app/templates/email/admin_lifecycle_vehicle.html:28
+msgid "Inactivity Warning Sent"
+msgstr "Avertissement d'inactivité envoyé"
+
+#: app/templates/email/admin_lifecycle_vehicle.html:29
+msgid "Unused Vehicle Notice"
+msgstr "Avis de véhicule inutilisé"
+
+#: app/templates/email/admin_lifecycle_vehicle.html:31
+msgid "Auto-Deleted"
+msgstr "Supprimé automatiquement"
+
+#: app/templates/email/admin_lifecycle_vehicle.html:32
+msgid "Vehicle Automatically Deleted"
+msgstr "Véhicule supprimé automatiquement"
+
+#: app/templates/email/admin_lifecycle_vehicle.html:39
+msgid ""
+"An inactivity warning email has been sent to a vehicle owner because "
+"their vehicle has not communicated with the server for more than 12 "
+"months. The vehicle will be automatically deleted in 7 days if no "
+"communication is received."
+msgstr ""
+"Un e-mail d'avertissement d'inactivité a été envoyé à un propriétaire de "
+"véhicule car son véhicule n'a pas communiqué avec le serveur depuis plus "
+"de 12 mois. Le véhicule sera automatiquement supprimé dans 7 jours si "
+"aucune communication n'est reçue."
+
+#: app/templates/email/admin_lifecycle_vehicle.html:41
+msgid ""
+"A vehicle has been automatically deleted due to more than 12 months of "
+"inactivity. All associated data has been removed."
+msgstr ""
+"Un véhicule a été automatiquement supprimé en raison de plus de 12 mois "
+"d'inactivité. Toutes les données associées ont été supprimées."
+
+#: app/templates/email/admin_lifecycle_vehicle.html:60
+msgid "Owner Email"
+msgstr "E-mail du propriétaire"
+
+#: app/templates/email/admin_lifecycle_vehicle.txt:4
+msgid "[Lifecycle] Unused vehicle warning sent"
+msgstr "[Cycle de vie] Avertissement de véhicule inutilisé envoyé"
+
+# | msgid "" "An inactivity warning email has been sent to a vehicle owner
+# | because " "their vehicle has not communicated with the server for more
+# than
+# | 3 " "months. The vehicle will be automatically deleted in 7 days if no "
+# | "communication is received."
+#: app/templates/email/admin_lifecycle_vehicle.txt:6
+msgid ""
+"An inactivity warning email has been sent to a vehicle owner because "
+"their vehicle has not communicated for more than 12 months."
+msgstr ""
+"Un avertissement d'inactivité a été envoyé par e-mail au propriétaire "
+"d'un véhicule, car son véhicule n'a pas communiqué depuis plus de 12 "
+"mois."
+
+# | msgid "Last Seen"
+#: app/templates/email/admin_lifecycle_vehicle.txt:11
+#: app/templates/email/unused_vehicle_warning.txt:9
+msgid "Last seen"
+msgstr "Dernière activité"
+
+#: app/templates/email/admin_lifecycle_vehicle.txt:13
+msgid ""
+"The vehicle will be automatically deleted in 7 days if no communication "
+"is received."
+msgstr ""
+"Le véhicule sera automatiquement supprimé dans 7 jours si aucune "
+"communication n'est reçue."
+
+# | msgid "Vehicle Automatically Deleted"
+#: app/templates/email/admin_lifecycle_vehicle.txt:15
+msgid "[Lifecycle] Vehicle automatically deleted"
+msgstr "[Cycle de vie] Véhicule supprimé automatiquement"
+
+# | msgid "" "A vehicle has been automatically deleted due to more than 3
+# months
+# | of " "inactivity. All associated data has been removed."
+#: app/templates/email/admin_lifecycle_vehicle.txt:17
+msgid "A vehicle has been automatically deleted due to 12+ months of inactivity."
+msgstr ""
+"Un véhicule a été supprimé automatiquement après plus de 12 mois "
+"d'inactivité."
+
+# | msgid "" "All associated data including charge logs and trip records has
+# | been " "deleted."
+#: app/templates/email/admin_lifecycle_vehicle.txt:23
+msgid ""
+"All associated data (charge logs, trip records, historical data) has been"
+" deleted."
+msgstr ""
+"Toutes les données associées (journaux de charge, trajets, données "
+"historiques) ont été supprimées."
+
+#: app/templates/email/admin_new_user_notification.html:24
+#: app/templates/email/admin_new_user_notification.txt:1
+msgid "New User Registration"
+msgstr "Inscription d'un nouvel utilisateur"
+
+#: app/templates/email/admin_new_user_notification.html:28
+#: app/templates/email/admin_new_user_notification.txt:5
+msgid ""
+"A new user has just registered an account on the PyOVMS server. Their "
+"account is currently inactive pending email verification."
+msgstr ""
+"Un nouvel utilisateur vient de créer un compte sur le serveur PyOVMS. Son"
+" compte est actuellement inactif en attente de la vérification par "
+"e-mail."
+
+#: app/templates/email/admin_new_user_notification.html:40
+#: app/templates/email/admin_new_user_notification.txt:9
+msgid "Registration Time"
+msgstr "Heure d'inscription"
+
+#: app/templates/email/admin_new_user_notification.html:45
+#: app/templates/email/admin_new_user_notification.txt:11
+msgid "You can manage all server users from the User Management page."
+msgstr ""
+"Vous pouvez gérer tous les utilisateurs du serveur depuis la page Gestion"
+" des utilisateurs."
+
+#: app/templates/email/password_reset_body.html:26
+msgid ""
+"We received a request to reset your password. Click the button below to "
+"set a new password:"
+msgstr ""
+"Nous avons reçu une demande de réinitialisation de votre mot de passe. "
+"Cliquez sur le bouton ci-dessous pour définir un nouveau mot de passe :"
+
+#: app/templates/email/password_reset_body.html:28
+#: app/templates/email/verification_body.html:27
+msgid ""
+"If you cannot click the button, please copy and paste the following link "
+"into your web browser:"
+msgstr ""
+"Si vous ne pouvez pas cliquer sur le bouton, veuillez copier et coller le"
+" lien suivant dans votre navigateur web :"
+
+#: app/templates/email/password_reset_body.html:30
+#: app/templates/email/password_reset_body.txt:9
+#, python-format
+msgid ""
+"This link is valid for %(valid_hours)s hour(s). If it has expired, you "
+"can request a new one."
+msgstr ""
+"Ce lien est valable pendant %(valid_hours)s heure(s). S'il a expiré, vous"
+" pouvez en demander un nouveau."
+
+#: app/templates/email/password_reset_body.html:32
+#: app/templates/email/password_reset_body.txt:11
+msgid ""
+"If you did not request a password reset, please ignore this email. Your "
+"password will remain unchanged."
+msgstr ""
+"Si vous n'avez pas demandé de réinitialisation du mot de passe, veuillez "
+"ignorer cet e-mail. Votre mot de passe restera inchangé."
+
+#: app/templates/email/password_reset_body.html:35
+#: app/templates/email/password_reset_body.txt:14
+#: app/templates/email/verification_body.html:32
+#: app/templates/email/verification_body.txt:14
+msgid "Thanks,"
+msgstr "Merci,"
+
+#: app/templates/email/password_reset_body.html:35
+#: app/templates/email/password_reset_body.txt:15
+#: app/templates/email/verification_body.html:32
+#: app/templates/email/verification_body.txt:15
+msgid "The PyOVMS Team"
+msgstr "L'équipe PyOVMS"
+
+# | msgid "" "We received a request to reset your password. Click the button
+# | below to " "set a new password:"
+#: app/templates/email/password_reset_body.txt:5
+msgid ""
+"We received a request to reset your password. Click the link below to set"
+" a new password:"
+msgstr ""
+"Nous avons reçu une demande de réinitialisation de votre mot de passe. "
+"Cliquez sur le lien ci-dessous pour définir un nouveau mot de passe :"
+
+#: app/templates/email/unused_vehicle_warning.html:32
+#: app/templates/email/unused_vehicle_warning.txt:5
+#, python-format
+msgid ""
+"Your vehicle %(vehicle_id)s has not communicated with the server for more"
+" than 12 months."
+msgstr ""
+"Votre véhicule %(vehicle_id)s n'a pas communiqué avec le serveur depuis "
+"plus de 12 mois."
+
+#: app/templates/email/unused_vehicle_warning.html:52
+#: app/templates/email/unused_vehicle_warning.txt:11
+msgid ""
+"If this vehicle is still in use, please ensure it is configured correctly"
+" and can reach the server."
+msgstr ""
+"Si ce véhicule est toujours utilisé, veuillez vous assurer qu'il est "
+"correctement configuré et qu'il peut atteindre le serveur."
+
+#: app/templates/email/unused_vehicle_warning.html:53
+msgid ""
+"If no communication is received within 7 days, the vehicle will be "
+"automatically removed from the server."
+msgstr ""
+"Si aucune communication n'est reçue dans les 7 jours, le véhicule sera "
+"automatiquement supprimé du serveur."
+
+#: app/templates/email/unused_vehicle_warning.html:55
+msgid "Log In to Manage Vehicle"
+msgstr "Se connecter pour gérer le véhicule"
+
+# | msgid "Vehicle Name"
+#: app/templates/email/unused_vehicle_warning.txt:7
+#: app/templates/email/vehicle_auto_deleted.txt:7
+msgid "Vehicle name"
+msgstr "Nom du véhicule"
+
+# | msgid "" "If no communication is received within 7 days, the vehicle will
+# be
+# | " "automatically removed from the server."
+#: app/templates/email/unused_vehicle_warning.txt:13
+msgid ""
+"If no communication is received within 7 days, the vehicle will be "
+"automatically removed from the server to free up resources."
+msgstr ""
+"Si aucune communication n'est reçue dans un délai de 7 jours, le véhicule"
+" sera automatiquement retiré du serveur afin de libérer des ressources."
+
+#: app/templates/email/unused_vehicle_warning.txt:15
+msgid "To prevent deletion, log in and verify the vehicle connection at:"
+msgstr ""
+"Pour éviter la suppression, connectez-vous et vérifiez la connexion du "
+"véhicule à l'adresse :"
+
+#: app/templates/email/vehicle_auto_deleted.html:25
+msgid "Vehicle Automatically Removed"
+msgstr "Véhicule supprimé automatiquement"
+
+#: app/templates/email/vehicle_auto_deleted.html:32
+#, python-format
+msgid ""
+"Your vehicle %(vehicle_id)s has been automatically removed from the "
+"server because it had not communicated for more than 12 months."
+msgstr ""
+"Votre véhicule %(vehicle_id)s a été automatiquement supprimé du serveur "
+"car il n'avait pas communiqué depuis plus de 12 mois."
+
+#: app/templates/email/vehicle_auto_deleted.html:48
+#: app/templates/email/vehicle_auto_deleted.txt:10
+msgid ""
+"All associated data including charge logs and trip records has been "
+"deleted."
+msgstr ""
+"Toutes les données associées, y compris les journaux de charge et les "
+"enregistrements de trajets, ont été supprimées."
+
+#: app/templates/email/vehicle_auto_deleted.html:49
+msgid ""
+"If you wish to continue monitoring this vehicle, you can register it "
+"again on the server."
+msgstr ""
+"Si vous souhaitez continuer à surveiller ce véhicule, vous pouvez "
+"l'enregistrer à nouveau sur le serveur."
+
+#: app/templates/email/vehicle_auto_deleted.html:51
+msgid "Log In to Register Vehicle"
+msgstr "Se connecter pour enregistrer le véhicule"
+
+# | msgid "" "Your vehicle %(vehicle_id)s has been automatically removed from
+# | the " "server because it had not communicated for more than 12 months."
+#: app/templates/email/vehicle_auto_deleted.txt:5
+#, python-format
+msgid ""
+"Your vehicle %(vehicle_id)s has been automatically removed from the "
+"server because it had not communicated for more than 12 months and no "
+"activity was detected after the inactivity notice was sent."
+msgstr ""
+"Votre véhicule %(vehicle_id)s a été automatiquement retiré du serveur, "
+"car il n'avait pas communiqué depuis plus de 12 mois et aucune activité "
+"n'a été détectée après l'envoi de l'avis d'inactivité."
+
+# | msgid "" "If you wish to continue monitoring this vehicle, you can
+# register
+# | it " "again on the server."
+#: app/templates/email/vehicle_auto_deleted.txt:12
+msgid ""
+"If you wish to continue monitoring this vehicle, you can register it "
+"again at:"
+msgstr ""
+"Si vous souhaitez continuer à surveiller ce véhicule, vous pouvez "
+"l'enregistrer à nouveau à l'adresse :"
+
+#: app/templates/email/verification_body.html:21
+#: app/templates/email/verification_body.txt:1
+msgid "Welcome to PyOVMS!"
+msgstr "Bienvenue sur PyOVMS !"
+
+#: app/templates/email/verification_body.html:25
+msgid ""
+"Thank you for registering. Please click the button below to activate your"
+" account and get started."
+msgstr ""
+"Merci de votre inscription. Veuillez cliquer sur le bouton ci-dessous "
+"pour activer votre compte et commencer."
+
+#: app/templates/email/verification_body.html:26
+msgid "Activate Account"
+msgstr "Activer le compte"
+
+#: app/templates/email/verification_body.html:29
+#: app/templates/email/verification_body.txt:9
+#, python-format
+msgid ""
+"This verification link is valid for %(valid_hours)s hours. If it has "
+"expired, you may need to register again."
+msgstr ""
+"Ce lien de vérification est valable pendant %(valid_hours)s heures. S'il "
+"a expiré, vous devrez peut-être vous réinscrire."
+
+#: app/templates/email/verification_body.html:30
+#: app/templates/email/verification_body.txt:11
+msgid "If you did not register for an account, please ignore this email."
+msgstr ""
+"Si vous ne vous êtes pas inscrit pour un compte, veuillez ignorer cet "
+"e-mail."
+
+# | msgid "" "Thank you for registering. Please click the button below to
+# | activate your" " account and get started."
+#: app/templates/email/verification_body.txt:5
+msgid ""
+"Thank you for registering. Please click the link below to activate your "
+"account and get started."
+msgstr ""
+"Merci pour votre inscription. Veuillez cliquer sur le lien ci-dessous "
+"pour activer votre compte et commencer."
+
+#~ msgid "you"
+#~ msgstr "vous"
+
+#~ msgid "Comic Code"
+#~ msgstr "Comic Code"
+
+#~ msgid "Verify Your PyOVMS Account"
+#~ msgstr "Vérifiez votre compte PyOVMS"
+
+#~ msgid "Vehicle Removed"
+#~ msgstr "Véhicule supprimé"
+

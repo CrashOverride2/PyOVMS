@@ -1,0 +1,75 @@
+<div class="bg-input-bg p-5 rounded-md border border-neon-blue/70 shadow-lg" x-cloak>
+    <h2 class="text-xl font-semibold text-neon-blue mb-3">{{ _('All Metrics (Last Known Values)') }}</h2>
+
+    <div x-show="metricsUi.showSourceSwitcher" class="mb-4 text-sm bg-gray-800/50 p-3 rounded-md">
+        <span class="mr-3 text-text-secondary">{{ _('Data Source:') }}</span>
+        <label class="mr-4">
+            <input type="radio" name="metricsSource" value="v2"
+                :checked="isMetricsSourceV2" @change="setMetricsSourceV2"
+                class="mr-1 text-neon-blue focus:ring-neon-blue focus:ring-opacity-50 border-gray-600 bg-gray-700 form-radio">
+            {{ _('V2 (Cached)') }}
+        </label>
+        <label>
+            <input type="radio" name="metricsSource" value="v3"
+                :checked="isMetricsSourceV3" @change="setMetricsSourceV3"
+                class="mr-1 text-neon-magenta focus:ring-neon-magenta focus:ring-opacity-50 border-gray-600 bg-gray-700 form-radio">
+            {{ _('V3 (Live MQTT)') }}
+        </label>
+    </div>
+
+    <div x-show="metricsUi.showV2" x-transition>
+        <h3 class="text-lg font-semibold text-neon-yellow mb-2">{{ _('V2 Metrics (from Cache)') }}</h3>
+        <div x-show="metricsUi.hasV2Groups" class="space-y-3">
+            <template x-for="group in metricsUi.v2Groups" :key="group.id">
+                <div class="bg-gray-800/30 rounded-md">
+                    <div class="w-full text-left p-2.5 flex justify-between items-center">
+                        <span class="font-semibold text-text-primary capitalize" x-text="group.label"></span>
+                    </div>
+                    <div class="p-3 border-t border-border-color">
+                        <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-sm font-mono">
+                            <template x-for="item in group.items" :key="item.id">
+                                <div class="flex flex-wrap justify-between border-b border-border-color/20 py-1">
+                                    <dt class="text-text-secondary" :title="item.title" x-text="item.label"></dt>
+                                    <dd class="text-text-primary font-semibold pl-2 break-anywhere max-w-full"
+                                        x-text="item.valueText"></dd>
+                                </div>
+                            </template>
+                        </dl>
+                    </div>
+                </div>
+            </template>
+        </div>
+        <div x-show="metricsUi.noV2Groups">
+            <p class="text-text-secondary">{{ _('No V2 metrics data available.') }}</p>
+        </div>
+    </div>
+
+    <div x-show="metricsUi.showV3" x-transition>
+        <h3 class="text-lg font-semibold text-neon-yellow mb-2">{{ _('V3 Metrics (from MQTT)') }}</h3>
+        <div x-show="metricsUi.hasV3Groups" class="space-y-3">
+            <template x-for="group in metricsUi.v3Groups" :key="group.id">
+                <div class="bg-gray-800/30 rounded-md">
+                    <div class="w-full text-left p-2.5 flex justify-between items-center">
+                        <span class="font-semibold text-text-primary" x-text="group.label"></span>
+                    </div>
+                    <div class="p-3 border-t border-border-color">
+                        <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-sm font-mono">
+                            <template x-for="item in group.items" :key="item.id">
+                                <div class="flex flex-wrap justify-between border-b border-border-color/20 py-1">
+                                    <dt class="text-text-secondary" :title="item.title" x-text="item.key"></dt>
+                                    <dd class="text-text-primary font-semibold pl-2 break-anywhere max-w-full"
+                                        x-text="item.valueText">
+                                    </dd>
+                                </div>
+                            </template>
+                        </dl>
+                    </div>
+                </div>
+            </template>
+        </div>
+        <div x-show="metricsUi.noV3Groups">
+            <p class="text-text-secondary">{{ _('No V3 metrics data available. Is the vehicle online via MQTT?')
+                }}</p>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,57 @@
+<div>
+    <div x-show="cellStatsView.hasVoltages" class="bg-input-bg p-5 rounded-md border border-neon-blue/70 shadow-lg mb-6">
+        <h2 class="text-xl font-semibold text-neon-blue mb-3">{{ _('Battery Cell Voltages') }}</h2>
+        <div class="text-sm text-text-secondary mb-4">
+            <span>{{ _('Min:') }} <strong class="text-text-primary" x-text="cellStatsView.voltageMinText"></strong></span>
+            <span class="mx-2">|</span>
+            <span>{{ _('Max:') }} <strong class="text-text-primary" x-text="cellStatsView.voltageMaxText"></strong></span>
+            <span class="mx-2">|</span>
+            <span>{{ _('Count:') }} <strong class="text-text-primary" x-text="cellStatsView.voltageCountText"></strong></span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <template x-for="cell in cellStatsView.voltageCells" :key="cell.id">
+                <div class="bg-gray-800/50 p-2 rounded-md border border-gray-700">
+                    <div class="flex justify-between items-center text-sm mb-1">
+                        <span class="text-text-secondary" x-text="cell.label"></span>
+                        <span class="font-semibold text-text-primary" x-text="cell.valueText"></span>
+                    </div>
+                    <div class="w-full bg-gray-600 rounded h-2.5 shadow-inner">
+                        <div class="h-full rounded transition-all duration-300 ease-out"
+                            :style="cell.barStyle"
+                            :class="cell.barClass">
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <div x-show="cellStatsView.hasTemperatures" class="bg-input-bg p-5 rounded-md border border-neon-blue/70 shadow-lg">
+        <h2 class="text-xl font-semibold text-neon-blue mb-3">{{ _('Battery Cell Temperatures') }}</h2>
+        <div class="text-sm text-text-secondary mb-4">
+            <span>{{ _('Min:') }} <strong class="text-text-primary" x-text="cellStatsView.temperatureMinText"></strong></span>
+            <span class="mx-2">|</span>
+            <span>{{ _('Max:') }} <strong class="text-text-primary" x-text="cellStatsView.temperatureMaxText"></strong></span>
+            <span class="mx-2">|</span>
+            <span>{{ _('Count:') }} <strong class="text-text-primary" x-text="cellStatsView.temperatureCountText"></strong></span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <template x-for="sensor in cellStatsView.temperatureSensors" :key="sensor.id">
+                <div class="bg-gray-800/50 p-2 rounded-md border border-gray-700">
+                    <div class="flex justify-between items-center text-sm mb-1">
+                        <span class="text-text-secondary" x-text="sensor.label"></span>
+                        <span class="font-semibold text-text-primary" x-text="sensor.valueText"></span>
+                    </div>
+                    <div class="w-full bg-gray-600 rounded h-2.5 shadow-inner">
+                        <div class="h-full rounded transition-all duration-300 ease-out"
+                            :style="sensor.barStyle"
+                            :class="sensor.barClass">
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <p x-show="cellStatsView.showEmptyState" class="text-text-secondary">{{ _('No V3 cell data available for this vehicle.') }}</p>
+</div>

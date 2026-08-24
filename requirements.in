@@ -1,0 +1,58 @@
+#
+# PyOVMS Project Dependencies
+# This file is used by 'pip' to install all necessary packages.
+# To install, run: pip install -r requirements.txt
+#
+
+# --- Core Web Framework & Server ---
+fastapi         # The main web framework for building the API and UI.
+uvicorn         # The ASGI server that runs the FastAPI application.
+psutil          # Collect stats from running processes
+
+# --- Database & ORM ---
+SQLAlchemy      # The core Object-Relational Mapper (ORM) for database interactions.
+alembic         # For handling database schema migrations.
+
+# --- Database Drivers (Install the ones you need) ---
+# For PostgreSQL (Recommended for production)
+psycopg2-binary # Driver for connecting to PostgreSQL databases.
+# For MySQL / MariaDB
+PyMySQL         # Driver for connecting to MySQL and MariaDB databases.
+# For SQLite (Default, no extra driver needed for Python 3)
+
+# --- Authentication & Security ---
+bcrypt          # For securely hashing and verifying user passwords.
+pydantic-settings # For loading configuration from .env files.
+python-multipart  # Required by FastAPI for parsing form data (e.g., in login forms).
+pycryptodome    # For encryption/decryption (V2 protocol's RC4, Fernet for secrets).
+cryptography    # For Fernet encryption used in utils/crypto.py.
+itsdangerous    # Pass data from and to unsecure environments
+
+# --- Two-Factor Authentication (2FA/TOTP) ---
+pyotp           # Generates and verifies Time-based One-Time Passwords (TOTP).
+qrcode[pil]     # Creates QR codes for easy TOTP setup in authenticator apps.
+webauthn        # Add WebAuthn support
+
+# --- V3 Protocol (MQTT) ---
+paho-mqtt       # MQTT client for subscribing to metrics and publishing commands.
+
+# --- Notifications ---
+requests        # For sending notifications to services like NTFY.
+firebase-admin  # For sending Firebase Cloud Messaging (FCM) push notifications to Android.
+httpx[http2]    # HTTP/2 client for the APNs provider API (app/services/apns_client.py).
+pyjwt[crypto]   # Signs the ES256 provider tokens for APNs.
+pydantic[email] # For email verification mails
+
+# --- Async I/O ---
+aiofiles        # Async file I/O for non-blocking log streaming in WebSocket handler.
+
+# --- Web UI & Templating ---
+Jinja2          # The templating engine used to render the HTML pages.
+Markdown        # Used to render the privacy_policy.md file into HTML for the UI.
+fastapi_babel   # Provides translations to other languages
+websockets      # Websockets for live data
+
+# NOTE: python-jose was removed. It was never imported anywhere in app/ — JWTs are
+# signed and verified with pyjwt (app/security.py). It dragged in ecdsa, which is
+# affected by CVE-2024-23342 (Minerva timing attack) with no upstream fix, and
+# python-jose itself is effectively unmaintained. Do not add it back.

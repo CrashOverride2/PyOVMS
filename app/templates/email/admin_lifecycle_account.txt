@@ -1,0 +1,24 @@
+{{ _('Hello %(name)s,') % {'name': admin_display_name} }}
+
+{% if event_type == 'account_deletion_warning' %}
+{{ _('[Lifecycle] Account deletion warning sent') }}
+
+{{ _('An account deletion warning has been sent to a user because their account has no vehicles and they have not logged in for more than 30 days.') }}
+
+{{ _('Username') }}: {{ username }}
+{{ _('Email') }}: {{ email }}
+
+{{ _('The account will be automatically deleted in 7 days unless the user logs in or creates a vehicle.') }}
+{% elif event_type == 'account_auto_deleted' %}
+{{ _('[Lifecycle] Account automatically deleted') }}
+
+{{ _('A user account has been automatically deleted because the account had no vehicles and showed no activity for more than 37 days (30-day inactivity + 7-day grace period).') }}
+
+{{ _('Username') }}: {{ username }}
+{{ _('Email') }}: {{ email }}
+{% endif %}
+
+{{ _('Manage Users') }}: {{ user_management_url }}
+
+{{ _('PyOVMS Control Server') }}
+{{ server_base_url }}

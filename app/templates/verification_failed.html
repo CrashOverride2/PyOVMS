@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Verification Failed') }}{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto bg-card-bg p-8 rounded-lg shadow-xl border border-red-500/50 mt-12 text-center">
+     <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-700/70 mb-4">
+        <svg class="h-6 w-6 text-red-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </div>
+    <h1 class="text-3xl font-bold mb-4 text-red-400">{{ _('Account Verification Failed') }}</h1>
+    <p class="text-text-primary mb-6">
+        {{ _("The verification link is invalid, has expired, or the account has already been activated.") }}
+    </p>
+    <p class="text-sm text-text-secondary">
+        {{ _('Please try logging in, or if you are unable to, you may need to register for a new account.') }}
+    </p>
+    <div class="mt-8">
+        <a href="{{ url_for('ui_login_form') }}" class="px-6 py-2 text-sm font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">
+            {{ _('Go to Login') }}
+        </a>
+        {% if settings.ALLOW_USER_REGISTRATION %}
+        <a href="{{ url_for('ui_register_form') }}" class="ml-4 px-6 py-2 text-sm font-medium text-neon-magenta border border-neon-magenta rounded-md hover:bg-neon-magenta hover:text-dark-bg transition-colors duration-200">
+            {{ _('Register Again') }}
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

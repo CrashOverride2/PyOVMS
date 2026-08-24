@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Alert</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .header { text-align: center; border-bottom: 1px solid #eeeeee; padding-bottom: 20px; margin-bottom: 20px; }
+        .header h1 { color: #333333; margin: 0; font-size: 20px; }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-bottom: 10px; background-color: #fdedec; color: #c0392b; border: 1px solid #e74c3c; }
+        .content { color: #555555; line-height: 1.6; }
+        .alert-box { background-color: #fef9e7; border-left: 4px solid #f39c12; padding: 15px; margin: 20px 0; }
+        .details-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .details-table td { padding: 8px; border: 1px solid #dddddd; }
+        .details-table td:first-child { font-weight: bold; background-color: #f9f9f9; width: 45%; }
+        .recommendations { background-color: #eaf2fb; padding: 15px; border-radius: 4px; margin: 15px 0; }
+        .recommendations h4 { margin-top: 0; color: #333333; }
+        .button { display: block; width: fit-content; margin: 30px auto; padding: 12px 20px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; }
+        .footer { text-align: center; font-size: 12px; color: #999999; margin-top: 30px; border-top: 1px solid #eeeeee; padding-top: 20px; }
+        a { color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <span class="badge">🚨 {{ _('Security Alert') }}</span>
+            <h1>{{ _('IP Address Blocked') }}</h1>
+        </div>
+        <div class="content">
+            <p>{{ _('Hello %(name)s,') % {'name': admin_display_name} }}</p>
+
+            <div class="alert-box">
+                <strong>{{ _('IP Address Blocked!') }}</strong><br>
+                {{ _('An IP address has been blocked due to repeated failed authentication attempts.') }}
+            </div>
+
+            <table class="details-table">
+                <tr>
+                    <td>{{ _('IP Address') }}</td>
+                    <td>{{ ip_address }}</td>
+                </tr>
+                <tr>
+                    <td>{{ _('Authentication Type') }}</td>
+                    <td>{{ auth_type }}</td>
+                </tr>
+                <tr>
+                    <td>{{ _('Failed Attempts') }}</td>
+                    <td>{{ failure_count }}</td>
+                </tr>
+                <tr>
+                    <td>{{ _('Block Duration') }}</td>
+                    <td>{{ block_duration_minutes }} {{ _('minutes') }}</td>
+                </tr>
+                <tr>
+                    <td>{{ _('Timestamp') }}</td>
+                    <td>{{ timestamp }}</td>
+                </tr>
+            </table>
+
+            <div class="recommendations">
+                <h4>{{ _('Recommended Actions') }}</h4>
+                <p><strong>{{ _('If this was a legitimate user:') }}</strong></p>
+                <ul>
+                    <li>{{ _('Wait for the block to expire') }}</li>
+                    <li>{{ _('Use the correct credentials') }}</li>
+                    <li>{{ _('Contact the administrator if issues persist') }}</li>
+                </ul>
+                <p><strong>{{ _('If this appears to be malicious activity, consider:') }}</strong></p>
+                <ul>
+                    <li>{{ _('Reviewing your firewall rules') }}</li>
+                    <li>{{ _('Implementing additional IP restrictions') }}</li>
+                    <li>{{ _('Checking the Security Events Dashboard for patterns') }}</li>
+                </ul>
+            </div>
+
+            <p>{{ _('The blocked IP will be automatically unblocked after %(minutes)s minutes.') % {'minutes': block_duration_minutes} }}</p>
+
+            <a href="{{ security_events_url }}" class="button">{{ _('Open Security Events') }}</a>
+        </div>
+        <div class="footer">
+            <p>{{ _('PyOVMS Control Server') }} | <a href="{{ server_base_url }}">{{ server_base_url }}</a></p>
+        </div>
+    </div>
+</body>
+</html>

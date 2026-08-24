@@ -1,0 +1,168 @@
+<div>
+    <h2 class="text-xl font-semibold text-neon-blue mb-4">{{ _('Trip Statistics') }}</h2>
+    <div x-show="statsState.showLoading" class="p-4 text-center text-text-secondary">
+        <p>{{ _('Loading statistics...') }}</p>
+    </div>
+    <div x-show="statsState.showError"
+        class="p-4 text-center text-red-400 bg-red-900/40 border border-red-700/60 rounded-md">
+        <p x-text="statsState.error"></p>
+    </div>
+
+    <template x-if="statsState.hasStats">
+        <div x-cloak>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                <div class="lg:col-span-2 flex flex-col h-[36rem]">
+                    <div class="flex justify-end mb-2">
+                        <div class="flex items-center text-xs bg-card-bg p-1 rounded-md border border-border-color/50">
+                            <button @click="statsState.setViewDaily"
+                                :class="statsState.viewButtonClasses.daily"
+                                class="px-2 py-1 rounded-md transition-colors">{{ _('Daily') }}</button>
+                            <button @click="statsState.setViewWeekly"
+                                :class="statsState.viewButtonClasses.weekly"
+                                class="px-2 py-1 rounded-md transition-colors">{{ _('Weekly') }}</button>
+                            <button @click="statsState.setViewMonthly"
+                                :class="statsState.viewButtonClasses.monthly"
+                                class="px-2 py-1 rounded-md transition-colors">{{ _('Monthly') }}</button>
+                        </div>
+                    </div>
+                    <div
+                        class="bg-card-bg p-4 rounded-md flex-1 min-h-0 flex justify-between gap-1 border border-border-color overflow-x-auto">
+                        <template x-for="period in statsState.displayPeriods" :key="period.id">
+                            <div class="flex-1 h-full flex flex-col items-center justify-end group cursor-pointer min-w-[2rem]"
+                                @click="statsState.selectPeriod"
+                                :data-period-index="period.index">
+                                <div class="text-center text-xs text-text-primary mb-1"
+                                    x-text="period.distanceText"></div>
+                                <div class="w-full bg-neon-blue/80 rounded-t-sm transition-all duration-300 hover:bg-neon-blue"
+                                    :style="period.barStyle">
+                                </div>
+                                <div class="text-center text-xs text-text-secondary mt-1 w-12 mx-auto leading-tight"
+                                    x-text="period.periodLabelText"></div>
+                            </div>
+                        </template>
+                        <div x-show="statsState.noDisplayPeriods"
+                            class="flex items-center justify-center w-full h-full text-text-secondary">
+                            <p>{{ _('No trip data for this period.') }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-col space-y-4 h-[36rem] overflow-hidden">
+                    <div class="bg-card-bg p-4 rounded-md border border-border-color">
+                        <h3 class="font-semibold text-neon-yellow mb-2">{{ _('Lifetime Totals') }}</h3>
+                        <dl class="text-sm space-y-1">
+                            <div class="flex justify-between">
+                                <dt class="text-text-secondary">{{ _('Total Distance') }}</dt>
+                                <dd class="text-text-primary font-medium"
+                                    x-text="statsState.lifetimeTotalDistanceText"></dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-text-secondary">{{ _('Total Duration') }}</dt>
+                                <dd class="text-text-primary font-medium"
+                                    x-text="statsState.lifetimeTotalDurationText"></dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-text-secondary">{{ _('Total Trips') }}</dt>
+                                <dd class="text-text-primary font-medium" x-text="statsState.lifetimeTotalTripsText">
+                                </dd>
+                            </div>
+                            <div x-show="statsState.lifetimeTotalEnergyText" class="flex justify-between">
+                                <dt class="text-text-secondary">{{ _('Total Energy') }}</dt>
+                                <dd class="text-text-primary font-medium"
+                                    x-text="statsState.lifetimeTotalEnergyText"></dd>
+                            </div>
+                            <div x-show="statsState.lifetimeTotalSocUsedText" class="flex justify-between">
+                                <dt class="text-text-secondary">{{ _('Total SOC Used') }}</dt>
+                                <dd class="text-text-primary font-medium"
+                                    x-text="statsState.lifetimeTotalSocUsedText"></dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-text-secondary">{{ _('Longest Trip') }}</dt>
+                                <dd class="text-text-primary font-medium"
+                                    x-text="statsState.lifetimeLongestTripText"></dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-text-secondary">{{ _('Shortest Trip') }}</dt>
+                                <dd class="text-text-primary font-medium"
+                                    x-text="statsState.lifetimeShortestTripText"></dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-text-secondary">{{ _('Busiest Day') }}</dt>
+                                <dd class="text-text-primary font-medium"
+                                    x-text="statsState.lifetimeBusiestDayText"></dd>
+                            </div>
+                        </dl>
+                    </div>
+                    <div class="bg-card-bg p-4 rounded-md border border-border-color">
+                        <template x-if="statsState.selectedPeriodDetailVisible">
+                            <div>
+                                <h3 class="font-semibold text-neon-yellow mb-2"
+                                    x-text="statsState.selectedPeriodTitleText">
+                                </h3>
+                                <dl class="text-sm space-y-1">
+                                    <div class="flex justify-between">
+                                        <dt class="text-text-secondary">{{ _('Total Distance') }}</dt>
+                                        <dd class="text-text-primary font-medium"
+                                            x-text="statsState.selectedPeriodTotalDistanceText">
+                                        </dd>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <dt class="text-text-secondary">{{ _('Total Duration') }}</dt>
+                                        <dd class="text-text-primary font-medium"
+                                            x-text="statsState.selectedPeriodTotalDurationText">
+                                        </dd>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <dt class="text-text-secondary">{{ _('Number of Trips') }}</dt>
+                                        <dd class="text-text-primary font-medium"
+                                            x-text="statsState.selectedPeriodTripCountText"></dd>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <dt class="text-text-secondary">{{ _('Avg. Speed') }}</dt>
+                                        <dd class="text-text-primary font-medium"
+                                            x-text="statsState.selectedPeriodAvgSpeedText">
+                                        </dd>
+                                    </div>
+                                    <div x-show="statsState.selectedPeriodEnergyText" class="flex justify-between">
+                                        <dt class="text-text-secondary">{{ _('Total Energy') }}</dt>
+                                        <dd class="text-text-primary font-medium"
+                                            x-text="statsState.selectedPeriodEnergyText">
+                                        </dd>
+                                    </div>
+                                    <div x-show="statsState.selectedPeriodSocUsedText" class="flex justify-between">
+                                        <dt class="text-text-secondary">{{ _('Total SOC Used') }}</dt>
+                                        <dd class="text-text-primary font-medium"
+                                            x-text="statsState.selectedPeriodSocUsedText">
+                                        </dd>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <dt class="text-text-secondary">{{ _('Longest Trip') }}</dt>
+                                        <dd class="text-text-primary font-medium"
+                                            x-text="statsState.selectedPeriodLongestTripText">
+                                        </dd>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <dt class="text-text-secondary">{{ _('Shortest Trip') }}</dt>
+                                        <dd class="text-text-primary font-medium"
+                                            x-text="statsState.selectedPeriodShortestTripText">
+                                        </dd>
+                                    </div>
+                                    <div x-show="statsState.showSelectedPeriodBusiestDay"
+                                        class="flex justify-between">
+                                        <dt class="text-text-secondary">{{ _('Busiest Day') }}</dt>
+                                        <dd class="text-text-primary font-medium"
+                                            x-text="statsState.selectedPeriodBusiestDayText"></dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </template>
+                        <template x-if="statsState.selectedPeriodPromptVisible">
+                            <div class="flex items-center justify-center h-full text-text-secondary text-sm">
+                                <p>{{ _('Click a bar on the chart to see details.') }}</p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>

@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _(page_title) }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8" x-data="blockedIPsManager">
+
+    <!-- Header -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+            <a href="{{ url_for('ui_admin_dashboard') }}" class="px-4 py-2 text-sm font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">← {{ _('Admin Dashboard') }}</a>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-neon-green">{{ _('Blocked IPs') }}</h1>
+                <p class="text-text-secondary text-sm mt-1">{{ _('View and manage rate-limited IP addresses. Blocks survive server restarts.') }}</p>
+            </div>
+        </div>
+        <button @click="load" class="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-neon-green/10 text-neon-green border border-neon-green/50 rounded-md hover:bg-neon-green/20 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" :class="refreshIconClass" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg>
+            {{ _('Refresh') }}
+        </button>
+    </div>
+
+    <!-- Error/Success banner -->
+    <div x-show="showMessage" x-cloak x-transition
+        :class="messageClass"
+        class="px-4 py-3 rounded-lg border text-sm" x-text="message"></div>
+
+    <!-- Add Block Form -->
+    <div class="bg-card-bg p-5 rounded-lg shadow-md border border-border-color">
+        <h2 class="text-lg font-semibold text-neon-yellow mb-4">{{ _('Manually Block an IP') }}</h2>
+        <form @submit.prevent="addBlock" class="flex flex-wrap gap-3 items-end">
+            <div class="flex-1 min-w-40">
+                <label class="block text-xs text-text-secondary mb-1">{{ _('IP Address') }}</label>
+                <input type="text" :value="form.ip" @input="setFormIp($event.target.value)" placeholder="192.168.1.1"
+                    class="w-full bg-input-bg border border-border-color rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-neon-green/50" required>
+            </div>
+            <div class="w-44">
+                <label class="block text-xs text-text-secondary mb-1">{{ _('Duration (minutes)') }}</label>
+                <input type="number" :value="form.duration_minutes" @input="setFormDuration($event.target.value)" min="1" max="525600"
+                    class="w-full bg-input-bg border border-border-color rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-neon-green/50">
+            </div>
+            <div class="flex-1 min-w-40">
+                <label class="block text-xs text-text-secondary mb-1">{{ _('Reason') }}</label>
+                <input type="text" :value="form.reason" @input="setFormReason($event.target.value)" placeholder="manual_admin_block"
+                    class="w-full bg-input-bg border border-border-color rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-neon-green/50">
+            </div>
+            <button type="submit" :disabled="submitting"
+                class="px-4 py-2 text-sm font-medium bg-red-500/20 text-red-400 border border-red-500/50 rounded-md hover:bg-red-500/40 transition-colors disabled:opacity-50">
+                <span x-show="showBlockIdle">{{ _('Block IP') }}</span>
+                <span x-show="showBlockLoading">{{ _('Blocking…') }}</span>
+            </button>
+        </form>
+    </div>
+
+    <!-- Blocked IPs Table -->
+    <div>
+        <h2 class="text-xl font-semibold text-red-400 mb-4">
+            {{ _('Currently Blocked IPs') }}
+            <span class="text-sm font-normal text-text-secondary ml-2" x-text="blockCountText"></span>
+        </h2>
+
+        <!-- Loading skeleton -->
+        <div x-show="showLoadingEmpty" class="bg-card-bg rounded-lg border border-border-color p-8 text-center text-text-secondary text-sm">
+            {{ _('Loading…') }}
+        </div>
+
+        <!-- Empty state -->
+        <div x-show="showNoBlocks" class="bg-card-bg rounded-lg border border-border-color p-8 text-center text-text-secondary text-sm">
+            {{ _('No IPs are currently blocked.') }}
+        </div>
+
+        <!-- Table -->
+        <div x-show="showTable" class="overflow-x-auto bg-card-bg rounded-lg border border-red-500/30 shadow-md">
+            <table class="min-w-full divide-y divide-border-color/50 text-sm">
+                <thead class="bg-input-bg">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-medium text-text-secondary">{{ _('IP Address') }}</th>
+                        <th class="px-4 py-3 text-left font-medium text-text-secondary">{{ _('Reason') }}</th>
+                        <th class="px-4 py-3 text-left font-medium text-text-secondary">{{ _('Blocked At') }}</th>
+                        <th class="px-4 py-3 text-left font-medium text-text-secondary">{{ _('Unblocks At') }}</th>
+                        <th class="px-4 py-3 text-left font-medium text-text-secondary">{{ _('Time Remaining') }}</th>
+                        <th class="px-4 py-3 text-left font-medium text-text-secondary">{{ _('Action') }}</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border-color/30">
+                    <template x-for="block in displayBlocks" :key="block.ip">
+                        <tr class="hover:bg-input-bg/30 transition-colors">
+                            <td class="px-4 py-3 font-mono text-red-300" x-text="block.ip"></td>
+                            <td class="px-4 py-3 text-text-secondary text-xs" x-text="block.reason"></td>
+                            <td class="px-4 py-3 text-text-secondary text-xs" x-text="block.createdAtText"></td>
+                            <td class="px-4 py-3 text-text-secondary text-xs" x-text="block.unblockAtText"></td>
+                            <td class="px-4 py-3 text-xs">
+                                <span class="px-2 py-0.5 rounded-full bg-red-900/40 text-red-300 border border-red-500/30"
+                                    x-text="block.timeRemainingText"></span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <button @click="removeBlockByEvent" :data-ip="block.ip"
+                                    class="px-3 py-1 text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/40 rounded-md hover:bg-green-500/30 transition-colors">
+                                    {{ _('Unblock') }}
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script nonce="{{ request.state.csp_nonce }}">
+document.addEventListener('alpine:init', () => {
+    Alpine.data('blockedIPsManager', () => ({
+        blocks: [],
+        displayBlocks: [],
+        loading: false,
+        submitting: false,
+        message: '',
+        messageType: 'success',
+        showMessage: false,
+        messageClass: 'bg-green-900/40 border-green-500/50 text-green-300',
+        refreshIconClass: '',
+        showBlockIdle: true,
+        showBlockLoading: false,
+        blockCountText: '(0)',
+        showLoadingEmpty: false,
+        showNoBlocks: true,
+        showTable: false,
+        form: {
+            ip: '',
+            duration_minutes: 60,
+            reason: 'manual_admin_block',
+        },
+
+        setFormIp(value) { this.form.ip = value; },
+        setFormDuration(value) { this.form.duration_minutes = Number(value); },
+        setFormReason(value) { this.form.reason = value; },
+
+        async init() {
+            await this.load();
+        },
+        refreshUiState() {
+            this.showMessage = !!this.message;
+            this.messageClass = this.messageType === 'error'
+                ? 'bg-red-900/40 border-red-500/50 text-red-300'
+                : 'bg-green-900/40 border-green-500/50 text-green-300';
+            this.refreshIconClass = this.loading ? 'animate-spin' : '';
+            this.showBlockIdle = !this.submitting;
+            this.showBlockLoading = this.submitting;
+            this.blockCountText = `(${this.blocks.length})`;
+            this.showLoadingEmpty = this.loading && this.blocks.length === 0;
+            this.showNoBlocks = !this.loading && this.blocks.length === 0;
+            this.showTable = this.blocks.length > 0;
+        },
+        buildDisplayBlocks() {
+            this.displayBlocks = this.blocks.map((block) => ({
+                ...block,
+                reason: block.reason || '—',
+                createdAtText: this.formatDate(block.created_at),
+                unblockAtText: this.formatDate(block.unblock_at),
+                timeRemainingText: this.timeRemaining(block.unblock_at)
+            }));
+            this.refreshUiState();
+        },
+
+        async load() {
+            this.loading = true;
+            this.refreshUiState();
+            try {
+                const resp = await fetch('/api/v1/security/blocked-ips', { credentials: 'include' });
+                if (!resp.ok) throw new Error(await resp.text());
+                this.blocks = await resp.json();
+                this.buildDisplayBlocks();
+            } catch (e) {
+                this.showMessage('Failed to load blocked IPs: ' + e.message, 'error');
+            } finally {
+                this.loading = false;
+                this.refreshUiState();
+            }
+        },
+
+        async addBlock() {
+            this.submitting = true;
+            this.message = '';
+            this.refreshUiState();
+            try {
+                const resp = await fetch('/api/v1/security/blocked-ips', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(this.form),
+                });
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    throw new Error(err.detail || JSON.stringify(err));
+                }
+                this.showMessage(`IP ${this.form.ip} blocked successfully.`, 'success');
+                this.form.ip = '';
+                await this.load();
+            } catch (e) {
+                this.showMessage('Error: ' + e.message, 'error');
+            } finally {
+                this.submitting = false;
+                this.refreshUiState();
+            }
+        },
+        async removeBlockByEvent(event) {
+            const ip = event?.currentTarget?.dataset?.ip;
+            if (!ip) return;
+            await this.removeBlock(ip);
+        },
+
+        async removeBlock(ip) {
+            if (!confirm(`Unblock ${ip}?`)) return;
+            try {
+                const resp = await fetch(`/api/v1/security/blocked-ips/${encodeURIComponent(ip)}`, {
+                    method: 'DELETE',
+                    credentials: 'include',
+                });
+                if (!resp.ok && resp.status !== 204) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.detail || 'Request failed');
+                }
+                this.showMessage(`IP ${ip} unblocked.`, 'success');
+                await this.load();
+            } catch (e) {
+                this.showMessage('Error: ' + e.message, 'error');
+            }
+        },
+
+        formatDate(iso) {
+            if (!iso) return '—';
+            return new Date(iso).toLocaleString();
+        },
+
+        timeRemaining(unblockAt) {
+            const diff = Math.max(0, new Date(unblockAt) - Date.now());
+            const h = Math.floor(diff / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            const s = Math.floor((diff % 60000) / 1000);
+            if (h > 0) return `${h}h ${m}m`;
+            if (m > 0) return `${m}m ${s}s`;
+            return `${s}s`;
+        },
+
+        showMessage(text, type) {
+            this.message = text;
+            this.messageType = type;
+            this.refreshUiState();
+            setTimeout(() => {
+                this.message = '';
+                this.refreshUiState();
+            }, 5000);
+        },
+    }));
+});
+</script>
+{% endblock %}
