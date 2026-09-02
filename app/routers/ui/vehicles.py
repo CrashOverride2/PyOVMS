@@ -33,6 +33,7 @@ from app.utils.vehicle_data_presenter import parse_crash_log_data, parse_stored_
 from app.utils.datalog_definitions import DATALOG_DEFINITIONS
 from zoneinfo import ZoneInfo
 from app.utils.vehicle_state_parser import parse_v2_messages_to_metrics_dict
+from app.utils.timestamps import as_utc
 from app.metrics_manager import metrics_manager
 from app.csrf_protection import verify_csrf_token, get_csrf_token
 from app.i18n import _
@@ -767,7 +768,7 @@ def ui_vehicle_datalogs_page_route(
         chart_records = crud.historical_data.get_historical_data_for_vehicle(
             db, vehicle_id, record_type_equals=type, limit=1000, sort_ascending=True
         )
-        labels = [r.timestamp.astimezone(tz).strftime('%Y-%m-%d %H:%M') if r.timestamp else '' for r in chart_records]
+        labels = [as_utc(r.timestamp).astimezone(tz).strftime('%Y-%m-%d %H:%M') if r.timestamp else '' for r in chart_records]
         for chart_def in definition["charts"]:
             data = []
             for r in chart_records:

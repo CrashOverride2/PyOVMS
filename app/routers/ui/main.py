@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Depends, HTTPException
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pathlib import Path
 import logging
@@ -46,18 +46,14 @@ def ui_privacy_policy(
     request: Request,
     current_user: Optional[models_db.User] = Depends(get_user_from_request_cookie)
 ):
-    # The policy is operator-supplied and not shipped with the source. Without one there
-    # is nothing to show, so 404 rather than render a page whose entire content is an
-    # error message — the footer link is hidden in that case anyway.
-    project_root = Path(__file__).resolve().parent.parent.parent.parent
-    policy_file = project_root / "privacy_policy.md"
-    if not policy_file.exists():
-        raise HTTPException(status_code=404, detail="No privacy policy has been published on this instance.")
-
     common_vars = get_common_template_vars(request, current_user)
     policy_html = "<h1>Error</h1><p>Could not render privacy policy.</p>"
     try:
-        if markdown is None:
+        project_root = Path(__file__).resolve().parent.parent.parent.parent
+        policy_file = project_root / "privacy_policy.md"
+        if not policy_file.exists():
+            policy_html = "<h1>Error</h1><p>Privacy policy file (privacy_policy.md) not found.</p>"
+        elif markdown is None:
              policy_html = "<h1>Configuration Error</h1><p>The 'markdown' library is not installed on the server.</p>"
         else:
             policy_html = markdown.markdown(policy_file.read_text(encoding="utf-8"))

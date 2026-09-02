@@ -1,6 +1,8 @@
 from xml.etree import ElementTree as ET
 from typing import TYPE_CHECKING
 
+from app.utils.timestamps import as_utc
+
 if TYPE_CHECKING:
     from .models import ChargeLog
 
@@ -101,7 +103,7 @@ def generate_kml_for_charge(charge: 'ChargeLog') -> str:
     if charge.start_time:
         timestamp = ET.SubElement(placemark, 'TimeStamp')
         when = ET.SubElement(timestamp, 'when')
-        when.text = charge.start_time.strftime('%Y-%m-%dT%H:%M:%SZ')
+        when.text = as_utc(charge.start_time).strftime('%Y-%m-%dT%H:%M:%SZ')
 
     # Point coordinates (longitude, latitude, altitude)
     point = ET.SubElement(placemark, 'Point')

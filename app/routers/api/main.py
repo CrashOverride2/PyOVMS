@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status as http_status
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, status as http_status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
@@ -15,6 +15,9 @@ from app.services.vehicle_service import (
     send_command_to_vehicle,
     trigger_karto_vehicle_deletion,
 )
+from app.utils.datalog_definitions import DATALOG_DEFINITIONS
+from app.utils.email_validation import MAX_EMAIL_LENGTH, validate_email_address
+from app.utils.vehicle_data_presenter import parse_crash_log_data
 from app.utils.vehicle_state_parser import parse_vehicle_state_to_json, parse_v2_messages_to_metrics_dict
 from app.metrics_manager import metrics_manager
 from app.dependencies import require_active_api_user, require_admin_api_user
@@ -413,7 +416,7 @@ def api_register_unified_push_endpoint(
 ):
     """
     Register or update a UnifiedPush endpoint for a vehicle.
-    Called by the official OVMS Connect app after receiving an endpoint URL from its UnifiedPush distributor.
+    Called by the Flutter-OVMS app after receiving an endpoint URL from its UnifiedPush distributor.
     When device_id is provided, the subscription is tracked per-device in push_subscriptions.
     """
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
@@ -479,3 +482,395 @@ def api_register_fcm_token(
         "vehicle_id": vehicle_db.vehicle_id,
         "message": "FCM token registered"
     }
+
+# --- Vehicle logs & notification targets -------------------------------------------
+
+_DATALOG_MAX_PAGE_SIZE = 200
+_LOG_MAX_LIMIT = 200
+
+_LOG_MAX_RESPONSE_BYTES = 4 * 1024 * 1024
+
+_CREDENTIAL_ENDPOINT_TYPES = frozenset({'fcm', 'apns', 'up'})
+
+
+def _push_subscription_info(sub: models_db.PushSubscription) -> models_api.PushSubscriptionInfo:
+    """The one place a PushSubscription row becomes a response body.
+
+    Shared by the list and the create path so a new push type cannot be added to one
+    projection and forgotten in the other — which is exactly how 'up' came to be
+    returned in full while 'fcm' and 'apns' were redacted.
+    """
+    return models_api.PushSubscriptionInfo(
+        id=sub.id,
+        push_type=sub.push_type,
+        device_id=sub.device_id,
+        endpoint=None if sub.push_type in _CREDENTIAL_ENDPOINT_TYPES else sub.endpoint,
+        ntfy_server_url=sub.ntfy_server_url,
+        has_auth=bool(sub.ntfy_auth_token or sub.ntfy_auth_password),
+        created_at=sub.created_at,
+    )
+
+
+def _get_owned_vehicle_or_404(
+    db: Session, current_user: models_db.User, vehicle_module_id: str
+) -> models_db.Vehicle:
+    """Resolve a module id to a vehicle the caller may read, or raise.
+
+    Mirrors `_get_datalog_vehicle_or_raise` in the UI router. 404 before 403 is
+    deliberate and matches the rest of this file.
+    """
+    vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
+    if not vehicle_db:
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Vehicle not found")
+    if not current_user.is_admin and vehicle_db.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=http_status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this vehicle",
+        )
+    return vehicle_db
+
+
+def _log_protocol(record_type: str) -> str:
+    """V3 records are stored with a 'V3' prefix on the record type; everything else is V2."""
+    return 'v3' if record_type.startswith('V3') else 'v2'
+
+
+@router.get("/vehicles/{vehicle_module_id}/datalogs", response_model=models_api.DataLogSummaryResponse,
+            dependencies=[Depends(require_active_api_user)])
+def api_get_datalog_types(
+    vehicle_module_id: str,
+    db: Session = Depends(get_db),
+    current_user: models_db.User = Depends(require_active_api_user)
+):
+    """Which history record types this vehicle has stored, and how many of each.
+
+    Crash and debug records are excluded — they have their own endpoint and a shape
+    that has nothing to do with the comma-separated data records.
+    """
+    vehicle_db = _get_owned_vehicle_or_404(db, current_user, vehicle_module_id)
+
+    types = []
+    for row in crud.historical_data.get_historical_summary(db, vehicle_db.vehicle_id):
+        record_type = row['h_recordtype']
+        lowered = record_type.lower()
+        if 'crash' in lowered or 'debug' in lowered:
+            continue
+        definition = DATALOG_DEFINITIONS.get(record_type)
+        types.append(models_api.DataLogTypeInfo(
+            record_type=record_type,
+            description=definition["description"] if definition else None,
+            fields=definition["fields"] if definition else [],
+            total_records=row['totalrecs'],
+            distinct_records=row['distinctrecs'],
+            first=row['first_dt'],
+            last=row['last_dt'],
+        ))
+
+    return models_api.DataLogSummaryResponse(vehicle_id=vehicle_db.vehicle_id, types=types)
+
+
+@router.get("/vehicles/{vehicle_module_id}/datalogs/records", response_model=models_api.DataLogRecordsResponse,
+            dependencies=[Depends(require_active_api_user)])
+def api_get_datalog_records(
+    vehicle_module_id: str,
+    type: str = Query(..., min_length=1, max_length=50, description="Record type, e.g. '*-LOG-Trip'."),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=_DATALOG_MAX_PAGE_SIZE),
+    db: Session = Depends(get_db),
+    current_user: models_db.User = Depends(require_active_api_user)
+):
+    """One page of the records of a single type, newest first.
+
+    `type` is a query parameter rather than a path segment because record types contain
+    '*' and '/'-unsafe characters ('*-LOG-Trip'), and `page_size` is capped: the
+    per-vehicle row quota is 10 000 x 64 KiB, so an unbounded page is an OOM primitive
+    for any authenticated caller (see tests/test_history_dump_bounded.py).
+    """
+    vehicle_db = _get_owned_vehicle_or_404(db, current_user, vehicle_module_id)
+
+    # One row over the page, so "is there more" needs no second count query.
+    records_db = crud.historical_data.get_historical_data_for_vehicle(
+        db, vehicle_db.vehicle_id, record_type_equals=type,
+        skip=(page - 1) * page_size, limit=page_size + 1,
+    )
+    has_more = len(records_db) > page_size
+
+    records = []
+    max_fields = 0
+    for log in records_db[:page_size]:
+        fields = log.data_payload.split(',') if log.data_payload else []
+        max_fields = max(max_fields, len(fields))
+        records.append(models_api.DataLogRecord(
+            timestamp=log.timestamp, record_number=log.record_number, fields=fields,
+        ))
+
+    definition = DATALOG_DEFINITIONS.get(type)
+    field_names = definition["fields"] if definition else []
+    headers = [field_names[i] if i < len(field_names) else f"F{i + 1}" for i in range(max_fields)]
+
+    return models_api.DataLogRecordsResponse(
+        vehicle_id=vehicle_db.vehicle_id,
+        record_type=type,
+        description=definition["description"] if definition else None,
+        headers=headers,
+        records=records,
+        page=page,
+        page_size=page_size,
+        has_more=has_more,
+    )
+
+
+@router.get("/vehicles/{vehicle_module_id}/logs", response_model=models_api.VehicleLogsResponse,
+            dependencies=[Depends(require_active_api_user)])
+def api_get_vehicle_logs(
+    vehicle_module_id: str,
+    limit: int = Query(50, ge=1, le=_LOG_MAX_LIMIT, description="Maximum entries per category."),
+    db: Session = Depends(get_db),
+    current_user: models_db.User = Depends(require_active_api_user)
+):
+    """Crash reports and debug records, parsed into fields.
+
+    Same two queries the vehicle detail page runs, with the same '%Crash%' / '%Debug%'
+    split — debug excludes crash so a record is never reported twice.
+
+    Two bounds apply and the response says which one stopped it. `limit` caps rows per
+    category; _LOG_MAX_RESPONSE_BYTES caps the payload actually assembled, because a
+    row here is not a small thing — a debug record carries up to 64 KiB, so the row
+    cap alone permits a ~25 MB answer built entirely in memory. Crash reports spend the
+    budget first: they are why someone calls this endpoint, and a debug dump must not
+    crowd them out of it.
+    """
+    vehicle_db = _get_owned_vehicle_or_404(db, current_user, vehicle_module_id)
+
+    crash_rows = crud.historical_data.get_historical_data_for_vehicle(
+        db, vehicle_db.vehicle_id, record_type_like="%Crash%", limit=limit
+    )
+    debug_rows = crud.historical_data.get_historical_data_for_vehicle(
+        db, vehicle_db.vehicle_id, record_type_like="%Debug%",
+        exclude_record_type_like="%Crash%", limit=limit
+    )
+
+    budget = _LOG_MAX_RESPONSE_BYTES
+    truncated = False
+
+    crash_logs = []
+    for log in crash_rows:
+        cost = len(log.data_payload or "")
+        if crash_logs and cost > budget:
+            truncated = True
+            break
+        budget -= cost
+        parsed = parse_crash_log_data(log.data_payload)
+        crash_logs.append(models_api.CrashLogEntry(
+            timestamp=log.timestamp,
+            record_type=log.record_type,
+            protocol=_log_protocol(log.record_type),
+            firmware=parsed.get('firmware'),
+            build_id=parsed.get('build_id'),
+            reason_code=parsed.get('reason_code'),
+            reason_text=parsed.get('reason_text'),
+            is_abort=bool(parsed.get('is_abort')),
+            pc=parsed.get('pc'),
+            exc_cause=parsed.get('exc_cause'),
+            crash_task_name=parsed.get('crash_task_name'),
+            crash_task_prio=parsed.get('crash_task_prio'),
+            running_task_name=parsed.get('running_task_name'),
+            running_task_prio=parsed.get('running_task_prio'),
+            backtrace=parsed.get('backtrace'),
+        ))
+
+    debug_logs = []
+    for log in debug_rows:
+        data = log.data_payload or ""
+        if len(data) > budget:
+            truncated = True
+            break
+        budget -= len(data)
+        debug_logs.append(models_api.DebugLogEntry(
+            timestamp=log.timestamp,
+            record_type=log.record_type,
+            protocol=_log_protocol(log.record_type),
+            data=data,
+        ))
+
+    if truncated:
+        logger.info(
+            f"Vehicle logs for {vehicle_db.vehicle_id} truncated at "
+            f"{_LOG_MAX_RESPONSE_BYTES} bytes ({len(crash_logs)} crash, "
+            f"{len(debug_logs)} debug of up to {limit} each)."
+        )
+
+    return models_api.VehicleLogsResponse(
+        vehicle_id=vehicle_db.vehicle_id, crash_logs=crash_logs, debug_logs=debug_logs,
+        truncated=truncated,
+    )
+
+
+@router.get("/vehicles/{vehicle_module_id}/push/subscriptions",
+            response_model=models_api.PushSubscriptionListResponse,
+            dependencies=[Depends(require_active_api_user)])
+def api_list_push_subscriptions(
+    vehicle_module_id: str,
+    db: Session = Depends(get_db),
+    current_user: models_db.User = Depends(require_active_api_user)
+):
+    """The vehicle's notification targets, newest first.
+
+    Push tokens, UnifiedPush endpoints and ntfy credentials are not projected — see
+    _push_subscription_info.
+    """
+    vehicle_db = _get_owned_vehicle_or_404(db, current_user, vehicle_module_id)
+
+    subscriptions = [
+        _push_subscription_info(sub)
+        for sub in crud.push_subscription.get_subscriptions_for_vehicle(db, vehicle_db.id)
+    ]
+
+    return models_api.PushSubscriptionListResponse(
+        vehicle_id=vehicle_db.vehicle_id, subscriptions=subscriptions,
+    )
+
+
+@router.delete("/vehicles/{vehicle_module_id}/push/subscriptions/{subscription_id}",
+               status_code=http_status.HTTP_204_NO_CONTENT,
+               dependencies=[Depends(require_active_api_user)])
+def api_delete_push_subscription(
+    vehicle_module_id: str,
+    subscription_id: int,
+    db: Session = Depends(get_db),
+    current_user: models_db.User = Depends(require_active_api_user)
+):
+    """Remove one notification target.
+
+    The delete is scoped to the vehicle in SQL as well as by the ownership check, so a
+    subscription id belonging to someone else's vehicle deletes nothing and answers 404.
+    """
+    vehicle_db = _get_owned_vehicle_or_404(db, current_user, vehicle_module_id)
+
+    if not crud.push_subscription.delete_subscription(db, subscription_id, vehicle_db.id):
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    return None
+
+
+class EmailRecipientRequest(BaseModel):
+    """A manually added e-mail recipient for a vehicle's notifications.
+
+    Validated with the same helper the web form uses. That check is the security
+    boundary, not a convenience: the address is handed to the SMTP layer, and
+    Python's default e-mail policy serialises a header containing CR/LF verbatim —
+    so an unchecked value lets the submitter append their own headers (an extra
+    Bcc:, a forged From:, a second body) and turns the server into an open relay
+    sending from its own domain.
+    """
+    email: str = Field(..., max_length=MAX_EMAIL_LENGTH)
+
+    @field_validator('email')
+    @classmethod
+    def validate_recipient(cls, v):
+        return validate_email_address(v)
+
+
+@router.post("/vehicles/{vehicle_module_id}/push/email",
+             response_model=models_api.PushSubscriptionInfo,
+             status_code=http_status.HTTP_201_CREATED,
+             dependencies=[Depends(require_active_api_user)])
+def api_add_email_recipient(
+    vehicle_module_id: str,
+    body: EmailRecipientRequest,
+    db: Session = Depends(get_db),
+    current_user: models_db.User = Depends(require_active_api_user)
+):
+    """Add an e-mail address to this vehicle's notification targets.
+
+    Keyed by the address, so adding one twice updates the existing row rather
+    than accumulating duplicates, and the per-vehicle subscription cap applies
+    exactly as it does to a device registration.
+    """
+    vehicle_db = _get_owned_vehicle_or_404(db, current_user, vehicle_module_id)
+
+    subscription = crud.push_subscription.add_manual_email(db, vehicle_db.id, body.email)
+    db.commit()
+    db.refresh(subscription)
+
+    logger.info(f"E-mail recipient added for vehicle {vehicle_db.vehicle_id}")
+    return _push_subscription_info(subscription)
+
+
+class NtfySubscriptionRequest(BaseModel):
+    """A manually added ntfy target, mirroring the web form's fields.
+
+    [server_url] goes through the same SSRF check as everywhere else: the server
+    fetches this URL itself, so an unvalidated one turns a notification into a
+    request to whatever the submitter names — a link-local metadata endpoint, a
+    service on the loopback interface, a host inside the deployment's network.
+
+    The topic is capped at the length `add_manual_ntfy` keys the row on. Beyond
+    that the key truncates while the delivered topic does not, so two different
+    topics sharing a 255-character prefix would silently become one target.
+    """
+    topic: str = Field(..., min_length=1, max_length=255)
+    server_url: Optional[str] = Field(None, max_length=255)
+    auth_method: Optional[str] = Field(None, max_length=50)
+    auth_token: Optional[str] = Field(None, max_length=255)
+    auth_user: Optional[str] = Field(None, max_length=100)
+    auth_password: Optional[str] = Field(None, max_length=100)
+    auth_query_param_name: Optional[str] = Field(None, max_length=50)
+
+    @field_validator('topic')
+    @classmethod
+    def strip_topic(cls, v):
+        topic = v.strip()
+        if not topic:
+            raise ValueError('ntfy topic cannot be empty')
+        return topic
+
+    @field_validator('server_url')
+    @classmethod
+    def validate_server_url(cls, v):
+        return models_api._validate_ntfy_server_url(v)
+
+    @field_validator('auth_method')
+    @classmethod
+    def normalise_auth_method(cls, v):
+        # The form's "no authentication" option posts an empty value or "none";
+        # both mean the same absence to add_manual_ntfy.
+        if v is None or v.strip() == '' or v.strip().lower() == 'none':
+            return None
+        if v not in ('bearer', 'basic', 'query'):
+            raise ValueError("auth_method must be one of 'bearer', 'basic', 'query'")
+        return v
+
+
+@router.post("/vehicles/{vehicle_module_id}/push/ntfy",
+             response_model=models_api.PushSubscriptionInfo,
+             status_code=http_status.HTTP_201_CREATED,
+             dependencies=[Depends(require_active_api_user)])
+def api_add_ntfy_subscription(
+    vehicle_module_id: str,
+    body: NtfySubscriptionRequest,
+    db: Session = Depends(get_db),
+    current_user: models_db.User = Depends(require_active_api_user)
+):
+    """Add an ntfy topic to this vehicle's notification targets.
+
+    Keyed by the topic, so adding the same one again updates its server and
+    credentials rather than accumulating duplicates. The credentials are stored
+    encrypted and are never read back out — see PushSubscriptionInfo.
+    """
+    vehicle_db = _get_owned_vehicle_or_404(db, current_user, vehicle_module_id)
+
+    subscription = crud.push_subscription.add_manual_ntfy(
+        db, vehicle_db.id,
+        topic=body.topic,
+        server_url=body.server_url,
+        auth_method=body.auth_method,
+        auth_token=body.auth_token or None,
+        auth_user=body.auth_user or None,
+        auth_password=body.auth_password or None,
+        auth_query_param_name=body.auth_query_param_name or None,
+    )
+    db.commit()
+    db.refresh(subscription)
+
+    logger.info(f"ntfy target added for vehicle {vehicle_db.vehicle_id}")
+    return _push_subscription_info(subscription)

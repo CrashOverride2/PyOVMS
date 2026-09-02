@@ -189,7 +189,10 @@ document.addEventListener('alpine:init', () => {
                 const resp = await fetch('/api/v1/security/blocked-ips', {
                     method: 'POST',
                     credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': window.csrfToken,
+                    },
                     body: JSON.stringify(this.form),
                 });
                 if (!resp.ok) {
@@ -218,6 +221,7 @@ document.addEventListener('alpine:init', () => {
                 const resp = await fetch(`/api/v1/security/blocked-ips/${encodeURIComponent(ip)}`, {
                     method: 'DELETE',
                     credentials: 'include',
+                    headers: { 'X-CSRF-Token': window.csrfToken },
                 });
                 if (!resp.ok && resp.status !== 204) {
                     const err = await resp.json().catch(() => ({}));

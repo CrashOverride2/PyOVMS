@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from xml.etree import ElementTree as ET
 from typing import TYPE_CHECKING
+from app.utils.timestamps import as_utc
 
 if TYPE_CHECKING:
     from .models import ChargeLog
@@ -33,7 +34,7 @@ def generate_gpx_for_charge(charge: 'ChargeLog') -> str:
     name = ET.SubElement(metadata, 'name')
     name.text = f'Charge Session {charge.id}'
     time = ET.SubElement(metadata, 'time')
-    time.text = charge.start_time.strftime('%Y-%m-%dT%H:%M:%SZ') if charge.start_time else datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    time.text = as_utc(charge.start_time).strftime('%Y-%m-%dT%H:%M:%SZ') if charge.start_time else datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
     # Add waypoint for charge start location
     wpt = ET.SubElement(gpx, 'wpt', {
@@ -66,7 +67,7 @@ def generate_gpx_for_charge(charge: 'ChargeLog') -> str:
 
     # Add timestamp
     wpt_time = ET.SubElement(wpt, 'time')
-    wpt_time.text = charge.start_time.strftime('%Y-%m-%dT%H:%M:%SZ') if charge.start_time else datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    wpt_time.text = as_utc(charge.start_time).strftime('%Y-%m-%dT%H:%M:%SZ') if charge.start_time else datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
     # Convert to string with XML declaration
     ET.register_namespace('', 'http://www.topografix.com/GPX/1/1')

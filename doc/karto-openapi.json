@@ -422,6 +422,17 @@
             ],
             "title": "Map Preview Path"
           },
+          "map_preview_path_light": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Map Preview Path Light"
+          },
           "soc_used": {
             "anyOf": [
               {
@@ -615,6 +626,17 @@
               }
             ],
             "title": "Map Preview Path"
+          },
+          "map_preview_path_light": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Map Preview Path Light"
           },
           "soc_used": {
             "anyOf": [
@@ -834,6 +856,17 @@
               }
             ],
             "title": "Map Preview Path"
+          },
+          "map_preview_path_light": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Map Preview Path Light"
           },
           "soc_used": {
             "anyOf": [

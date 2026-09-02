@@ -4,6 +4,7 @@ import datetime
 from typing import Optional, List, Dict, Any
 
 from app.models import db as models_db
+from app.utils.timestamps import as_utc
 import logging
 
 logger = logging.getLogger(__name__)
@@ -234,6 +235,26 @@ def delete_old_historical_data(db: Session, older_than_days: int = 90) -> int:
     db.commit()
     return num_deleted
 
+def payload_concat(dialect_name: str):
+    """The "join every payload in this group" aggregate, per backend.
+
+    SQLAlchemy does not translate aggregate names: `func.group_concat(...)` compiles
+    to a literal `group_concat(...)` for whatever dialect is bound, and PostgreSQL has
+    no such function. A PostgreSQL deployment therefore answered V2 command 30 with
+    UndefinedFunction — a path SQLite installs cannot reach and the test suite, which
+    runs on SQLite, could not see.
+
+    SQLite and MySQL both spell it `group_concat` and both default to ',' between
+    values. PostgreSQL spells it `string_agg` and has no default separator, so the
+    comma is named there to keep the three backends producing the same string.
+
+    A function rather than an inline branch so the PostgreSQL half can be compiled and
+    asserted on without a PostgreSQL server — see tests/test_cross_dialect_sql.py.
+    """
+    if dialect_name == 'postgresql':
+        return func.string_agg(models_db.HistoricalData.data_payload, ',')
+    return func.group_concat(models_db.HistoricalData.data_payload)
+
 def get_historical_daily(
     db: Session,
     vehicle_id: str,
@@ -253,14 +274,9 @@ def get_historical_daily(
     Returns:
         List of dicts with keys: 'u_date' (YYYY-MM-DD), 'data' (concatenated payloads)
     """
-    # SQLite and PostgreSQL have different GROUP_CONCAT functions
-    # SQLite: GROUP_CONCAT(field)
-    # PostgreSQL: STRING_AGG(field, separator)
-    # We'll use func.group_concat for SQLite compatibility
-
     query = db.query(
         func.date(models_db.HistoricalData.timestamp).label('u_date'),
-        func.group_concat(models_db.HistoricalData.data_payload).label('data')
+        payload_concat(db.bind.dialect.name).label('data')
     ).filter(
         models_db.HistoricalData.vehicle_module_id_str == vehicle_id.upper(),
         models_db.HistoricalData.record_type == record_type
@@ -292,8 +308,16 @@ def get_historical_summary(
         - 'distinctrecs': Count of distinct record numbers
         - 'totalrecs': Total record count
         - 'totalsize': Total size estimate in bytes
-        - 'first': First (minimum) timestamp
-        - 'last': Last (maximum) timestamp
+        - 'first': First (minimum) timestamp, as 'YYYY-MM-DD HH:MM:SS' or ''
+        - 'last': Last (maximum) timestamp, same format
+        - 'first_dt'/'last_dt': the same two values as UTC-aware datetimes, or None
+
+    The two representations are not redundant. The *strings* are a wire format: V2
+    command 31 concatenates them into the reply it sends the module (protocols/v2/
+    handlers.py), so their layout is fixed by the protocol and cannot gain a zone
+    suffix. They are also zone-less, which is fine for a fixed-width column in the
+    web UI and wrong for anything a third party has to parse -- hence the datetimes,
+    which the JSON API projects instead.
     """
     if since_date is None:
         since_date = datetime.datetime(2000, 1, 1, tzinfo=datetime.timezone.utc)
@@ -327,5 +351,7 @@ def get_historical_summary(
         'totalrecs': row.totalrecs or 0,
         'totalsize': row.totalsize or 0,
         'first': row.first.strftime('%Y-%m-%d %H:%M:%S') if row.first else '',
-        'last': row.last.strftime('%Y-%m-%d %H:%M:%S') if row.last else ''
+        'last': row.last.strftime('%Y-%m-%d %H:%M:%S') if row.last else '',
+        'first_dt': as_utc(row.first),
+        'last_dt': as_utc(row.last),
     } for row in results]

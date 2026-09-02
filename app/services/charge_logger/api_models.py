@@ -1,27 +1,23 @@
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel
 from typing import Optional, List
 import datetime
 from uuid import UUID
 
+from app.utils.timestamps import UtcDatetime
+
 class ChargeLogPoint(BaseModel):
-    timestamp: datetime.datetime
+    timestamp: UtcDatetime
     soc: Optional[float] = None
     power_kw: Optional[float] = None
     battery_temp_c: Optional[float] = None
-
-    @field_serializer('timestamp')
-    def serialize_timestamp(self, dt: datetime.datetime) -> str:
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=datetime.timezone.utc)
-        return dt.isoformat()
 
     class Config:
         from_attributes = True
 
 class ChargeLogSummary(BaseModel):
     id: UUID
-    start_time: datetime.datetime
-    end_time: Optional[datetime.datetime] = None
+    start_time: UtcDatetime
+    end_time: Optional[UtcDatetime] = None
     duration_seconds: Optional[int] = None
     start_soc: Optional[float] = None
     end_soc: Optional[float] = None
@@ -31,14 +27,6 @@ class ChargeLogSummary(BaseModel):
     energy_added_kwh: Optional[float] = None
     max_power_kw: Optional[float] = None
     average_power_kw: Optional[float] = None
-
-    @field_serializer('start_time', 'end_time')
-    def serialize_datetimes(self, dt: Optional[datetime.datetime]) -> Optional[str]:
-        if dt is None:
-            return None
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=datetime.timezone.utc)
-        return dt.isoformat()
 
     class Config:
         from_attributes = True

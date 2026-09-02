@@ -6,8 +6,12 @@ from fastapi import APIRouter, Depends, Query, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.db import User, SecurityEvent, BlockedIP
-from app.dependencies import require_admin_user_from_cookie_or_api
+from app.dependencies import (
+    require_admin_user_from_cookie_or_api,
+    require_admin_user_from_cookie_or_api_with_csrf,
+)
 from app.security_manager import security_manager
+from app.utils.timestamps import UtcDatetime
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, field_validator
 import datetime
@@ -24,7 +28,7 @@ class SecurityEventResponse(BaseModel):
     ip_address: Optional[str]
     user_agent: Optional[str]
     details: Optional[Dict[str, Any]]
-    created_at: datetime.datetime
+    created_at: UtcDatetime
 
     class Config:
         from_attributes = True
@@ -41,8 +45,8 @@ class SecurityStatisticsResponse(BaseModel):
 class BlockedIPResponse(BaseModel):
     ip: str
     reason: Optional[str]
-    created_at: datetime.datetime
-    unblock_at: datetime.datetime
+    created_at: UtcDatetime
+    unblock_at: UtcDatetime
 
     class Config:
         from_attributes = True
@@ -92,7 +96,7 @@ def block_ip(
     request: Request,
     body: BlockIPRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin_user_from_cookie_or_api),
+    current_user: User = Depends(require_admin_user_from_cookie_or_api_with_csrf),
 ):
     """Manually block an IP address for a given duration."""
     security_manager.block_ip_manually(body.ip, body.duration_minutes, body.reason)
@@ -115,7 +119,7 @@ def unblock_ip(
     ip: str,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin_user_from_cookie_or_api),
+    current_user: User = Depends(require_admin_user_from_cookie_or_api_with_csrf),
 ):
     """Unblock a previously blocked IP address."""
     try:

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, List, Optional
 from app.config import settings
 from app.notifications.email_queue import Priority, queue_email_notification
 from app.notifications.templating import N_, get_gettext, render_source, template_env
+from app.utils.timestamps import as_utc
 
 if TYPE_CHECKING:
     from app.models.db import User
@@ -165,7 +166,7 @@ def send_new_user_admin_notification(new_user: "User"):
         template_vars = {
             "new_user_username": new_user.username,
             "new_user_email": new_user.email,
-            "registration_time": new_user.created_at.strftime('%Y-%m-%d %H:%M:%S UTC'),
+            "registration_time": as_utc(new_user.created_at).strftime('%Y-%m-%d %H:%M:%S UTC'),
             "user_management_url": user_management_url,
             "server_base_url": settings.SERVER_BASE_URL
         }

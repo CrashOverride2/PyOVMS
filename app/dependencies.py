@@ -11,6 +11,7 @@ from app.database import get_db
 from app import security
 from app.security_manager import security_manager
 from app.config import settings
+from app.csrf_protection import verify_csrf_token
 import logging
 
 logger = logging.getLogger(__name__)
@@ -261,3 +262,38 @@ async def require_admin_user_from_cookie_or_api(
         detail="Authentication required. Provide valid cookie session or API key.",
         headers={"WWW-Authenticate": "APIKey"}
     )
+
+
+CSRF_HEADER_NAME = "X-CSRF-Token"
+
+
+async def require_admin_user_from_cookie_or_api_with_csrf(
+    request: Request,
+    user: models_db.User = Depends(require_admin_user_from_cookie_or_api),
+    api_key_value: Optional[str] = Security(api_key_header),
+) -> models_db.User:
+    """
+    require_admin_user_from_cookie_or_api, plus CSRF for the cookie half.
+
+    CSRF follows the credential, not the URL prefix. An API key is not ambient: the
+    browser never attaches it on its own, so a cross-site page cannot authenticate with
+    one and there is nothing for a token to add. A session cookie *is* ambient — the
+    browser sends it with any request an attacker's page provokes — which is exactly the
+    case a token exists for.
+
+    Endpoints under /api/v1 that accept only a key therefore need no token; the two that
+    also accept a cookie *and* change state (blocking and unblocking an IP) did, and were
+    missing it. The bar was low but not zero: a JSON body forces a preflight this CORS
+    policy refuses, so the reachable variants were limited rather than absent — and none
+    of that is a property of the endpoint, it is a property of what a browser happened to
+    make hard that day.
+
+    Verified without rotating. The admin console fires several of these actions off a
+    single rendered page, and rotation invalidates the token that page still holds after
+    one further request — blocking three addresses in a row would fail on the third.
+    """
+    if api_key_value:
+        return user
+
+    verify_csrf_token(request, request.headers.get(CSRF_HEADER_NAME), rotate_token=False)
+    return user

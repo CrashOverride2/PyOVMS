@@ -38,7 +38,33 @@ def pool_kwargs_for(database_url: str) -> dict:
     }
 
 
-connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
+def connect_args_for(database_url: str) -> dict:
+    """DBAPI connect() arguments for a database URL.
+
+    SQLite needs check_same_thread=False: the TCP servers, the MQTT subscribers and the
+    broadcaster all share this engine across threads.
+
+    PostgreSQL is pinned to UTC. `timestamptz` is returned *in the session's TimeZone*,
+    which defaults to whatever the server, the database or the role happens to be set to
+    — so on a host configured for Europe/Berlin every stored timestamp came back as an
+    aware +02:00 value. Anything that converts is unaffected (as_utc() handles any
+    offset), but the places that format a value they already believe to be UTC are not:
+    `strftime('%Y-%m-%dT%H:%M:%SZ')` then writes a Berlin wall clock and labels it Z, and
+    date_trunc()/date() cut days and months on Berlin boundaries on PostgreSQL while
+    cutting them on UTC boundaries on SQLite. Pinning the session makes the assumption
+    the whole codebase already holds true at the connection, on every backend.
+
+    MySQL gets nothing: its DATETIME columns are zone-less and are read back naive, which
+    is the same shape SQLite produces.
+    """
+    if database_url.startswith("sqlite"):
+        return {"check_same_thread": False}
+    if database_url.startswith("postgresql"):
+        return {"options": "-c timezone=UTC"}
+    return {}
+
+
+connect_args = connect_args_for(settings.DATABASE_URL)
 
 engine = create_engine(
     settings.DATABASE_URL,

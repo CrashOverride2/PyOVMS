@@ -18,6 +18,7 @@ from app.tcp_server import shutdown_tcp_servers, start_tcp_server_main
 from app.websocket_manager import manager as websocket_manager
 from app.utils.vehicle_data_presenter import parse_stored_msgs_for_vehicle_info
 from app.utils.vehicle_state_parser import parse_v2_messages_to_metrics_dict
+from app.utils.timestamps import as_utc
 from app.metrics_manager import metrics_manager
 import datetime
 from app import crud
@@ -184,7 +185,7 @@ async def periodic_lifecycle_housekeeping(shutdown_event: asyncio.Event):
                 if not owner:
                     continue
                 last_seen = (
-                    crud.vehicle._vehicle_last_seen(vehicle).strftime('%Y-%m-%d %H:%M UTC')
+                    as_utc(crud.vehicle._vehicle_last_seen(vehicle)).strftime('%Y-%m-%d %H:%M UTC')
                     if crud.vehicle._vehicle_last_seen(vehicle) else "never"
                 )
                 try:

@@ -68,7 +68,7 @@ def is_websocket_ticket_name(name: Optional[str]) -> bool:
 
     The WebSocket handler deletes the key it authenticates with, so it must be able to
     tell a ticket from a real key. Without that check a user who passed their regular
-    API key — or, their phone's device key, which is also the MQTT
+    API key — or their phone's device key, which is also the MQTT
     password — destroyed it by connecting once.
     """
     return bool(name) and name.startswith(WS_TICKET_NAME_PREFIX)

@@ -25,19 +25,6 @@ templates.env.add_extension('jinja2.ext.i18n')
 
 templates.env.globals['source_code_url'] = settings.SOURCE_CODE_URL
 
-# Instance-specific footer links. Unset by default so a fresh deployment never links to
-# somebody else's firmware mirror or donation page; the footer omits each one entirely
-# while its setting is empty.
-templates.env.globals['firmware_repo_url'] = settings.FIRMWARE_REPO_URL
-templates.env.globals['donation_url'] = settings.DONATION_URL
-
-# The privacy policy is operator-supplied (privacy_policy.md, gitignored — see
-# privacy_policy.example.md). Resolved once at import: the footer hides the link and the
-# route 404s when no policy has been placed, instead of serving an error page.
-# APP_DIR is the "app" package directory, so the project root is one level up.
-PRIVACY_POLICY_FILE = APP_DIR.parent / "privacy_policy.md"
-templates.env.globals['privacy_policy_available'] = PRIVACY_POLICY_FILE.exists()
-
 TRANSLATIONS_DIR = Path(__file__).resolve().parent.parent.parent / "translations"
 
 templates.env.install_null_translations()

@@ -2,7 +2,6 @@
 Device provisioning for the OVMS Connect App
 """
 
-import datetime
 import logging
 from typing import Optional
 
@@ -18,6 +17,7 @@ from app.models import db as models_db
 from app.security_events import SecurityEventType, security_event_logger
 from app.security_manager import security_manager
 from app.utils.step_up import has_recent_reauth
+from app.utils.timestamps import UtcDatetime
 from app.utils.two_factor import (
     SecondFactor,
     password_login_is_disabled,
@@ -76,7 +76,7 @@ class DeviceTokenRequest(BaseModel):
 class DeviceTokenResponse(BaseModel):
     api_key: str = Field(..., description="Full API key. Returned exactly once.")
     key_prefix: str
-    expires_at: Optional[datetime.datetime]
+    expires_at: Optional[UtcDatetime]
     mqtt_username: str
     mqtt_password: str
 

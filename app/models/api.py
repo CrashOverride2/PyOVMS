@@ -1,11 +1,11 @@
 from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import Optional, List, Dict, Any
-import datetime
 import ipaddress
 import re
 from urllib.parse import urlparse
 
 from app.utils.email_validation import validate_optional_email_address
+from app.utils.timestamps import UtcDatetime
 
 
 def _validate_push_endpoint_url(v: Optional[str]) -> Optional[str]:
@@ -117,8 +117,8 @@ class UserPasswordUpdate(BaseModel):
 class UserInfo(UserBase):
     id: int
     is_admin: bool
-    created_at: datetime.datetime
-    updated_at: datetime.datetime
+    created_at: UtcDatetime
+    updated_at: UtcDatetime
     is_totp_enabled: bool = False
     timezone: str = 'UTC'
 
@@ -170,10 +170,10 @@ class VehicleInfo(BaseModel):
     fcm_token: Optional[str] = None
     apns_token: Optional[str] = None
 
-    last_seen_tcp: Optional[datetime.datetime] = None
-    last_seen_v3: Optional[datetime.datetime] = None
-    last_message_at: Optional[datetime.datetime] = None
-    unused_reminder_sent_at: Optional[datetime.datetime] = None
+    last_seen_tcp: Optional[UtcDatetime] = None
+    last_seen_v3: Optional[UtcDatetime] = None
+    last_message_at: Optional[UtcDatetime] = None
+    unused_reminder_sent_at: Optional[UtcDatetime] = None
 
     class Config:
         from_attributes = True
@@ -322,8 +322,8 @@ class StatusResponse(BaseModel):
     vehicle_id: str
     is_connected: bool
     data: Dict[str, Any] 
-    last_seen_tcp: Optional[datetime.datetime] = None
-    last_message_at: Optional[datetime.datetime] = None
+    last_seen_tcp: Optional[UtcDatetime] = None
+    last_message_at: Optional[UtcDatetime] = None
 
 # --- Notification Models ---
 class NtfySubscriptionRequest(BaseModel): 
@@ -370,7 +370,7 @@ class AutoProvisionProfileInfo(AutoProvisionProfileBase):
     NOTE: Sensitive keys and passwords are NEVER returned in API responses.
     """
     id: int
-    created_at: datetime.datetime
+    created_at: UtcDatetime
     owner_username: Optional[str] = None
 
     class Config:
@@ -395,9 +395,9 @@ class ApiKeyInfo(BaseModel):
     id: int
     name: str
     key_prefix: str
-    created_at: datetime.datetime
-    expires_at: Optional[datetime.datetime]
-    last_used_at: Optional[datetime.datetime]
+    created_at: UtcDatetime
+    expires_at: Optional[UtcDatetime]
+    last_used_at: Optional[UtcDatetime]
     is_active: bool
 
     class Config:
@@ -430,3 +430,106 @@ class MetricsQueryRequest(BaseModel):
 class MetricsQueryResponse(BaseModel):
     vehicle_id: str
     metrics: Dict[str, Any] = Field(..., description="A dictionary of the requested metrics and their current values. Unavailable metrics will have a value of null.")
+
+# --- Data Log / Crash Log Models ---
+
+class DataLogTypeInfo(BaseModel):
+    record_type: str
+    description: Optional[str] = Field(None, description="Set for record types known to DATALOG_DEFINITIONS.")
+    fields: List[str] = Field(default_factory=list, description="Column names for known record types, empty otherwise.")
+    total_records: int = 0
+    distinct_records: int = 0
+    first: Optional[UtcDatetime] = Field(
+        None, description="Timestamp of the oldest stored record of this type (UTC)."
+    )
+    last: Optional[UtcDatetime] = Field(
+        None, description="Timestamp of the newest stored record of this type (UTC)."
+    )
+
+class DataLogSummaryResponse(BaseModel):
+    vehicle_id: str
+    types: List[DataLogTypeInfo]
+
+class DataLogRecord(BaseModel):
+    timestamp: Optional[UtcDatetime] = None
+    record_number: Optional[int] = None
+    fields: List[str] = Field(default_factory=list)
+
+class DataLogRecordsResponse(BaseModel):
+    vehicle_id: str
+    record_type: str
+    description: Optional[str] = None
+    headers: List[str] = Field(..., description="Named columns where known, F1..Fn otherwise.")
+    records: List[DataLogRecord]
+    page: int
+    page_size: int
+    has_more: bool
+
+class CrashLogEntry(BaseModel):
+    timestamp: Optional[UtcDatetime] = None
+    record_type: str
+    protocol: str = Field(..., description="'v2' or 'v3', derived from the record type prefix.")
+    firmware: Optional[str] = None
+    build_id: Optional[str] = None
+    reason_code: Optional[str] = None
+    reason_text: Optional[str] = None
+    is_abort: bool = False
+    pc: Optional[str] = None
+    exc_cause: Optional[str] = None
+    crash_task_name: Optional[str] = None
+    crash_task_prio: Optional[str] = None
+    running_task_name: Optional[str] = None
+    running_task_prio: Optional[str] = None
+    backtrace: Optional[str] = None
+
+class DebugLogEntry(BaseModel):
+    timestamp: Optional[UtcDatetime] = None
+    record_type: str
+    protocol: str = Field(..., description="'v2' or 'v3', derived from the record type prefix.")
+    data: str
+
+class VehicleLogsResponse(BaseModel):
+    vehicle_id: str
+    crash_logs: List[CrashLogEntry]
+    debug_logs: List[DebugLogEntry]
+    truncated: bool = Field(
+        False,
+        description=(
+            "True when the response byte budget, not `limit`, decided where the lists "
+            "ended. Lower `limit` and page through by narrowing the set if you hit it."
+        ),
+    )
+
+# --- Push Subscription Models ---
+
+class PushSubscriptionInfo(BaseModel):
+    """One notification target of a vehicle.
+
+    [endpoint] is deliberately absent for 'fcm', 'apns' and 'up'. The first two hold a
+    device push token; the third holds the distributor URL a UnifiedPush client handed
+    us, and posting to that URL is the whole authorisation needed to notify the device.
+    All three are therefore credentials for sending to that device, and none has any
+    business being read back out of the API — the web UI shows "Token registered" for
+    the same reason, and never renders the UnifiedPush endpoint at all. The ntfy auth
+    fields are never projected here.
+
+    An ntfy topic *is* returned: it is what the user typed and has to see to recognise
+    the entry, and on its own it does not authorise anything the server would accept.
+    """
+    id: int
+    push_type: str = Field(..., description="'fcm', 'apns', 'up', 'ntfy' or 'email'")
+    device_id: str
+    endpoint: Optional[str] = Field(
+        None,
+        description="Null for 'fcm'/'apns'/'up' — a push token or distributor URL is never returned.",
+    )
+    ntfy_server_url: Optional[str] = None
+    has_auth: bool = Field(False, description="True when the ntfy target carries stored credentials.")
+    created_at: UtcDatetime
+
+    class Config:
+        from_attributes = True
+
+class PushSubscriptionListResponse(BaseModel):
+    vehicle_id: str
+    subscriptions: List[PushSubscriptionInfo]

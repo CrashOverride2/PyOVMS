@@ -32,7 +32,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 REQUIREMENTS_IN = REPO_ROOT / "requirements.in"
 REQUIREMENTS_TXT = REPO_ROOT / "requirements.txt"
-CI_WORKFLOW = REPO_ROOT / ".forgejo" / "workflows" / "security-audit.yml"
+CI_WORKFLOW = REPO_ROOT / ".forgejo" / "workflows" / "ci.yml"
 
 # The one definition of what "audit the dependencies" means. The CI workflow runs the
 # same command — it cannot import this module, because it deliberately installs only

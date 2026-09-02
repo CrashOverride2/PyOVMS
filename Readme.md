@@ -299,17 +299,18 @@ npm run watch   # rebuild on every template save
 ### Translations (i18n)
 
 ```bash
-# 1. Extract all translatable strings
-pybabel extract -F babel.cfg -o messages.pot .
+# 1. Extract, merge and compile — one command, pinned flags
+scripts/update_translations.sh
 
-# 2. Update existing language files
-pybabel update -i messages.pot -d app/translations
+# 2. Fill in any empty msgstr in app/translations/<lang>/LC_MESSAGES/messages.po
 
-# 3. Edit app/translations/<lang>/LC_MESSAGES/messages.po
-
-# 4. Compile
-pybabel compile -d app/translations
+# 3. Run it again so the .mo files match
+scripts/update_translations.sh
 ```
+
+Use the script rather than calling `pybabel` directly: it pins the sort order, the
+location format and the wrap column. Without them the catalog is rewritten wholesale on
+every run, and a dropped translation is indistinguishable from the churn around it.
 
 → **[Translations Guide](doc/translations.md)**
 

@@ -16,7 +16,6 @@ from app.csrf_protection import (
     get_csrf_token,
     verify_csrf_token,
     rotate_csrf_token,
-    validate_csrf_token,
     csrf_token_needs_renewal,
     CSRF_TOKEN_RENEW_AFTER,
 )

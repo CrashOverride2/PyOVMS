@@ -10,9 +10,9 @@ DEFAULT_MQTT_HOST = "localhost"
 DEFAULT_MQTT_PORT = 1883
 DEFAULT_OWNER_USERNAME = "changeme"
 DEFAULT_VEHICLE_ID = "TESTCAR"
-# Placeholder only. Pass the real one with --password (or via the environment) — a
-# credential typed in here is a credential committed, and MQTT passwords for vehicles
-# are the same secret the car itself authenticates with.
+# Placeholder only. Pass the real one with --password — a credential typed in here
+# is a credential committed, and a vehicle's MQTT password is the same secret the
+# car itself authenticates with.
 DEFAULT_VEHICLE_PASSWORD = "changeme"
 
 # Simulation Parameters

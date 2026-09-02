@@ -6,7 +6,7 @@
 # Pinning the selection here is the point; the specific rules matter less than the fact
 # that everyone now runs the same ones.
 #
-# The CI gate in .forgejo/workflows/tests.yml runs `ruff check app/` with no --select, so
+# The `lint` job in .forgejo/workflows/ci.yml runs `ruff check .` with no --select, so
 # it uses exactly this file. Everything selected below is clean as of this commit — a red
 # lint job means new code, not a backlog.
 
