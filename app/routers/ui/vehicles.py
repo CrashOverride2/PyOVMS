@@ -22,7 +22,7 @@ from app.models import db as models_db
 from app.utils.crypto import decrypt_data
 from app.utils.csv_safety import sanitize_csv_cell, sanitize_csv_row
 from app.utils.email_validation import InvalidEmailAddress, validate_email_address
-from . import templates, get_common_template_vars
+from . import templates, get_common_template_vars, get_translator
 from app.dependencies import require_current_user_from_cookie_fully_authenticated
 from app.services.vehicle_service import (
     KartoDeletionFailed,
@@ -36,7 +36,6 @@ from app.utils.vehicle_state_parser import parse_v2_messages_to_metrics_dict
 from app.utils.timestamps import as_utc
 from app.metrics_manager import metrics_manager
 from app.csrf_protection import verify_csrf_token, get_csrf_token
-from app.i18n import _
 import logging
 
 logger = logging.getLogger(__name__)
@@ -120,10 +119,10 @@ def ui_suggest_vehicle_id_route(
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated)
 ):
     prefixes = ['EV', 'CAR', 'VEH', 'MOD']
-    # Not `for _`: this module imports gettext as `_`, and the loop variable shadowed it
-    # for the rest of the function. Nothing translated inside this loop, so it was
-    # harmless here — but the next edit that adds a `_("...")` would have failed
-    # confusingly on an int.
+    # Not `for _`: the routes in this module bind gettext to `_`, and a loop variable
+    # of that name shadows it for the rest of the function. Nothing is translated
+    # inside this loop, so it was harmless here — but the next edit that adds a
+    # `_("...")` would have failed confusingly on an int.
     for _attempt in range(20):
         prefix = secrets.choice(prefixes)
         num = secrets.randbelow(9000) + 1000
@@ -158,7 +157,10 @@ def ui_add_vehicle_submit_route(
     vehicle_name: Optional[str] = Form(None),
     server_password: str = Form(...),
     module_password: Optional[str] = Form(None),
-    protocol: str = Form('both'),
+    # Matches the wizard's own default. Only reached if the form omits the field
+    # entirely, which the wizard never does — but 'both' as the fallback silently
+    # enabled V2 TCP authentication for a vehicle whose owner never asked for it.
+    protocol: str = Form('v3'),
     notification_preference: Optional[str] = Form('v3'),
     enable_trip_tracking: bool = Form(False),
     enable_charge_logging: bool = Form(False),
@@ -183,14 +185,15 @@ def ui_add_vehicle_submit_route(
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated)
 ):
     # Verify CSRF token
+    _ = get_translator(request)
     try:
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
-        return RedirectResponse(url=f"{request.url_for('ui_add_vehicle_form')}?error_message={quote_plus(str(e.detail))}", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{request.url_for('ui_add_vehicle_form')}?error_message={quote_plus(_(str(e.detail)))}", status_code=status.HTTP_303_SEE_OTHER)
 
     vehicle_id_upper = vehicle_id.upper()
     if not re.fullmatch(r"[A-Z0-9-]+", vehicle_id_upper):
-        return RedirectResponse(url=f"{request.url_for('ui_add_vehicle_form')}?error_message=Vehicle ID must only contain letters, numbers, and hyphens.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{request.url_for('ui_add_vehicle_form')}?error_message={quote_plus(_("Vehicle ID must only contain letters, numbers, and hyphens."))}", status_code=status.HTTP_303_SEE_OTHER)
     
     if crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_id_upper):
         # The regex above already constrains this to [A-Z0-9-], so nothing here needs
@@ -203,13 +206,13 @@ def ui_add_vehicle_submit_route(
     if current_user.is_admin:
         add_form_url = str(request.url_for('ui_add_vehicle_form'))
         if owner_id is None:
-            return RedirectResponse(url=f"{add_form_url}?error_message=Admin must select an owner for the vehicle.", status_code=status.HTTP_303_SEE_OTHER)
+            return RedirectResponse(url=f"{add_form_url}?error_message={quote_plus(_("Admin must select an owner for the vehicle."))}", status_code=status.HTTP_303_SEE_OTHER)
         
         owner_user = crud.user.get_user_by_id(db, user_id=owner_id)
         if not owner_user:
-            return RedirectResponse(url=f"{add_form_url}?error_message=Selected owner not found.", status_code=status.HTTP_303_SEE_OTHER)
+            return RedirectResponse(url=f"{add_form_url}?error_message={quote_plus(_("Selected owner not found."))}", status_code=status.HTTP_303_SEE_OTHER)
         if owner_user.is_admin:
-            return RedirectResponse(url=f"{add_form_url}?error_message=Cannot assign a vehicle to an administrator.", status_code=status.HTTP_303_SEE_OTHER)
+            return RedirectResponse(url=f"{add_form_url}?error_message={quote_plus(_("Cannot assign a vehicle to an administrator."))}", status_code=status.HTTP_303_SEE_OTHER)
         
         owner_id_to_use = owner_user.id
 
@@ -250,20 +253,21 @@ def ui_add_vehicle_submit_route(
         return RedirectResponse(url=f"{request.url_for('ui_add_vehicle_form')}?error_message={quote_plus(str(error_message))}", status_code=status.HTTP_303_SEE_OTHER)
 
     crud.vehicle.create_vehicle(db, vehicle_in, owner_id=owner_id_to_use)
-    return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?success_message=Vehicle '{vehicle_id_upper}' added successfully.", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?success_message={quote_plus(_("Vehicle '%(id)s' added successfully.") % {'id': vehicle_id_upper})}", status_code=status.HTTP_303_SEE_OTHER)
 
 @router.get("/{vehicle_db_id}/edit", response_class=HTMLResponse, name="ui_edit_vehicle_form")
 def ui_edit_vehicle_form_route(
     request: Request, vehicle_db_id: int, db: Session = Depends(get_db),
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated)
 ):
+    _ = get_translator(request)
     common_vars = get_common_template_vars(request, current_user)
     db_vehicle = crud.vehicle.get_vehicle_by_id(db, vehicle_db_id)
     if not db_vehicle:
-        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message=Vehicle not found.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Vehicle not found."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     if not current_user.is_admin and db_vehicle.owner_id != current_user.id:
-        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message=Not authorized to edit this vehicle.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Not authorized to edit this vehicle."))}", status_code=status.HTTP_303_SEE_OTHER)
     
     vehicle_api_model = models_api.VehicleSecureInfo.model_validate(db_vehicle, from_attributes=True)
     if db_vehicle.owner:
@@ -298,23 +302,24 @@ def ui_edit_vehicle_submit_route(
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated)
 ):
     # Verify CSRF token
+    _ = get_translator(request)
     try:
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
-        return RedirectResponse(url=f"{request.url_for('ui_edit_vehicle_form', vehicle_db_id=vehicle_db_id)}?error_message={quote_plus(str(e.detail))}", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{request.url_for('ui_edit_vehicle_form', vehicle_db_id=vehicle_db_id)}?error_message={quote_plus(_(str(e.detail)))}", status_code=status.HTTP_303_SEE_OTHER)
 
     current_db_vehicle = crud.vehicle.get_vehicle_by_id(db, vehicle_db_id)
     if not current_db_vehicle:
-        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message=Vehicle to update not found.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Vehicle to update not found."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     if not current_user.is_admin and current_db_vehicle.owner_id != current_user.id:
-        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message=Not authorized to edit this vehicle.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Not authorized to edit this vehicle."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     vehicle_id_upper = vehicle_id.upper()
     if not re.fullmatch(r"[A-Z0-9-]+", vehicle_id_upper):
-        return RedirectResponse(url=f"{request.url_for('ui_edit_vehicle_form', vehicle_db_id=vehicle_db_id)}?error_message=Vehicle ID must only contain letters, numbers, and hyphens.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{request.url_for('ui_edit_vehicle_form', vehicle_db_id=vehicle_db_id)}?error_message={quote_plus(_("Vehicle ID must only contain letters, numbers, and hyphens."))}", status_code=status.HTTP_303_SEE_OTHER)
     if vehicle_id_upper != current_db_vehicle.vehicle_id:
-        return RedirectResponse(url=f"{request.url_for('ui_edit_vehicle_form', vehicle_db_id=vehicle_db_id)}?error_message=Vehicle ID cannot be changed after creation.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{request.url_for('ui_edit_vehicle_form', vehicle_db_id=vehicle_db_id)}?error_message={quote_plus(_("Vehicle ID cannot be changed after creation."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     # An empty field means "no display name" — store NULL instead of an empty string
     vehicle_name = vehicle_name.strip() if vehicle_name else None
@@ -353,11 +358,11 @@ def ui_edit_vehicle_submit_route(
 
     updated = crud.vehicle.update_vehicle(db, vehicle_db_id, vehicle_update)
     if not updated:
-        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message=Vehicle not found for update (unexpected).", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Vehicle not found for update (unexpected)."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     db.commit()
 
-    return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?success_message=Vehicle '{updated.vehicle_id}' updated successfully.", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?success_message={quote_plus(_("Vehicle '%(id)s' updated successfully.") % {'id': updated.vehicle_id})}", status_code=status.HTTP_303_SEE_OTHER)
 
 @router.post("/{vehicle_db_id}/delete", response_class=RedirectResponse, name="ui_delete_vehicle")
 async def ui_delete_vehicle_route(
@@ -368,20 +373,21 @@ async def ui_delete_vehicle_route(
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated)
 ):
     # Verify CSRF token
+    _ = get_translator(request)
     try:
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
-        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(str(e.detail))}", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_(str(e.detail)))}", status_code=status.HTTP_303_SEE_OTHER)
 
     vehicle_to_delete = crud.vehicle.get_vehicle_by_id(db, vehicle_db_id)
     if not vehicle_to_delete:
-        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message=Vehicle not found for deletion.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Vehicle not found for deletion."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     if not current_user.is_admin and vehicle_to_delete.owner_id != current_user.id:
-        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message=Not authorized to delete this vehicle.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Not authorized to delete this vehicle."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     if delete_confirmation != vehicle_to_delete.vehicle_id:
-        return RedirectResponse(url=f"{request.url_for('ui_edit_vehicle_form', vehicle_db_id=vehicle_db_id)}?error_message=Incorrect confirmation text. Vehicle deletion cancelled.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{request.url_for('ui_edit_vehicle_form', vehicle_db_id=vehicle_db_id)}?error_message={quote_plus(_("Incorrect confirmation text. Vehicle deletion cancelled."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     # Karto first, and only proceed if it confirmed. Deleting the vehicle while its
     # GPS history survives would leave that history orphaned — and the vehicle id is
@@ -392,7 +398,7 @@ async def ui_delete_vehicle_route(
         logger.error(f"Aborting deletion of vehicle {vehicle_to_delete.vehicle_id}: {e}")
         return RedirectResponse(
             url=f"{request.url_for('ui_edit_vehicle_form', vehicle_db_id=vehicle_db_id)}"
-                f"?error_message={quote_plus('Trip data could not be deleted right now, so the vehicle was kept. Please try again shortly.')}",
+                f"?error_message={quote_plus(_("Trip data could not be deleted right now, so the vehicle was kept. Please try again shortly."))}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
@@ -400,15 +406,16 @@ async def ui_delete_vehicle_route(
     if car_conn: await car_conn.close() 
 
     crud.vehicle.delete_vehicle(db, vehicle_db_id)
-    return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?success_message=Vehicle '{vehicle_to_delete.vehicle_id}' deleted successfully.", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?success_message={quote_plus(_("Vehicle '%(id)s' deleted successfully.") % {'id': vehicle_to_delete.vehicle_id})}", status_code=status.HTTP_303_SEE_OTHER)
 
 @router.get("/{vehicle_module_id}", response_class=HTMLResponse, name="ui_vehicle_detail_page")
 async def ui_vehicle_detail_page_route(
     request: Request, vehicle_module_id: str, db: Session = Depends(get_db),
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated)
 ):
+    _ = get_translator(request)
     if current_user.is_admin:
-        return RedirectResponse(url=f"{request.url_for('ui_admin_dashboard')}?error_message=Admins cannot view detailed vehicle information.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus(_("Admins cannot view detailed vehicle information."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     common_vars = get_common_template_vars(request, current_user)
     vehicle_id_upper = vehicle_module_id.upper()
@@ -421,7 +428,7 @@ async def ui_vehicle_detail_page_route(
         msg = quote_plus(f"Vehicle '{vehicle_id_upper}' not found.")
         return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={msg}", status_code=status.HTTP_303_SEE_OTHER)
     if not current_user.is_admin and db_vehicle.owner_id != current_user.id:
-        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message=Not authorized to view this vehicle's details.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Not authorized to view this vehicle's details."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     crash_logs_db = crud.historical_data.get_historical_data_for_vehicle(db, vehicle_id_upper, record_type_like="%Crash%", limit=50)
     debug_logs_db = crud.historical_data.get_historical_data_for_vehicle(
@@ -508,8 +515,9 @@ def ui_vehicle_trip_detail_page_route(
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated),
     db: Session = Depends(get_db)
 ):
+    _ = get_translator(request)
     if current_user.is_admin:
-        return RedirectResponse(url=f"{request.url_for('ui_admin_dashboard')}?error_message=Admins cannot view trip information.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus(_("Admins cannot view trip information."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     common_vars = get_common_template_vars(request, current_user)
     vehicle_id = vehicle_module_id.upper()
@@ -532,8 +540,9 @@ def ui_vehicle_charge_detail_page_route(
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated),
     db: Session = Depends(get_db)
 ):
+    _ = get_translator(request)
     if current_user.is_admin:
-        return RedirectResponse(url=f"{request.url_for('ui_admin_dashboard')}?error_message=Admins cannot view charge information.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus(_("Admins cannot view charge information."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     common_vars = get_common_template_vars(request, current_user)
     vehicle_id = vehicle_module_id.upper()
@@ -562,21 +571,22 @@ def ui_add_ntfy_subscription_route(
     db: Session = Depends(get_db),
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated)
 ):
+    _ = get_translator(request)
     detail_url = request.url_for('ui_vehicle_detail_page', vehicle_module_id=vehicle_module_id.upper())
     try:
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
-        return RedirectResponse(url=f"{detail_url}?error_message={quote_plus(str(e.detail))}", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{detail_url}?error_message={quote_plus(_(str(e.detail)))}", status_code=status.HTTP_303_SEE_OTHER)
 
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not vehicle_db:
-        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message=Vehicle not found.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Vehicle not found."))}", status_code=status.HTTP_303_SEE_OTHER)
     if not current_user.is_admin and vehicle_db.owner_id != current_user.id:
-        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message=Not authorized.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Not authorized."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     topic = ntfy_topic.strip()
     if not topic:
-        return RedirectResponse(url=f"{detail_url}?error_message=ntfy topic cannot be empty.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{detail_url}?error_message={quote_plus(_("ntfy topic cannot be empty."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     if ntfy_server_url:
         try:
@@ -595,7 +605,7 @@ def ui_add_ntfy_subscription_route(
         auth_query_param_name=ntfy_auth_query_param_name or None,
     )
     db.commit()
-    return RedirectResponse(url=f"{detail_url}?success_message=ntfy topic added.", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url=f"{detail_url}?success_message={quote_plus(_("ntfy topic added."))}", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/{vehicle_module_id}/push/add-email", response_class=RedirectResponse, name="ui_add_email_recipient")
@@ -606,28 +616,29 @@ def ui_add_email_recipient_route(
     db: Session = Depends(get_db),
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated)
 ):
+    _ = get_translator(request)
     detail_url = request.url_for('ui_vehicle_detail_page', vehicle_module_id=vehicle_module_id.upper())
     try:
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
-        return RedirectResponse(url=f"{detail_url}?error_message={quote_plus(str(e.detail))}", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{detail_url}?error_message={quote_plus(_(str(e.detail)))}", status_code=status.HTTP_303_SEE_OTHER)
 
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not vehicle_db:
-        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message=Vehicle not found.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Vehicle not found."))}", status_code=status.HTTP_303_SEE_OTHER)
     if not current_user.is_admin and vehicle_db.owner_id != current_user.id:
-        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message=Not authorized.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Not authorized."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     # A bare '@' check let CR/LF through, which the SMTP layer would have turned
     # into attacker-chosen extra headers.
     try:
         email = validate_email_address(notification_email)
     except InvalidEmailAddress:
-        return RedirectResponse(url=f"{detail_url}?error_message=Invalid email address.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{detail_url}?error_message={quote_plus(_("Invalid email address."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     crud.push_subscription.add_manual_email(db, vehicle_db.id, email)
     db.commit()
-    return RedirectResponse(url=f"{detail_url}?success_message=Email recipient added.", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url=f"{detail_url}?success_message={quote_plus(_("Email recipient added."))}", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/{vehicle_module_id}/push/{subscription_id}/delete", response_class=RedirectResponse, name="ui_delete_push_subscription")
@@ -637,19 +648,20 @@ def ui_delete_push_subscription_route(
     db: Session = Depends(get_db),
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated)
 ):
+    _ = get_translator(request)
     try:
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
-        return RedirectResponse(url=f"{request.url_for('ui_vehicle_detail_page', vehicle_module_id=vehicle_module_id)}?error_message={quote_plus(str(e.detail))}", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{request.url_for('ui_vehicle_detail_page', vehicle_module_id=vehicle_module_id)}?error_message={quote_plus(_(str(e.detail)))}", status_code=status.HTTP_303_SEE_OTHER)
 
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not vehicle_db:
-        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message=Vehicle not found.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Vehicle not found."))}", status_code=status.HTTP_303_SEE_OTHER)
     if not current_user.is_admin and vehicle_db.owner_id != current_user.id:
-        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message=Not authorized.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Not authorized."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     crud.push_subscription.delete_subscription(db, subscription_id, vehicle_db.id)
-    return RedirectResponse(url=f"{request.url_for('ui_vehicle_detail_page', vehicle_module_id=vehicle_module_id.upper())}?success_message=Push subscription removed.", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url=f"{request.url_for('ui_vehicle_detail_page', vehicle_module_id=vehicle_module_id.upper())}?success_message={quote_plus(_("Push subscription removed."))}", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/{vehicle_module_id}/command-ajax", name="ui_send_command_to_vehicle_ajax")
@@ -768,6 +780,12 @@ def ui_vehicle_datalogs_page_route(
         chart_records = crud.historical_data.get_historical_data_for_vehicle(
             db, vehicle_id, record_type_equals=type, limit=1000, sort_ascending=True
         )
+        # as_utc() first: a naive value is a stored UTC timestamp with its label
+        # missing (SQLite has no timezone type), and astimezone() on a naive datetime
+        # reads it as *system local time* instead. On a server not running in UTC that
+        # shifted every chart label by the offset — on SQLite only, which is why the
+        # same page was correct on PostgreSQL. The Jinja filter in ui/__init__.py
+        # normalises for exactly this reason; this call site did not.
         labels = [as_utc(r.timestamp).astimezone(tz).strftime('%Y-%m-%d %H:%M') if r.timestamp else '' for r in chart_records]
         for chart_def in definition["charts"]:
             data = []

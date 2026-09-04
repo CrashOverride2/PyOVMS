@@ -35,6 +35,35 @@ def get_active_admins(db: Session) -> List[models_db.User]:
     """Retrieves all active administrator users from the database."""
     return db.query(models_db.User).filter(models_db.User.is_admin == True, models_db.User.is_active == True).all()
 
+
+def is_last_active_admin(db: Session, user: models_db.User) -> bool:
+    """
+    Whether `user` is an active admin and no other active admin exists.
+
+    The invariant is "this server always has at least one account that can administer
+    it". Self-service account deletion has checked it since it was written
+    (ui/profile.py), because that is the one path where an admin can plainly remove
+    themselves. The admin-facing routes did not, on the reasoning that the actor is
+    themselves an active admin and cannot demote, deactivate or delete their own
+    account — so one always remains.
+
+    That reasoning is correct today and is exactly the kind that stops being correct
+    quietly: it depends on three separate self-checks in two routers staying in place.
+    Asserting the invariant where it is actually about to be broken costs one query
+    and does not depend on any of them.
+    """
+    if not (user.is_admin and user.is_active):
+        return False
+    return (
+        db.query(func.count(models_db.User.id))
+        .filter(
+            models_db.User.is_admin == True,
+            models_db.User.is_active == True,
+            models_db.User.id != user.id,
+        )
+        .scalar()
+    ) == 0
+
 def create_user(db: Session, user_in: models_api.UserCreate) -> models_db.User:
     hashed_password = security.get_password_hash(user_in.password)
     db_user = models_db.User(

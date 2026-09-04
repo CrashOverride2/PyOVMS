@@ -48,6 +48,8 @@ class SecurityEventType(str, Enum):
     USER_DELETED = "user_deleted"
     USER_DISABLED = "user_disabled"
     USER_ENABLED = "user_enabled"
+    ADMIN_GRANTED = "admin_granted"
+    ADMIN_REVOKED = "admin_revoked"
     ADMIN_ACTION = "admin_action"
     DISPOSABLE_EMAIL_BLOCKED = "disposable_email_blocked"
     MQTT_SYNC_FAILED = "mqtt_sync_failed"
@@ -81,6 +83,12 @@ class SecurityEventLogger:
         SecurityEventType.PERMISSION_DENIED: SecurityEventSeverity.WARNING,
         SecurityEventType.DISPOSABLE_EMAIL_BLOCKED: SecurityEventSeverity.WARNING,
         SecurityEventType.MQTT_SYNC_FAILED: SecurityEventSeverity.ERROR,
+        # Both directions are worth a WARNING, not an INFO. Granting admin is the
+        # escalation an attacker with a stolen admin key performs to survive the
+        # key being revoked; revoking it from someone else is how they lock the
+        # real operators out. Neither is routine on a running server.
+        SecurityEventType.ADMIN_GRANTED: SecurityEventSeverity.WARNING,
+        SecurityEventType.ADMIN_REVOKED: SecurityEventSeverity.WARNING,
     }
 
     @staticmethod
@@ -291,3 +299,40 @@ class SecurityEventLogger:
 
 # Convenience function for easy import
 security_event_logger = SecurityEventLogger()
+
+
+def log_admin_role_change(
+    db: Session,
+    *,
+    target_id: int,
+    target_username: str,
+    granted: bool,
+    actor: "models_db.User",
+    ip_address: Optional[str],
+    via: str,
+) -> None:
+    """
+    Record a change to a user's admin flag.
+
+    Nothing recorded this. USER_CREATED said only that an account was created, and the
+    edit routes logged an event solely when is_active moved — so the single most
+    consequential change an account can undergo, being handed administrative rights,
+    left the audit trail indistinguishable from a name correction. That is the change
+    someone holding a stolen admin credential makes first, because a second admin
+    account outlives the revocation of the key or password that created it.
+
+    Shared by the API and the UI so both spell the event the same way; `via` says which
+    route it came from. Never raises — an unwritable audit row must not turn a
+    completed administrative change into a 500.
+    """
+    try:
+        security_event_logger.log_event(
+            db=db,
+            event_type=SecurityEventType.ADMIN_GRANTED if granted else SecurityEventType.ADMIN_REVOKED,
+            user_id=target_id,
+            username=target_username,
+            ip_address=ip_address,
+            details={"changed_by": actor.username, "changed_by_user_id": actor.id, "via": via},
+        )
+    except Exception:
+        logger.exception("Failed to record admin role change for user '%s'", target_username)

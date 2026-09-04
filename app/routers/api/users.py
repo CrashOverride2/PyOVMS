@@ -14,7 +14,7 @@ from app.services.disposable_email_service import (
     DisposableEmailBlocked,
     DisposableEmailListUnavailable,
 )
-from app.security_events import security_event_logger, SecurityEventType
+from app.security_events import log_admin_role_change, security_event_logger, SecurityEventType
 from app.security_manager import security_manager
 from app.services.vehicle_service import (
     KartoDeletionFailed,
@@ -29,19 +29,32 @@ router = APIRouter(
 
 # Separate router for self-service endpoints that only require an active user,
 # not admin privileges.  Mounted at the same prefix via api/main.py.
+#
+# The dependency is declared here as well as on the one route below, and that is not
+# redundancy for its own sake: this router shares the /users prefix with the
+# admin-only one above, so anything added here inherits the *path* of an
+# administrative surface without inheriting its guard. A route written without an
+# explicit Depends would be reachable unauthenticated, and would read as protected to
+# anyone who saw the prefix. The floor belongs on the router.
 me_router = APIRouter(
     prefix="/users",
     tags=["User Management API"],
+    dependencies=[Depends(require_active_api_user)],
 )
 
 logger = logging.getLogger(__name__)
+
 
 @router.post("", response_model=models_api.UserInfo, status_code=status.HTTP_201_CREATED)
 def create_user_api(
     user_in: models_api.UserCreate,
     request: Request,
     db: Session = Depends(get_db),
+    current_admin: models_db.User = Depends(require_admin_api_user),
 ):
+    # The admin check is the router-level dependency above; current_admin re-declares
+    # it so the guard is visible in the signature (FastAPI caches it, so this is the
+    # same call) and so the audit records below can name who acted.
     ip_addr = request.client.host if request.client else "unknown"
     if crud.user.get_user_by_username(db, username=user_in.username):
         security_manager.record_failure(ip_addr, 'api_general')
@@ -70,10 +83,20 @@ def create_user_api(
         security_event_logger.log_event(
             db=db, event_type=SecurityEventType.USER_CREATED,
             user_id=new_user.id, username=new_user.username,
-            ip_address=ip_addr, details={"created_via": "api"}
+            ip_address=ip_addr,
+            details={
+                "created_via": "api",
+                "created_by": current_admin.username,
+                "is_admin": new_user.is_admin,
+            },
         )
     except Exception:
         pass
+    if new_user.is_admin:
+        log_admin_role_change(
+            db, target_id=new_user.id, target_username=new_user.username, granted=True,
+            actor=current_admin, ip_address=ip_addr, via="api_create",
+        )
     return new_user
 
 @router.get("", response_model=List[models_api.UserInfo])
@@ -98,10 +121,19 @@ def update_user_api(
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # The invariant first, deliberately ahead of the self-checks below. Ordered after
+    # them it would be unreachable — the actor is an active admin and cannot demote or
+    # deactivate their own account, so a sole admin never gets this far — which makes
+    # it a guard that never runs and therefore never fails visibly if it breaks. Ahead
+    # of them it carries the sole-admin case itself, and says the accurate thing: the
+    # problem is not that you are editing yourself, it is that nobody else can get in.
+    if (user_in.is_admin is False or user_in.is_active is False) and crud.user.is_last_active_admin(db, db_user):
+        raise HTTPException(status_code=400, detail="Cannot remove the last remaining admin account.")
+
     if db_user.id == current_admin.id:
         if user_in.is_active is False: raise HTTPException(status_code=400, detail="Admin cannot deactivate themselves.")
         if user_in.is_admin is False: raise HTTPException(status_code=400, detail="Admin cannot remove their own admin status.")
-            
+
     if user_in.username and user_in.username != db_user.username and crud.user.get_user_by_username(db, user_in.username):
         raise HTTPException(status_code=400, detail="Username already registered by another user.")
     if user_in.email and user_in.email != db_user.email and crud.user.get_user_by_email(db, user_in.email):
@@ -124,7 +156,14 @@ def update_user_api(
             raise HTTPException(status_code=503, detail="Unable to validate email domain at this time")
             
     old_is_active = db_user.is_active
+    old_is_admin = db_user.is_admin
     updated_user = crud.user.update_user(db=db, user_db=db_user, user_in=user_in)
+    if user_in.is_admin is not None and user_in.is_admin != old_is_admin:
+        log_admin_role_change(
+            db, target_id=user_id, target_username=updated_user.username,
+            granted=user_in.is_admin, actor=current_admin,
+            ip_address=request.client.host if request.client else None, via="api_update",
+        )
     if user_in.is_active is not None and user_in.is_active != old_is_active:
         try:
             ip_addr = request.client.host if request.client else None
@@ -147,6 +186,8 @@ async def delete_user_api(
     db_user = crud.user.get_user_by_id(db, user_id=user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
+    if crud.user.is_last_active_admin(db, db_user):
+        raise HTTPException(status_code=400, detail="Cannot delete the last remaining admin account.")
     if db_user.id == current_admin.id:
         raise HTTPException(status_code=400, detail="Admin cannot delete themselves.")
 

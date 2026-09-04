@@ -16,7 +16,7 @@
                 {{ _('Open your authenticator app (e.g., Google Authenticator, Authy, Microsoft Authenticator) and scan the QR code below.') }}
             </p>
             <div class="flex justify-center p-4 bg-white rounded-md">
-                <img src="{{ qr_code_data_uri }}" alt="TOTP QR Code" class="w-48 h-48 md:w-56 md:h-56">
+                <img src="{{ qr_code_data_uri }}" alt="{{ _('TOTP QR Code') }}" class="w-48 h-48 md:w-56 md:h-56">
             </div>
             <p class="text-sm text-text-secondary mt-3">
                 {{ _('If you cannot scan the QR code, you can manually enter this key:') }}

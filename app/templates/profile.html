@@ -12,7 +12,7 @@
 
     <div class="mb-6 border-b border-border-color overflow-hidden">
         <div class="overflow-x-auto pb-2 custom-scrollbar">
-            <nav class="-mb-px flex space-x-6 min-w-max" aria-label="Tabs">
+            <nav class="-mb-px flex space-x-6 min-w-max" aria-label="{{ _('Tabs') }}">
                 <button type="button" data-tab-btn="info"
                         class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-text-secondary hover:text-text-primary hover:border-gray-500">
                     {{ _('User Information') }}
@@ -171,7 +171,7 @@
             <ul class="list-disc list-inside mt-2 space-y-1 text-xs">
                 <li><strong>{{ _('Username:') }}</strong> {{ _('The 8-character Key Prefix.') }}</li>
                 <li><strong>{{ _('Password:') }}</strong> {{ _('The full API Key.') }}</li>
-                <li><strong>{{ _('Topic Access:') }}</strong> `ovms/{{ current_user.username }}/{vehicle_id}/#` for each of your vehicles.</li>
+                <li><strong>{{ _('Topic Access:') }}</strong> `ovms/{{ current_user.username }}/{vehicle_id}/#` {{ _('for each of your vehicles.') }}</li>
             </ul>
         </div>
         {% endif %}

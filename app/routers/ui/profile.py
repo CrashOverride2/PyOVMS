@@ -14,7 +14,7 @@ from app import crud, security
 from app.models import api as models_api
 from app.models import db as models_db
 from app.models.db import WebAuthnCredential
-from . import templates, get_common_template_vars
+from . import templates, get_common_template_vars, get_translator
 from app.dependencies import require_current_user_from_cookie_fully_authenticated, get_client_ip
 from app.config import settings
 from app.csrf_protection import verify_csrf_token, get_csrf_token
@@ -168,6 +168,7 @@ def ui_confirm_password_submit_route(
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated),
     client_ip: str = Depends(get_client_ip),
 ):
+    _ = get_translator(request)
     target = _safe_next_url(request, next_url)
     form_url = str(request.url_for('ui_confirm_password_form'))
 
@@ -175,13 +176,13 @@ def ui_confirm_password_submit_route(
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
         return RedirectResponse(
-            url=f"{form_url}?next_url={quote_plus(target)}&error_message={quote_plus(str(e.detail))}",
+            url=f"{form_url}?next_url={quote_plus(target)}&error_message={quote_plus(_(str(e.detail)))}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
     if security_manager.is_blocked(client_ip):
         return RedirectResponse(
-            url=f"{form_url}?next_url={quote_plus(target)}&error_message={quote_plus('Too many attempts. Try again later.')}",
+            url=f"{form_url}?next_url={quote_plus(target)}&error_message={quote_plus(_("Too many attempts. Try again later."))}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
@@ -198,7 +199,7 @@ def ui_confirm_password_submit_route(
         except Exception:
             pass
         return RedirectResponse(
-            url=f"{form_url}?next_url={quote_plus(target)}&error_message={quote_plus('Incorrect password.')}",
+            url=f"{form_url}?next_url={quote_plus(target)}&error_message={quote_plus(_("Incorrect password."))}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
@@ -217,19 +218,20 @@ def ui_update_profile_submit_route(
     db: Session = Depends(get_db),
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated)
 ):
+    _ = get_translator(request)
     base_redirect_url = str(request.url_for('ui_profile_page'))
 
     # Verify CSRF token
     try:
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
-        return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(str(e.detail))}&tab=info", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(_(str(e.detail)))}&tab=info", status_code=status.HTTP_303_SEE_OTHER)
 
     if timezone not in available_timezones():
-        return RedirectResponse(url=f"{base_redirect_url}?error_message=Invalid timezone selected.&tab=info", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(_("Invalid timezone selected."))}&tab=info", status_code=status.HTTP_303_SEE_OTHER)
 
     if unit_preference not in ("metric", "imperial"):
-        return RedirectResponse(url=f"{base_redirect_url}?error_message=Invalid unit preference.&tab=info", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(_("Invalid unit preference."))}&tab=info", status_code=status.HTTP_303_SEE_OTHER)
 
     email_to_update = email.strip() or None
     full_name_to_update = full_name.strip() or None
@@ -265,7 +267,7 @@ def ui_update_profile_submit_route(
         update_payload_dict['unit_preference'] = unit_preference
 
     if not update_payload_dict:
-        return RedirectResponse(url=f"{base_redirect_url}?info_message=No changes detected.&tab=info", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{base_redirect_url}?info_message={quote_plus(_("No changes detected."))}&tab=info", status_code=status.HTTP_303_SEE_OTHER)
 
     try:
         user_in_update = models_api.UserUpdate(**update_payload_dict)
@@ -275,7 +277,7 @@ def ui_update_profile_submit_route(
 
     crud.user.update_user(db=db, user_db=current_user, user_in=user_in_update)
 
-    return RedirectResponse(url=f"{base_redirect_url}?success_message=Profile updated successfully.&tab=info", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url=f"{base_redirect_url}?success_message={quote_plus(_("Profile updated successfully."))}&tab=info", status_code=status.HTTP_303_SEE_OTHER)
 
 @router.post("/change-password", response_class=RedirectResponse, name="ui_change_password_submit")
 def ui_change_password_submit_route(
@@ -288,20 +290,21 @@ def ui_change_password_submit_route(
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated),
     client_ip: str = Depends(get_client_ip)
 ):
+    _ = get_translator(request)
     base_redirect_url = str(request.url_for('ui_profile_page'))
 
     # Verify CSRF token
     try:
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
-        return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(str(e.detail))}&tab=password", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(_(str(e.detail)))}&tab=password", status_code=status.HTTP_303_SEE_OTHER)
 
     if new_password != confirm_new_password:
-        return RedirectResponse(url=f"{base_redirect_url}?error_message=New passwords do not match.&tab=password", status_code=status.HTTP_303_SEE_OTHER) 
+        return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(_("New passwords do not match."))}&tab=password", status_code=status.HTTP_303_SEE_OTHER) 
 
     if not security.verify_password(current_password, current_user.hashed_password):
         security_manager.record_failure(client_ip, 'login')
-        return RedirectResponse(url=f"{base_redirect_url}?error_message=Incorrect current password.&tab=password", status_code=status.HTTP_303_SEE_OTHER) 
+        return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(_("Incorrect current password."))}&tab=password", status_code=status.HTTP_303_SEE_OTHER) 
 
     try:
         user_in_update = models_api.UserUpdate(password=new_password)
@@ -321,7 +324,7 @@ def ui_change_password_submit_route(
         pass
     # The user just proved their old password; no reason to ask again immediately.
     mark_reauthenticated(request, current_user.id)
-    return RedirectResponse(url=f"{base_redirect_url}?success_message=Password updated successfully.&tab=password", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url=f"{base_redirect_url}?success_message={quote_plus(_("Password updated successfully."))}&tab=password", status_code=status.HTTP_303_SEE_OTHER)
 
 @router.post("/apikeys/create", response_class=RedirectResponse, name="ui_create_api_key")
 def ui_create_api_key_route(
@@ -333,13 +336,14 @@ def ui_create_api_key_route(
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated),
     client_ip: str = Depends(get_client_ip)
 ):
+    _ = get_translator(request)
     base_redirect_url = str(request.url_for('ui_profile_page'))
 
     # Verify CSRF token
     try:
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
-        return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(str(e.detail))}&tab=apikeys", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(_(str(e.detail)))}&tab=apikeys", status_code=status.HTTP_303_SEE_OTHER)
 
     step_up = _needs_step_up(request, current_user, "apikeys")
     if step_up:
@@ -350,10 +354,10 @@ def ui_create_api_key_route(
         try:
             days_int = int(expires_in_days)
             if days_int <= 0:
-                return RedirectResponse(url=f"{base_redirect_url}?error_message=Expiry days must be a positive number.&tab=apikeys", status_code=status.HTTP_303_SEE_OTHER)
+                return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(_("Expiry days must be a positive number."))}&tab=apikeys", status_code=status.HTTP_303_SEE_OTHER)
             expires_delta = datetime.timedelta(days=days_int)
         except (ValueError, TypeError):
-            return RedirectResponse(url=f"{base_redirect_url}?error_message=Invalid value for expiry days.&tab=apikeys", status_code=status.HTTP_303_SEE_OTHER)
+            return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(_("Invalid value for expiry days."))}&tab=apikeys", status_code=status.HTTP_303_SEE_OTHER)
 
     try:
         db_key, plain_key = crud.apikey.create_api_key(db, user_id=current_user.id, name=key_name, expires_delta=expires_delta)
@@ -373,7 +377,7 @@ def ui_create_api_key_route(
     new_keys_list.append({"name": key_name, "key": plain_key, "prefix": db_key.key_prefix})
     request.session["new_api_keys_to_display"] = new_keys_list
 
-    final_url = f"{base_redirect_url}?success_message=API Key '{key_name}' created.&tab=apikeys#new-key-{db_key.key_prefix}"
+    final_url = f"{base_redirect_url}?success_message={quote_plus(_("API Key '%(name)s' created.") % {'name': key_name})}&tab=apikeys#new-key-{db_key.key_prefix}"
     return RedirectResponse(url=final_url, status_code=status.HTTP_303_SEE_OTHER)
 
 @router.post("/apikeys/{api_key_id}/delete", response_class=RedirectResponse, name="ui_delete_api_key")
@@ -385,18 +389,19 @@ def ui_delete_api_key_route(
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated),
     client_ip: str = Depends(get_client_ip)
 ):
+    _ = get_translator(request)
     base_redirect_url = str(request.url_for('ui_profile_page'))
 
     # Verify CSRF token
     try:
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
-        return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(str(e.detail))}&tab=apikeys", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(_(str(e.detail)))}&tab=apikeys", status_code=status.HTTP_303_SEE_OTHER)
 
     api_key_to_delete = crud.apikey.get_api_key_by_id_and_user(db, api_key_id=api_key_id, user_id=current_user.id)
 
     if not api_key_to_delete:
-        return RedirectResponse(url=f"{base_redirect_url}?error_message=API Key not found or not owned by you.&tab=apikeys", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(_("API Key not found or not owned by you."))}&tab=apikeys", status_code=status.HTTP_303_SEE_OTHER)
 
     crud.apikey.delete_api_key_by_id_and_user(db, api_key_id=api_key_id, user_id=current_user.id)
     try:
@@ -407,16 +412,17 @@ def ui_delete_api_key_route(
         )
     except Exception:
         pass
-    return RedirectResponse(url=f"{base_redirect_url}?success_message=API Key '{api_key_to_delete.name}' deleted.&tab=apikeys", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url=f"{base_redirect_url}?success_message={quote_plus(_("API Key '%(name)s' deleted.") % {'name': api_key_to_delete.name})}&tab=apikeys", status_code=status.HTTP_303_SEE_OTHER)
 
 @router.get("/2fa/totp/setup", response_class=HTMLResponse, name="ui_totp_setup_form")
 def ui_totp_setup_form_route(
     request: Request,
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated)
 ):
+    _ = get_translator(request)
     common_vars = get_common_template_vars(request, current_user)
     if current_user.is_totp_enabled:
-        return RedirectResponse(url=f"{request.url_for('ui_profile_page')}?error_message=TOTP is already enabled.&tab=2fa", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{request.url_for('ui_profile_page')}?error_message={quote_plus(_("TOTP is already enabled."))}&tab=2fa", status_code=status.HTTP_303_SEE_OTHER)
 
     # Gated here as well as at /enable so the password is asked for before a secret is
     # generated and shown, rather than after the user has scanned the QR code.
@@ -447,6 +453,7 @@ def ui_totp_enable_submit_route(
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated),
     client_ip: str = Depends(get_client_ip)
 ):
+    _ = get_translator(request)
     profile_base_url = str(request.url_for('ui_profile_page'))
     setup_form_base_url = str(request.url_for('ui_totp_setup_form'))
 
@@ -454,7 +461,7 @@ def ui_totp_enable_submit_route(
     try:
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
-        return RedirectResponse(url=f"{setup_form_base_url}?error_message={quote_plus(str(e.detail))}", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{setup_form_base_url}?error_message={quote_plus(_(str(e.detail)))}", status_code=status.HTTP_303_SEE_OTHER)
 
     step_up = _needs_step_up(request, current_user, "2fa")
     if step_up:
@@ -462,7 +469,7 @@ def ui_totp_enable_submit_route(
 
     pending_secret = request.session.get("pending_totp_secret")
     if not pending_secret:
-        return RedirectResponse(url=f"{profile_base_url}?tab=2fa&error_message=TOTP setup session expired. Please try again.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{profile_base_url}?tab=2fa&error_message={quote_plus(_("TOTP setup session expired. Please try again."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     if security.verify_totp_code(pending_secret, totp_code):
         crud.user.enable_totp_for_user(db, current_user, pending_secret)
@@ -475,7 +482,7 @@ def ui_totp_enable_submit_route(
             )
         except Exception:
             pass
-        redirect = RedirectResponse(url=f"{profile_base_url}?tab=2fa&success_message=Authenticator app enabled successfully.", status_code=status.HTTP_303_SEE_OTHER)
+        redirect = RedirectResponse(url=f"{profile_base_url}?tab=2fa&success_message={quote_plus(_("Authenticator app enabled successfully."))}", status_code=status.HTTP_303_SEE_OTHER)
         _reissue_session_cookie(request, redirect, current_user)
         return redirect
     else:
@@ -485,7 +492,7 @@ def ui_totp_enable_submit_route(
         # Feeding it into the per-account limit would let someone lock themselves out
         # of login by fumbling their authenticator during setup.
         security_manager.record_failure(client_ip, 'totp')
-        return RedirectResponse(url=f"{setup_form_base_url}?error_message=Invalid TOTP code. Please try again.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{setup_form_base_url}?error_message={quote_plus(_("Invalid TOTP code. Please try again."))}", status_code=status.HTTP_303_SEE_OTHER)
 
 @router.post("/2fa/totp/disable", response_class=RedirectResponse, name="ui_totp_disable_submit")
 def ui_totp_disable_submit_route(
@@ -495,20 +502,21 @@ def ui_totp_disable_submit_route(
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated),
     client_ip: str = Depends(get_client_ip)
 ):
+    _ = get_translator(request)
     profile_base_url = str(request.url_for('ui_profile_page'))
 
     # Verify CSRF token
     try:
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
-        return RedirectResponse(url=f"{profile_base_url}?error_message={quote_plus(str(e.detail))}&tab=2fa", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{profile_base_url}?error_message={quote_plus(_(str(e.detail)))}&tab=2fa", status_code=status.HTTP_303_SEE_OTHER)
 
     step_up = _needs_step_up(request, current_user, "2fa")
     if step_up:
         return step_up
 
     if not current_user.is_totp_enabled:
-        return RedirectResponse(url=f"{profile_base_url}?tab=2fa&error_message=TOTP is not enabled.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{profile_base_url}?tab=2fa&error_message={quote_plus(_("TOTP is not enabled."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     crud.user.disable_totp_for_user(db, current_user)
     if "pending_totp_secret" in request.session: del request.session["pending_totp_secret"]
@@ -520,7 +528,7 @@ def ui_totp_disable_submit_route(
         )
     except Exception:
         pass
-    redirect = RedirectResponse(url=f"{profile_base_url}?tab=2fa&success_message=Authenticator app disabled successfully.", status_code=status.HTTP_303_SEE_OTHER)
+    redirect = RedirectResponse(url=f"{profile_base_url}?tab=2fa&success_message={quote_plus(_("Authenticator app disabled successfully."))}", status_code=status.HTTP_303_SEE_OTHER)
     _reissue_session_cookie(request, redirect, current_user)
     return redirect
 
@@ -533,23 +541,24 @@ async def ui_delete_profile_submit_route(
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated),
     client_ip: str = Depends(get_client_ip)
 ):
+    _ = get_translator(request)
     profile_redirect_url = str(request.url_for('ui_profile_page'))
 
     # Verify CSRF token
     try:
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
-        return RedirectResponse(url=f"{profile_redirect_url}?error_message={quote_plus(str(e.detail))}&tab=password", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{profile_redirect_url}?error_message={quote_plus(_(str(e.detail)))}&tab=password", status_code=status.HTTP_303_SEE_OTHER)
     
     step_up = _needs_step_up(request, current_user, "password")
     if step_up:
         return step_up
 
     if delete_confirmation != "DELETE":
-        return RedirectResponse(url=f"{profile_redirect_url}?error_message=Incorrect confirmation text.&tab=password", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{profile_redirect_url}?error_message={quote_plus(_("Incorrect confirmation text."))}&tab=password", status_code=status.HTTP_303_SEE_OTHER)
 
     if current_user.is_admin and len(crud.user.get_active_admins(db)) <= 1:
-        return RedirectResponse(url=f"{profile_redirect_url}?error_message=Cannot delete the only admin account.&tab=password", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{profile_redirect_url}?error_message={quote_plus(_("Cannot delete the only admin account."))}&tab=password", status_code=status.HTTP_303_SEE_OTHER)
 
     # Trip data first, and only proceed if Karto confirmed — the same rule the vehicle
     # routes follow. The account's vehicles disappear through the ORM cascade below,
@@ -561,7 +570,7 @@ async def ui_delete_profile_submit_route(
         logger.error(f"Aborting deletion of account '{current_user.username}': {e}")
         return RedirectResponse(
             url=f"{profile_redirect_url}?error_message="
-                f"{quote_plus('Your trip data could not be deleted right now, so the account was kept. Please try again.')}"
+                f"{quote_plus(_('Your trip data could not be deleted right now, so the account was kept. Please try again.'))}"
                 f"&tab=password",
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -578,7 +587,7 @@ async def ui_delete_profile_submit_route(
     crud.user.delete_user(db, user_id=user_id_to_delete)
     
     login_url = str(request.url_for('ui_login_form'))
-    redirect_response = RedirectResponse(url=f"{login_url}?success_message=Account '{username_deleted}' has been deleted.", status_code=status.HTTP_303_SEE_OTHER)
+    redirect_response = RedirectResponse(url=f"{login_url}?success_message={quote_plus(_("Account '%(name)s' has been deleted.") % {'name': username_deleted})}", status_code=status.HTTP_303_SEE_OTHER)
     # Both variants — see the logout handler in ui/auth.py. The account is gone either
     # way, but leaving a cookie behind means the browser keeps presenting a token that
     # now resolves to nothing on every request.

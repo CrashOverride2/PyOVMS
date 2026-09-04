@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request, Depends, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
+from urllib.parse import quote_plus
 import logging
 
 try:
@@ -13,7 +14,7 @@ from app.utils.safe_markdown import render_safe_markdown
 from app.database import get_db
 from app.connection_manager import manager
 from app.models import db as models_db
-from . import templates, get_common_template_vars
+from . import templates, get_common_template_vars, get_translator
 from app.dependencies import require_current_user_from_cookie_fully_authenticated
 from app import crud
 
@@ -29,8 +30,9 @@ def ui_dashboard(
     db: Session = Depends(get_db),
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated) 
 ):
+    _ = get_translator(request)
     if current_user.is_admin:
-        return RedirectResponse(url=f"{request.url_for('ui_admin_dashboard')}?error_message=Admins do not have a vehicle dashboard.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus(_("Admins do not have a vehicle dashboard."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     common_vars = get_common_template_vars(request, current_user)
     vehicle_infos = manager.get_all_vehicle_infos(db, current_user)

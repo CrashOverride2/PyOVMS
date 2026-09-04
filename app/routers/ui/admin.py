@@ -19,7 +19,7 @@ from app.database import get_db
 from app.connection_manager import manager
 from app import crud
 from app.models import db as models_db
-from . import templates, get_common_template_vars
+from . import templates, get_common_template_vars, get_translator
 from app.dependencies import require_admin_user_from_cookie
 from app.services.mqtt_auth_manager import mqtt_manager as mqtt_auth_manager
 from app.services.disposable_email_service import (
@@ -127,11 +127,12 @@ def ui_admin_update_infobox_route(
     current_user: models_db.User = Depends(require_admin_user_from_cookie)
 ):
     # Verify CSRF token
+    _ = get_translator(request)
     try:
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
         return RedirectResponse(
-            url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus(str(e.detail))}",
+            url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus(_(str(e.detail)))}",
             status_code=status.HTTP_303_SEE_OTHER
         )
 
@@ -143,7 +144,7 @@ def ui_admin_update_infobox_route(
         box_type=info_box_type
     )
     return RedirectResponse(
-        url=f"{request.url_for('ui_admin_dashboard')}?success_message=Info Box updated successfully.",
+        url=f"{request.url_for('ui_admin_dashboard')}?success_message={quote_plus(_("Info Box updated successfully."))}",
         status_code=status.HTTP_303_SEE_OTHER
     )
 
@@ -156,24 +157,25 @@ def ui_admin_clear_vehicle_auto_delete(
     db: Session = Depends(get_db),
     current_user: models_db.User = Depends(require_admin_user_from_cookie)
 ):
+    _ = get_translator(request)
     try:
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
         return RedirectResponse(
-            url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus(str(e.detail))}",
+            url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus(_(str(e.detail)))}",
             status_code=status.HTTP_303_SEE_OTHER
         )
 
     vehicle = crud.vehicle.clear_unused_reminder(db, vehicle_db_id)
     if not vehicle:
         return RedirectResponse(
-            url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus('Vehicle not found.')}",
+            url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus(_("Vehicle not found."))}",
             status_code=status.HTTP_303_SEE_OTHER
         )
 
     logger.info(f"Admin {current_user.username} cleared auto-delete marking for vehicle {vehicle.vehicle_id}")
     return RedirectResponse(
-        url=f"{request.url_for('ui_admin_dashboard')}?success_message={quote_plus(f'Auto-delete cancelled for vehicle {vehicle.vehicle_id}.')}",
+        url=f"{request.url_for('ui_admin_dashboard')}?success_message={quote_plus(_("Auto-delete cancelled for vehicle %(id)s.") % {'id': vehicle.vehicle_id})}",
         status_code=status.HTTP_303_SEE_OTHER
     )
 
@@ -192,11 +194,12 @@ def ui_admin_update_disposable_email_settings_route(
     db: Session = Depends(get_db),
     current_user: models_db.User = Depends(require_admin_user_from_cookie)
 ):
+    _ = get_translator(request)
     try:
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
         return RedirectResponse(
-            url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus(str(e.detail))}",
+            url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus(_(str(e.detail)))}",
             status_code=status.HTTP_303_SEE_OTHER
         )
 
@@ -226,11 +229,11 @@ def ui_admin_update_disposable_email_settings_route(
         except DisposableEmailListUnavailable as exc:
             logger.warning("Failed to refresh disposable email list: %s", exc)
             return RedirectResponse(
-                url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus(f'Settings saved, but refresh failed: {exc}')}",
+                url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus(_("Settings saved, but refresh failed: %(error)s") % {'error': exc})}",
                 status_code=status.HTTP_303_SEE_OTHER
             )
 
     return RedirectResponse(
-        url=f"{request.url_for('ui_admin_dashboard')}?success_message=Disposable email settings saved.",
+        url=f"{request.url_for('ui_admin_dashboard')}?success_message={quote_plus(_("Disposable email settings saved."))}",
         status_code=status.HTTP_303_SEE_OTHER
     )

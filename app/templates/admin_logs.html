@@ -70,7 +70,7 @@
             </span>
             <span class="text-sm font-medium text-text-secondary">
                 <span x-text="logLines.length"></span> {{ _('lines') }}
-                <span x-show="maxLinesReached" class="text-yellow-400 ml-2">(max)</span>
+                <span x-show="maxLinesReached" class="text-yellow-400 ml-2">{{ _('(max)') }}</span>
             </span>
             <button @click="togglePolling"
                     class="px-3 py-1.5 text-sm font-medium border rounded-md transition-colors"

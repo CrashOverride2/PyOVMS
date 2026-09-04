@@ -12,7 +12,7 @@ from app import crud, notifications
 from app.models import api as models_api
 from app.models import db as models_db
 from app.config import settings
-from . import templates, get_common_template_vars 
+from . import templates, get_common_template_vars, get_translator
 from app.dependencies import get_user_from_request_cookie, get_client_ip
 from app.security_manager import security_manager
 from app.services.disposable_email_service import (
@@ -52,15 +52,18 @@ def ui_register_submit_route(
     if not settings.ALLOW_USER_REGISTRATION:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registration is disabled.")
 
+    # Bound before the CSRF check, not after: the redirect below translates the
+    # exception detail, and get_common_template_vars() is only reached further down.
+    _ = get_translator(request)
+
     try:
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
         security_manager.record_failure(client_ip, 'api_general')
         register_form_url = str(request.url_for('ui_register_form'))
-        return RedirectResponse(url=f"{register_form_url}?error_message={quote_plus(str(e.detail))}", status_code=status.HTTP_303_SEE_OTHER)
-    
+        return RedirectResponse(url=f"{register_form_url}?error_message={quote_plus(_(str(e.detail)))}", status_code=status.HTTP_303_SEE_OTHER)
+
     common_vars = get_common_template_vars(request, None)
-    _ = common_vars["_"]
     form_data = {"username": username, "email": email}
     
     if password != confirm_password:
@@ -135,6 +138,7 @@ def ui_register_submit_route(
 
 @router.get("/verify/{token}", response_class=HTMLResponse, name="ui_verify_email")
 def ui_verify_email_route(request: Request, token: str, db: Session = Depends(get_db)):
+    _ = get_translator(request)
     common_vars = get_common_template_vars(request, None)
     user = crud.user.get_user_by_verification_token(db, token=token)
 
@@ -144,7 +148,7 @@ def ui_verify_email_route(request: Request, token: str, db: Session = Depends(ge
     # Check if already verified (token already used)
     if user.is_active and not user.email_verification_token:
         return RedirectResponse(
-            url=f"{request.url_for('ui_login_form')}?error_message=This verification link has already been used.",
+            url=f"{request.url_for('ui_login_form')}?error_message={quote_plus(_("This verification link has already been used."))}",
             status_code=status.HTTP_303_SEE_OTHER
         )
 
@@ -160,4 +164,4 @@ def ui_verify_email_route(request: Request, token: str, db: Session = Depends(ge
 
     # Single-use: Clear token immediately upon use
     crud.user.activate_user_and_clear_token(db, user)
-    return RedirectResponse(url=f"{request.url_for('ui_login_form')}?success_message=Your account has been activated! You can now log in.", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url=f"{request.url_for('ui_login_form')}?success_message={quote_plus(_("Your account has been activated! You can now log in."))}", status_code=status.HTTP_303_SEE_OTHER)

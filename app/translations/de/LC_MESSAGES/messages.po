@@ -32,6 +32,18 @@ msgstr ""
 msgid "(days to keep)."
 msgstr "(Aufbewahrung in Tagen)."
 
+#: app/templates/add_vehicle_wizard.html
+msgid "(leave unchecked for V2-only)"
+msgstr "(für reines V2 nicht ankreuzen)"
+
+#: app/templates/add_vehicle_wizard.html
+msgid "(leave unchecked for V3-only)"
+msgstr "(für reines V3 nicht ankreuzen)"
+
+#: app/templates/admin_logs.html
+msgid "(max)"
+msgstr "(max.)"
+
 #: app/templates/edit_user.html
 #, python-format
 msgid ""
@@ -107,9 +119,23 @@ msgstr ""
 "Ein Fahrzeug wurde aufgrund von mehr als 12 Monaten Inaktivität automatisch gelöscht."
 " Alle zugehörigen Daten wurden entfernt."
 
+#: app/routers/ui/profile.py
+#, python-format
+msgid "API Key '%(name)s' created."
+msgstr "API-Schlüssel '%(name)s' erstellt."
+
+#: app/routers/ui/profile.py
+#, python-format
+msgid "API Key '%(name)s' deleted."
+msgstr "API-Schlüssel '%(name)s' gelöscht."
+
 #: app/templates/profile.html
 msgid "API Key Prefix"
 msgstr "API-Schlüssel-Präfix"
+
+#: app/routers/ui/profile.py
+msgid "API Key not found or not owned by you."
+msgstr "API-Schlüssel nicht gefunden oder gehört Ihnen nicht."
 
 #: app/templates/profile.html
 msgid "API Keys"
@@ -122,6 +148,11 @@ msgstr "Abbruch:"
 #: app/templates/profile_webauthn_tab.html
 msgid "About WebAuthn Security Keys"
 msgstr "Über WebAuthn-Sicherheitsschlüssel"
+
+#: app/routers/ui/profile.py
+#, python-format
+msgid "Account '%(name)s' has been deleted."
+msgstr "Konto '%(name)s' wurde gelöscht."
 
 #: app/templates/email/admin_lifecycle_account.html
 msgid "Account Automatically Deleted"
@@ -138,6 +169,10 @@ msgstr "Hinweis zur Kontolöschung"
 #: app/templates/email/admin_lifecycle_account.html
 msgid "Account Deletion Warning"
 msgstr "Warnung zur Kontolöschung"
+
+#: app/templates/email/admin_lifecycle_account.html
+msgid "Account Lifecycle Notification"
+msgstr "Benachrichtigung zum Konto-Lebenszyklus"
 
 #: app/templates/verification_failed.html
 msgid "Account Verification Failed"
@@ -238,9 +273,41 @@ msgstr "Admin"
 msgid "Admin Dashboard"
 msgstr "Admin-Dashboard"
 
+#: app/routers/ui/users.py
+msgid "Admin cannot deactivate themselves."
+msgstr "Administratoren können sich nicht selbst deaktivieren."
+
+#: app/routers/ui/users.py
+msgid "Admin cannot delete themselves."
+msgstr "Administratoren können sich nicht selbst löschen."
+
+#: app/routers/ui/users.py
+msgid "Admin cannot remove their own admin status."
+msgstr "Administratoren können sich den eigenen Admin-Status nicht entziehen."
+
+#: app/routers/ui/vehicles.py
+msgid "Admin must select an owner for the vehicle."
+msgstr "Als Administrator müssen Sie einen Besitzer für das Fahrzeug auswählen."
+
 #: app/templates/profile.html
 msgid "Administrator"
 msgstr "Administrator"
+
+#: app/routers/ui/vehicles.py
+msgid "Admins cannot view charge information."
+msgstr "Administratoren können keine Ladeinformationen einsehen."
+
+#: app/routers/ui/vehicles.py
+msgid "Admins cannot view detailed vehicle information."
+msgstr "Administratoren können keine detaillierten Fahrzeuginformationen einsehen."
+
+#: app/routers/ui/vehicles.py
+msgid "Admins cannot view trip information."
+msgstr "Administratoren können keine Fahrtinformationen einsehen."
+
+#: app/routers/ui/dashboard.py
+msgid "Admins do not have a vehicle dashboard."
+msgstr "Administratoren haben kein Fahrzeug-Dashboard."
 
 #: app/templates/edit_vehicle.html
 msgid "Advanced Security (Paranoid Mode)"
@@ -455,6 +522,14 @@ msgstr "Authenticator-App (TOTP)"
 msgid "Authenticator Code"
 msgstr "Authentifizierungs-Code"
 
+#: app/routers/ui/profile.py
+msgid "Authenticator app disabled successfully."
+msgstr "Authenticator-App erfolgreich deaktiviert."
+
+#: app/routers/ui/profile.py
+msgid "Authenticator app enabled successfully."
+msgstr "Authenticator-App erfolgreich aktiviert."
+
 #: app/templates/profile.html
 msgid "Authenticator app is currently <strong>ENABLED</strong>."
 msgstr "Die Authenticator-App ist derzeit <strong>AKTIVIERT</strong>."
@@ -466,6 +541,16 @@ msgstr "Automatisch gelöscht"
 #: app/templates/base.html
 msgid "Auto-Provision"
 msgstr "Auto-Provisionierung"
+
+#: app/routers/ui/users.py
+#, python-format
+msgid "Auto-delete cancelled for user %(name)s."
+msgstr "Automatische Löschung für Benutzer %(name)s abgebrochen."
+
+#: app/routers/ui/admin.py
+#, python-format
+msgid "Auto-delete cancelled for vehicle %(id)s."
+msgstr "Automatische Löschung für Fahrzeug %(id)s abgebrochen."
 
 #: app/templates/autoprovision_management.html
 msgid ""
@@ -663,6 +748,18 @@ msgstr "CPU-Auslastung"
 msgid "CRITICAL"
 msgstr "KRITISCH"
 
+#: app/csrf_protection.py
+msgid "CSRF token mismatch. Please try again."
+msgstr "CSRF-Token stimmt nicht überein. Bitte versuchen Sie es erneut."
+
+#: app/csrf_protection.py
+msgid "CSRF token missing from form submission."
+msgstr "CSRF-Token fehlt in der Formularübermittlung."
+
+#: app/csrf_protection.py
+msgid "CSRF token missing from session. Please refresh the page."
+msgstr "CSRF-Token fehlt in der Sitzung. Bitte laden Sie die Seite neu."
+
 #: app/templates/admin_dashboard.html
 msgid "Cached domains"
 msgstr "Zwischengespeicherte Domänen"
@@ -697,6 +794,10 @@ msgstr "Automatische Löschmarkierung aufheben für"
 msgid "Cancel deletion"
 msgstr "Löschung abbrechen"
 
+#: app/routers/ui/vehicles.py
+msgid "Cannot assign a vehicle to an administrator."
+msgstr "Ein Fahrzeug kann keinem Administrator zugewiesen werden."
+
 #: app/templates/edit_user.html
 msgid "Cannot change own admin status"
 msgstr "Eigener Admin-Status kann nicht geändert werden"
@@ -708,6 +809,18 @@ msgstr "Kann für sich selbst nicht geändert werden"
 #: app/templates/edit_user.html
 msgid "Cannot deactivate self"
 msgstr "Kann sich nicht selbst deaktivieren"
+
+#: app/routers/ui/users.py
+msgid "Cannot delete the last remaining admin account."
+msgstr "Das letzte verbleibende Administratorkonto kann nicht gelöscht werden."
+
+#: app/routers/ui/profile.py
+msgid "Cannot delete the only admin account."
+msgstr "Das einzige Administratorkonto kann nicht gelöscht werden."
+
+#: app/routers/ui/users.py
+msgid "Cannot remove the last remaining admin account."
+msgstr "Das letzte verbleibende Administratorkonto kann nicht entfernt werden."
 
 #: app/templates/vehicle_detail.html
 msgid "Cell"
@@ -892,9 +1005,20 @@ msgstr "Kopiert!"
 msgid "Copy"
 msgstr "Kopieren"
 
+#: app/routers/ui/users.py
+#, python-format
+msgid "Could not delete user %(name)s. They may own vehicles or AP profiles."
+msgstr ""
+"Benutzer %(name)s konnte nicht gelöscht werden. Möglicherweise sind ihm noch "
+"Fahrzeuge oder AP-Profile zugeordnet."
+
 #: app/templates/_vehicle_cell_stats.html
 msgid "Count:"
 msgstr "Anzahl:"
+
+#: app/templates/base.html
+msgid "Crafted with"
+msgstr "Erstellt mit"
 
 #: app/templates/_vehicle_logs.html
 msgid "Crash & Debug Logs"
@@ -1078,6 +1202,10 @@ msgstr "Schutz vor Wegwerf-E-Mails"
 msgid "Disposable email addresses are not allowed."
 msgstr "Wegwerf-E-Mail-Adressen sind nicht erlaubt."
 
+#: app/routers/ui/admin.py
+msgid "Disposable email settings saved."
+msgstr "Einstellungen für Wegwerf-E-Mails gespeichert."
+
 #: app/templates/_trip_list.html app/templates/trip_detail.html
 msgid "Distance"
 msgstr "Distanz"
@@ -1144,6 +1272,10 @@ msgstr "E-Mail"
 #: app/templates/register.html
 msgid "Email Address"
 msgstr "E-Mail-Adresse"
+
+#: app/routers/ui/vehicles.py
+msgid "Email recipient added."
+msgstr "E-Mail-Empfänger hinzugefügt."
 
 #: app/templates/_vehicle_notifications.html
 msgid "Email server not configured globally"
@@ -1252,6 +1384,10 @@ msgstr "Fehler beim Löschen des Ladevorgangs: "
 msgid "Error deleting trip: "
 msgstr "Fehler beim Löschen der Fahrt: "
 
+#: app/routers/ui/auth.py
+msgid "Error with 2FA setup. Please login again."
+msgstr "Fehler bei der 2FA-Einrichtung. Bitte melden Sie sich erneut an."
+
 #: app/templates/base.html app/templates/forgot_password.html app/templates/login.html
 #: app/templates/login_totp.html app/templates/login_webauthn_2fa.html
 #: app/templates/register.html app/templates/reset_password.html
@@ -1285,6 +1421,10 @@ msgstr "Läuft ab in (Tagen)"
 #: app/templates/profile.html
 msgid "Expires:"
 msgstr "Läuft ab:"
+
+#: app/routers/ui/profile.py
+msgid "Expiry days must be a positive number."
+msgstr "Die Gültigkeitsdauer in Tagen muss eine positive Zahl sein."
 
 #: app/templates/_charge_list.html
 msgid "Export All (CSV)"
@@ -1653,6 +1793,22 @@ msgstr "Inaktiv/Abgelaufen"
 msgid "Inactivity Warning Sent"
 msgstr "Inaktivitätswarnung gesendet"
 
+#: app/routers/ui/profile.py
+msgid "Incorrect confirmation text."
+msgstr "Falscher Bestätigungstext."
+
+#: app/routers/ui/vehicles.py
+msgid "Incorrect confirmation text. Vehicle deletion cancelled."
+msgstr "Falscher Bestätigungstext. Löschen des Fahrzeugs abgebrochen."
+
+#: app/routers/ui/profile.py
+msgid "Incorrect current password."
+msgstr "Aktuelles Passwort ist falsch."
+
+#: app/routers/ui/profile.py
+msgid "Incorrect password."
+msgstr "Falsches Passwort."
+
 #: app/templates/_charge_list.html
 msgid "Individual Charge Sessions"
 msgstr "Einzelne Ladevorgänge"
@@ -1681,6 +1837,10 @@ msgstr "Stil der Infobox"
 msgid "Info Box Title"
 msgstr "Titel der Infobox"
 
+#: app/routers/ui/admin.py
+msgid "Info Box updated successfully."
+msgstr "Infobox erfolgreich aktualisiert."
+
 #: app/templates/base.html
 msgid "Info:"
 msgstr "Info:"
@@ -1693,17 +1853,45 @@ msgstr ""
 "Stecken Sie Ihren Sicherheitsschlüssel ein oder bereiten Sie Ihren biometrischen "
 "Authentifikator vor, und klicken Sie dann auf die Schaltfläche unten."
 
+#: app/routers/ui/auth.py
+msgid "Invalid 2FA code. Please try again."
+msgstr "Ungültiger 2FA-Code. Bitte versuchen Sie es erneut."
+
 #: app/templates/reset_password_invalid.html
 msgid "Invalid Reset Link"
 msgstr "Ungültiger Zurücksetzungslink"
+
+#: app/routers/ui/profile.py
+msgid "Invalid TOTP code. Please try again."
+msgstr "Ungültiger TOTP-Code. Bitte versuchen Sie es erneut."
+
+#: app/routers/ui/vehicles.py
+msgid "Invalid email address."
+msgstr "Ungültige E-Mail-Adresse."
 
 #: app/templates/error.html
 msgid "Invalid form submission"
 msgstr "Ungültige Formularübermittlung"
 
+#: app/csrf_protection.py
+msgid "Invalid or expired CSRF token. Please try again."
+msgstr "Ungültiger oder abgelaufener CSRF-Token. Bitte versuchen Sie es erneut."
+
+#: app/routers/ui/profile.py app/routers/ui/users.py
+msgid "Invalid timezone selected."
+msgstr "Ungültige Zeitzone ausgewählt."
+
+#: app/routers/ui/profile.py
+msgid "Invalid unit preference."
+msgstr "Ungültige Einheiteneinstellung."
+
 #: app/routers/ui/vehicles.py
 msgid "Invalid value"
 msgstr "Ungültiger Wert"
+
+#: app/routers/ui/profile.py
+msgid "Invalid value for expiry days."
+msgstr "Ungültiger Wert für die Gültigkeitsdauer in Tagen."
 
 #: app/templates/edit_autoprovision_profile.html app/templates/edit_user.html
 msgid "Is Active?"
@@ -2138,6 +2326,10 @@ msgstr "Neue Benutzerregistrierung auf PyOVMS"
 msgid "New password (leave blank if not changing)"
 msgstr "Neues Passwort (leer lassen, wenn keine Änderung)"
 
+#: app/routers/ui/profile.py
+msgid "New passwords do not match."
+msgstr "Die neuen Passwörter stimmen nicht überein."
+
 #: app/templates/vehicle_datalogs.html
 msgid "Newer"
 msgstr "Neuere"
@@ -2175,6 +2367,10 @@ msgstr "Keine V3-Metrikdaten verfügbar. Ist das Fahrzeug über MQTT online?"
 #: app/templates/autoprovision_management.html
 msgid "No auto-provisioning profiles found."
 msgstr "Keine Auto-Provisionierungsprofile gefunden."
+
+#: app/routers/ui/profile.py
+msgid "No changes detected."
+msgstr "Keine Änderungen festgestellt."
 
 #: app/templates/_charge_statistics.html
 msgid "No charge data for this period."
@@ -2249,6 +2445,22 @@ msgstr "Keine"
 #: app/templates/edit_vehicle.html
 msgid "Not Configured"
 msgstr "Nicht konfiguriert"
+
+#: app/routers/ui/vehicles.py
+msgid "Not authorized to delete this vehicle."
+msgstr "Keine Berechtigung, dieses Fahrzeug zu löschen."
+
+#: app/routers/ui/vehicles.py
+msgid "Not authorized to edit this vehicle."
+msgstr "Keine Berechtigung, dieses Fahrzeug zu bearbeiten."
+
+#: app/routers/ui/vehicles.py
+msgid "Not authorized to view this vehicle's details."
+msgstr "Keine Berechtigung, die Details dieses Fahrzeugs anzuzeigen."
+
+#: app/routers/ui/vehicles.py
+msgid "Not authorized."
+msgstr "Keine Berechtigung."
 
 #: app/templates/admin_dashboard.html
 msgid "Not fetched yet"
@@ -2424,6 +2636,10 @@ msgstr "Passwort-Zurücksetzungsanfrage"
 msgid "Password Reset Successful"
 msgstr "Passwort erfolgreich zurückgesetzt"
 
+#: app/routers/ui/profile.py
+msgid "Password updated successfully."
+msgstr "Passwort erfolgreich aktualisiert."
+
 #: app/templates/profile.html
 msgid "Password:"
 msgstr "Passwort:"
@@ -2499,6 +2715,29 @@ msgstr "Zurück"
 msgid "Privacy Policy"
 msgstr "Datenschutzrichtlinie"
 
+#: app/routers/ui/autoprovision.py
+#, python-format
+msgid "Profile '%(key)s' created successfully."
+msgstr "Profil '%(key)s' erfolgreich erstellt."
+
+#: app/routers/ui/autoprovision.py
+#, python-format
+msgid "Profile '%(key)s' deleted successfully."
+msgstr "Profil '%(key)s' erfolgreich gelöscht."
+
+#: app/routers/ui/autoprovision.py
+#, python-format
+msgid "Profile '%(key)s' updated successfully."
+msgstr "Profil '%(key)s' erfolgreich aktualisiert."
+
+#: app/routers/ui/autoprovision.py
+msgid "Profile not found."
+msgstr "Profil nicht gefunden."
+
+#: app/routers/ui/profile.py
+msgid "Profile updated successfully."
+msgstr "Profil erfolgreich aktualisiert."
+
 #: app/templates/autoprovision_management.html
 msgid "Provisioning Key"
 msgstr "Provisionierungsschlüssel"
@@ -2506,6 +2745,10 @@ msgstr "Provisionierungsschlüssel"
 #: app/templates/edit_autoprovision_profile.html
 msgid "Provisioning Key (Shared Secret)"
 msgstr "Provisionierungsschlüssel (Shared Secret)"
+
+#: app/routers/ui/vehicles.py
+msgid "Push subscription removed."
+msgstr "Push-Abonnement entfernt."
 
 #: app/templates/_vehicle_notifications.html
 msgid "Push tokens (FCM, APNs, UnifiedPush) are registered automatically by the app."
@@ -2706,6 +2949,10 @@ msgstr "Zurücksetzungslink abgelaufen"
 msgid "Reset Password"
 msgstr "Passwort zurücksetzen"
 
+#: app/templates/email/password_reset_body.html
+msgid "Reset Your PyOVMS Password"
+msgstr "Setzen Sie Ihr PyOVMS-Passwort zurück"
+
 #: app/templates/totp_key_rotation.html
 msgid "Restart the server"
 msgstr "Starten Sie den Server neu"
@@ -2861,6 +3108,10 @@ msgstr ""
 "Wählen Sie aus, welches/welche Protokoll(e) dieses Fahrzeug zum Verbinden verwenden "
 "soll."
 
+#: app/routers/ui/vehicles.py
+msgid "Selected owner not found."
+msgstr "Ausgewählter Besitzer nicht gefunden."
+
 #: app/templates/_vehicle_terminal.html
 msgid "Send"
 msgstr "Senden"
@@ -2909,6 +3160,10 @@ msgstr "Server-Passwort ist zu lang (max. 64 Zeichen)"
 msgid "Service unavailable. Server sent an unexpected response (Status: "
 msgstr "Dienst nicht verfügbar. Server hat eine unerwartete Antwort gesendet (Status: "
 
+#: app/routers/ui/auth.py
+msgid "Session expired. Please login again."
+msgstr "Sitzung abgelaufen. Bitte melden Sie sich erneut an."
+
 #: app/templates/reset_password.html
 msgid "Set New Password"
 msgstr "Neues Passwort festlegen"
@@ -2920,6 +3175,11 @@ msgstr "Passwort festlegen"
 #: app/templates/admin_dashboard.html
 msgid "Set to 0 to disable scheduled refreshes (manual only)."
 msgstr "Auf 0 setzen, um geplante Aktualisierungen zu deaktivieren (nur manuell)."
+
+#: app/routers/ui/admin.py
+#, python-format
+msgid "Settings saved, but refresh failed: %(error)s"
+msgstr "Einstellungen gespeichert, aber die Aktualisierung ist fehlgeschlagen: %(error)s"
 
 #: app/templates/totp_key_rotation.html
 msgid "Setup Required"
@@ -3082,6 +3342,27 @@ msgstr "TOTP aktiviert:"
 #: app/templates/admin_dashboard.html
 msgid "TOTP Key Rotation"
 msgstr "TOTP-Schlüsselrotation"
+
+#: app/templates/profile_totp_setup.html
+msgid "TOTP QR Code"
+msgstr "TOTP-QR-Code"
+
+#: app/routers/ui/profile.py
+msgid "TOTP is already enabled."
+msgstr "TOTP ist bereits aktiviert."
+
+#: app/routers/ui/profile.py
+msgid "TOTP is not enabled."
+msgstr "TOTP ist nicht aktiviert."
+
+#: app/routers/ui/profile.py
+msgid "TOTP setup session expired. Please try again."
+msgstr "Die TOTP-Einrichtungssitzung ist abgelaufen. Bitte versuchen Sie es erneut."
+
+#: app/templates/edit_vehicle.html app/templates/profile.html
+#: app/templates/vehicle_detail.html
+msgid "Tabs"
+msgstr "Registerkarten"
 
 #: app/templates/totp_key_rotation.html
 msgid "Target Key Version"
@@ -3285,6 +3566,10 @@ msgstr ""
 "Dieser Wert wird vom Fahrzeug gesendet, wenn es sich im Paranoid-Modus befindet, und "
 "wird im Allgemeinen nicht manuell bearbeitet."
 
+#: app/routers/ui/registration.py
+msgid "This verification link has already been used."
+msgstr "Dieser Bestätigungslink wurde bereits verwendet."
+
 #: app/templates/email/verification_body.html app/templates/email/verification_body.txt
 #, python-format
 msgid ""
@@ -3349,6 +3634,14 @@ msgstr "Token"
 #: app/templates/_vehicle_notifications.html
 msgid "Token registered"
 msgstr "Token registriert"
+
+#: app/routers/ui/profile.py
+msgid "Too many attempts. Try again later."
+msgstr "Zu viele Versuche. Bitte versuchen Sie es später erneut."
+
+#: app/routers/ui/auth.py
+msgid "Too many failed attempts. Please try again later."
+msgstr "Zu viele fehlgeschlagene Versuche. Bitte versuchen Sie es später erneut."
 
 #: app/templates/profile.html
 msgid "Topic Access:"
@@ -3430,6 +3723,20 @@ msgstr "Fahrtstart"
 msgid "Trip Statistics"
 msgstr "Fahrtstatistiken"
 
+#: app/routers/ui/users.py
+msgid "Trip data could not be deleted right now, so the account was kept. Please retry."
+msgstr ""
+"Die Fahrtdaten konnten gerade nicht gelöscht werden, daher wurde das Konto "
+"beibehalten. Bitte versuchen Sie es erneut."
+
+#: app/routers/ui/vehicles.py
+msgid ""
+"Trip data could not be deleted right now, so the vehicle was kept. Please try again "
+"shortly."
+msgstr ""
+"Die Fahrtdaten konnten gerade nicht gelöscht werden, daher wurde das Fahrzeug "
+"beibehalten. Bitte versuchen Sie es in Kürze erneut."
+
 #: app/templates/trip_detail.html
 msgid "Trip deleted successfully."
 msgstr "Fahrt erfolgreich gelöscht."
@@ -3484,6 +3791,12 @@ msgstr "Geben Sie hier DELETE ein"
 #: app/templates/profile.html
 msgid "Type DELETE to confirm"
 msgstr "Geben Sie DELETE zur Bestätigung ein"
+
+#: app/routers/ui/users.py
+msgid "Unable to validate email domain right now. Please try again later."
+msgstr ""
+"Die E-Mail-Domain kann derzeit nicht geprüft werden. Bitte versuchen Sie es später "
+"erneut."
 
 #: app/templates/blocked_ips.html
 msgid "Unblock"
@@ -3567,6 +3880,21 @@ msgstr "Verwenden Sie Ihren Sicherheitsschlüssel oder biometrischen Authentifik
 msgid "User"
 msgstr "Benutzer"
 
+#: app/routers/ui/users.py
+#, python-format
+msgid "User '%(name)s' created successfully."
+msgstr "Benutzer '%(name)s' erfolgreich erstellt."
+
+#: app/routers/ui/users.py
+#, python-format
+msgid "User '%(name)s' deleted successfully."
+msgstr "Benutzer '%(name)s' erfolgreich gelöscht."
+
+#: app/routers/ui/users.py
+#, python-format
+msgid "User '%(name)s' updated successfully."
+msgstr "Benutzer '%(name)s' erfolgreich aktualisiert."
+
 #: app/templates/profile.html
 msgid "User Information"
 msgstr "Benutzerinformationen"
@@ -3574,6 +3902,10 @@ msgstr "Benutzerinformationen"
 #: app/templates/edit_user.html
 msgid "User Management"
 msgstr "Benutzerverwaltung"
+
+#: app/routers/ui/users.py
+msgid "User not found."
+msgstr "Benutzer nicht gefunden."
 
 #: app/templates/edit_user.html
 msgid "User's full name"
@@ -3685,6 +4017,21 @@ msgstr "V3-Server-CLI-Konfiguration"
 msgid "V3/MQTT Configuration Details"
 msgstr "V3/MQTT-Konfigurationsdetails"
 
+#: app/routers/ui/vehicles.py
+#, python-format
+msgid "Vehicle '%(id)s' added successfully."
+msgstr "Fahrzeug '%(id)s' erfolgreich hinzugefügt."
+
+#: app/routers/ui/vehicles.py
+#, python-format
+msgid "Vehicle '%(id)s' deleted successfully."
+msgstr "Fahrzeug '%(id)s' erfolgreich gelöscht."
+
+#: app/routers/ui/vehicles.py
+#, python-format
+msgid "Vehicle '%(id)s' updated successfully."
+msgstr "Fahrzeug '%(id)s' erfolgreich aktualisiert."
+
 #: app/templates/add_vehicle_wizard.html
 msgid "Vehicle / Module ID"
 msgstr "Fahrzeug- / Modul-ID"
@@ -3710,6 +4057,18 @@ msgstr "Fahrzeug-Datenlogs"
 msgid "Vehicle ID"
 msgstr "Fahrzeug-ID"
 
+#: app/routers/ui/vehicles.py
+msgid "Vehicle ID cannot be changed after creation."
+msgstr "Die Fahrzeug-ID kann nach der Erstellung nicht mehr geändert werden."
+
+#: app/routers/ui/vehicles.py
+msgid "Vehicle ID must only contain letters, numbers, and hyphens."
+msgstr "Die Fahrzeug-ID darf nur Buchstaben, Zahlen und Bindestriche enthalten."
+
+#: app/templates/email/admin_lifecycle_vehicle.html
+msgid "Vehicle Lifecycle Notification"
+msgstr "Benachrichtigung zum Fahrzeug-Lebenszyklus"
+
 #: app/templates/add_vehicle_wizard.html app/templates/email/admin_lifecycle_vehicle.html
 #: app/templates/email/admin_lifecycle_vehicle.txt
 #: app/templates/email/unused_vehicle_warning.html
@@ -3725,7 +4084,7 @@ msgstr "Fahrzeugname (Anzeigename)"
 msgid "Vehicle Owner"
 msgstr "Fahrzeugbesitzer"
 
-#: app/notifications/mail/user.py
+#: app/notifications/mail/user.py app/templates/email/vehicle_auto_deleted.html
 msgid "Vehicle Removed"
 msgstr "Fahrzeug entfernt"
 
@@ -3733,6 +4092,22 @@ msgstr "Fahrzeug entfernt"
 #: app/templates/email/vehicle_auto_deleted.txt
 msgid "Vehicle name"
 msgstr "Fahrzeugname"
+
+#: app/routers/ui/vehicles.py
+msgid "Vehicle not found for deletion."
+msgstr "Zu löschendes Fahrzeug nicht gefunden."
+
+#: app/routers/ui/vehicles.py
+msgid "Vehicle not found for update (unexpected)."
+msgstr "Zu aktualisierendes Fahrzeug nicht gefunden (unerwartet)."
+
+#: app/routers/ui/admin.py app/routers/ui/vehicles.py
+msgid "Vehicle not found."
+msgstr "Fahrzeug nicht gefunden."
+
+#: app/routers/ui/vehicles.py
+msgid "Vehicle to update not found."
+msgstr "Zu aktualisierendes Fahrzeug nicht gefunden."
 
 #: app/templates/edit_vehicle.html
 msgid "Vehicle/Module ID (Unique)"
@@ -3762,11 +4137,11 @@ msgstr "Überprüfen & Aktivieren"
 msgid "Verify Code"
 msgstr "Code überprüfen"
 
-#: app/notifications/mail/user.py
+#: app/notifications/mail/user.py app/templates/email/verification_body.html
 msgid "Verify Your PyOVMS Account"
 msgstr "Bestätigen Sie Ihr PyOVMS-Konto"
 
-#: app/templates/totp_key_rotation.html
+#: app/templates/base.html app/templates/totp_key_rotation.html
 msgid "Version"
 msgstr "Version"
 
@@ -3895,6 +4270,10 @@ msgstr ""
 msgid "Your API Keys"
 msgstr "Ihre API-Schlüssel"
 
+#: app/routers/ui/registration.py
+msgid "Your account has been activated! You can now log in."
+msgstr "Ihr Konto wurde aktiviert! Sie können sich jetzt anmelden."
+
 #: app/templates/email/account_deletion_warning.html
 msgid ""
 "Your account has no registered vehicles and you have not logged in for more than 30 "
@@ -3961,6 +4340,14 @@ msgstr ""
 "Ihr Passwort wurde erfolgreich zurückgesetzt. Sie können sich jetzt mit Ihrem neuen "
 "Passwort anmelden."
 
+#: app/routers/ui/profile.py
+msgid ""
+"Your trip data could not be deleted right now, so the account was kept. Please try "
+"again."
+msgstr ""
+"Ihre Fahrtdaten konnten gerade nicht gelöscht werden, daher wurde das Konto "
+"beibehalten. Bitte versuchen Sie es erneut."
+
 #: app/templates/login.html
 msgid "Your username"
 msgstr "Ihr Benutzername"
@@ -4023,6 +4410,10 @@ msgstr "Konto/Konten stehen zur automatischen Löschung an"
 msgid "and"
 msgstr "und"
 
+#: app/templates/base.html
+msgid "by"
+msgstr "von"
+
 #: app/templates/edit_vehicle.html
 msgid "create a user"
 msgstr "erstellen Sie einen Benutzer"
@@ -4055,6 +4446,10 @@ msgstr "z.B. TESTWAGEN"
 msgid "first."
 msgstr "zuerst."
 
+#: app/templates/profile.html
+msgid "for each of your vehicles."
+msgstr "für jedes Ihrer Fahrzeuge."
+
 #: app/templates/_trip_search_heatmap.html
 msgid "from search point"
 msgstr "vom Suchpunkt"
@@ -4066,6 +4461,14 @@ msgstr "Zeilen"
 #: app/templates/email/admin_ip_blocked.html app/templates/email/admin_ip_blocked.txt
 msgid "minutes"
 msgstr "Minuten"
+
+#: app/routers/ui/vehicles.py
+msgid "ntfy topic added."
+msgstr "ntfy-Topic hinzugefügt."
+
+#: app/routers/ui/vehicles.py
+msgid "ntfy topic cannot be empty."
+msgstr "ntfy-Topic darf nicht leer sein."
 
 #: app/templates/_charge_list.html app/templates/_trip_list.html
 #: app/templates/_trip_search_heatmap.html
@@ -4104,179 +4507,4 @@ msgstr "Fahrzeug(e) stehen zur automatischen Löschung an"
 #: app/templates/register.html
 msgid "your@email.com"
 msgstr "ihre@email.com"
-
-#~ msgid "Language"
-#~ msgstr "Sprache"
-
-#~ msgid ""
-#~ "We received a request to reset your "
-#~ "password. Click the link below to set a"
-#~ " new password:"
-#~ msgstr ""
-#~ "Wir haben eine Anfrage zum Zurücksetzen Ihres"
-#~ " Passworts erhalten. Klicken Sie auf den "
-#~ "Link unten, um ein neues Passwort festzulegen:"
-
-#~ msgid "Passwords do not match."
-#~ msgstr "Passwörter stimmen nicht überein."
-
-#~ msgid "Password must be at least 8 characters long."
-#~ msgstr "Das Passwort muss mindestens 8 Zeichen lang sein."
-
-#~ msgid "V3/MQTT is not configured on the server."
-#~ msgstr "V3/MQTT ist auf dem Server nicht konfiguriert."
-
-#~ msgid "Hide"
-#~ msgstr "Verbergen"
-
-#~ msgid "Show"
-#~ msgstr "Anzeigen"
-
-#~ msgid "Widget Push Service"
-#~ msgstr "Widget-Push-Dienst"
-
-#~ msgid "Widget Push Service Settings"
-#~ msgstr "Einstellungen für den Widget-Push-Dienst"
-
-#~ msgid ""
-#~ "Control whether silent push notifications are "
-#~ "sent to mobile app widgets when vehicle "
-#~ "metrics change. When disabled, the per-vehicle"
-#~ " option will be greyed out. Note: Badge "
-#~ "updates for real notifications are NOT "
-#~ "affected by this setting."
-#~ msgstr ""
-#~ "Steuern Sie, ob stille Push-Benachrichtigungen "
-#~ "an die Widgets der mobilen App gesendet "
-#~ "werden, wenn sich Fahrzeugmetriken ändern. Wenn "
-#~ "diese Option deaktiviert ist, wird die "
-#~ "fahrzeugspezifische Einstellung ausgegraut. Hinweis: "
-#~ "Badge-Aktualisierungen für echte Benachrichtigungen "
-#~ "sind von dieser Einstellung NICHT betroffen."
-
-#~ msgid "Enable Widget Push Service"
-#~ msgstr "Widget-Push-Dienst aktivieren"
-
-#~ msgid "Note:"
-#~ msgstr "Hinweis:"
-
-#~ msgid ""
-#~ "Real notifications with badge updates will "
-#~ "continue to work regardless of this setting."
-#~ " Only silent widget updates are affected."
-#~ msgstr ""
-#~ "Echte Benachrichtigungen mit Badge-Aktualisierungen "
-#~ "funktionieren unabhängig von dieser Einstellung "
-#~ "weiterhin. Nur stille Widget-Aktualisierungen sind"
-#~ " betroffen."
-
-#~ msgid "Widget push service is globally disabled by administrator"
-#~ msgstr "Der Widget-Push-Dienst ist vom Administrator global deaktiviert"
-
-#~ msgid "Enable Silent Push for Widgets"
-#~ msgstr "Stille Push-Benachrichtigungen für Widgets aktivieren"
-
-#~ msgid "Globally Disabled"
-#~ msgstr "Global deaktiviert"
-
-#~ msgid ""
-#~ "Send silent push notifications to update app"
-#~ " widgets when vehicle metrics change (requires"
-#~ " device tokens to be configured above)."
-#~ msgstr ""
-#~ "Stille Push-Benachrichtigungen senden, um App-"
-#~ "Widgets zu aktualisieren, wenn sich Fahrzeugmetriken"
-#~ " ändern (erfordert die oben konfigurierten "
-#~ "Geräte-Tokens)."
-
-#~ msgid "NTFY Notifications:"
-#~ msgstr "NTFY-Benachrichtigungen:"
-
-#~ msgid "Server:"
-#~ msgstr "Server:"
-
-#~ msgid "Topic:"
-#~ msgstr "Topic:"
-
-#~ msgid "Email Notifications:"
-#~ msgstr "E-Mail-Benachrichtigungen:"
-
-#~ msgid "To:"
-#~ msgstr "An:"
-
-#~ msgid "FCM (Android) Notifications:"
-#~ msgstr "FCM (Android) Benachrichtigungen:"
-
-#~ msgid "Token:"
-#~ msgstr "Token:"
-
-#~ msgid "APNs (Apple) Notifications:"
-#~ msgstr "APNs (Apple) Benachrichtigungen:"
-
-#~ msgid "Edit these settings via the \"Edit Vehicle\" button."
-#~ msgstr "Bearbeiten Sie diese Einstellungen über die Schaltfläche „Fahrzeug bearbeiten“."
-
-#~ msgid "Prefix"
-#~ msgstr "Präfix"
-
-#~ msgid "Expires"
-#~ msgstr "Läuft ab"
-
-#~ msgid "Last Used"
-#~ msgstr "Zuletzt verwendet"
-
-#~ msgid "Push Notifications"
-#~ msgstr "Push-Benachrichtigungen"
-
-#~ msgid "No push notifications configured."
-#~ msgstr "Keine Push-Benachrichtigungen konfiguriert."
-
-#~ msgid "Remove this push subscription?"
-#~ msgstr "Diese Push-Benachrichtigung entfernen?"
-
-#~ msgid "Save"
-#~ msgstr "Speichern"
-
-#~ msgid "For authentication settings, use the"
-#~ msgstr "Für Authentifizierungseinstellungen bitte das"
-
-#~ msgid "full edit form"
-#~ msgstr "vollständige Bearbeitungsformular"
-
-#~ msgid "you"
-#~ msgstr "Sie"
-
-#~ msgid "Comic Code"
-#~ msgstr "Comic Code"
-
-#~ msgid "Verify Your PyOVMS Account"
-#~ msgstr "Bestätigen Sie Ihr PyOVMS-Konto"
-
-#~ msgid "Vehicle Removed"
-#~ msgstr "Fahrzeug entfernt"
-
-#~ msgid "App Store"
-#~ msgstr "App Store"
-
-#~ msgid "Download on the"
-#~ msgstr "Laden im"
-
-#~ msgid "GET IT ON"
-#~ msgstr "JETZT BEI"
-
-#~ msgid "Get the New OVMS Connect App!"
-#~ msgstr "Holen Sie sich die neue OVMS Connect App!"
-
-#~ msgid "Google Play"
-#~ msgstr "Google Play"
-
-#~ msgid ""
-#~ "Stay connected on the go. Monitor your "
-#~ "vehicle, receive real-time alerts, and send"
-#~ " commands directly from your smartphone."
-#~ msgstr ""
-#~ "Bleiben Sie auch unterwegs verbunden. Überwachen "
-#~ "Sie Ihr Fahrzeug, erhalten Sie Echtzeit-"
-#~ "Benachrichtigungen und senden Sie Befehle direkt "
-#~ "von Ihrem Smartphone aus."
 

@@ -16,6 +16,22 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+
+def N_(message: str) -> str:
+    """
+    gettext_noop — mark a string for extraction without translating it here.
+
+    The details below travel two ways: an API caller gets them as the JSON body of a
+    403, where English is correct, and a UI route catches the exception and puts the
+    text in `?error_message=` for the next page to display, where it is the one
+    English line on an otherwise translated page. Translating at the raise site would
+    also mean resolving a locale in a function that has no template context, so the
+    strings are only *marked* here (pybabel extracts N_ by default) and the UI routes
+    translate them with `_(str(e.detail))` at the point of display.
+    """
+    return message
+
+
 # Initialize serializer with JWT secret (reusing existing secret)
 csrf_serializer = URLSafeTimedSerializer(settings.SECRET_KEY_JWT, salt="csrf-token")
 
@@ -107,14 +123,14 @@ def verify_csrf_token(request: Request, form_token: Optional[str] = None, rotate
         logger.warning(f"CSRF token missing from session for endpoint {request.url.path}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="CSRF token missing from session. Please refresh the page."
+            detail=N_("CSRF token missing from session. Please refresh the page.")
         )
 
     if not form_token:
         logger.warning(f"CSRF token missing from form/data for endpoint {request.url.path}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="CSRF token missing from form submission."
+            detail=N_("CSRF token missing from form submission.")
         )
 
     if not validate_csrf_token(form_token):
@@ -122,7 +138,7 @@ def verify_csrf_token(request: Request, form_token: Optional[str] = None, rotate
         _rotate(request)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid or expired CSRF token. Please try again."
+            detail=N_("Invalid or expired CSRF token. Please try again.")
         )
 
     prev_token = request.session.get("csrf_token_prev")
@@ -134,7 +150,7 @@ def verify_csrf_token(request: Request, form_token: Optional[str] = None, rotate
         _rotate(request)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="CSRF token mismatch. Please try again."
+            detail=N_("CSRF token mismatch. Please try again.")
         )
 
     request.state.csrf_verified = True

@@ -9,7 +9,7 @@ from app.database import get_db
 from app import crud, security
 from app.models import db as models_db, api as models_api
 from app.config import settings
-from . import templates, get_common_template_vars
+from . import templates, get_common_template_vars, get_translator
 from app.dependencies import get_user_from_request_cookie, get_client_ip
 from app.security_manager import security_manager
 from app.csrf_protection import (
@@ -54,6 +54,7 @@ def ui_login_submit_route(
     client_ip: str = Depends(get_client_ip)
 ):
     # Verify CSRF token
+    _ = get_translator(request)
     try:
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
@@ -65,7 +66,7 @@ def ui_login_submit_route(
         except Exception as _e:
             logger.warning(f"Security event logging failed (CSRF_VIOLATION): {_e}")
         login_form_url = str(request.url_for('ui_login_form'))
-        return RedirectResponse(url=f"{login_form_url}?error_message={quote_plus(str(e.detail))}", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{login_form_url}?error_message={quote_plus(_(str(e.detail)))}", status_code=status.HTTP_303_SEE_OTHER)
 
     login_form_url = str(request.url_for('ui_login_form'))
 
@@ -216,22 +217,23 @@ def ui_login_totp_submit_route(
     client_ip: str = Depends(get_client_ip)
 ):
 
+    _ = get_translator(request)
     try:
         verify_csrf_token(request, csrf_token, rotate_token=False)
     except HTTPException as e:
         return RedirectResponse(
-            url=f"{request.url_for('ui_login_totp_form')}?error_message={quote_plus(str(e.detail))}",
+            url=f"{request.url_for('ui_login_totp_form')}?error_message={quote_plus(_(str(e.detail)))}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
     pending_user_id = request.session.get("pending_2fa_user_id")
     if not pending_user_id:
-        return RedirectResponse(url=f"{request.url_for('ui_login_form')}?error_message=Session expired. Please login again.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{request.url_for('ui_login_form')}?error_message={quote_plus(_("Session expired. Please login again."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     user = crud.user.get_user_by_id(db, user_id=pending_user_id)
     if not user or not user.is_active or not user.is_totp_enabled:
         if "pending_2fa_user_id" in request.session: del request.session["pending_2fa_user_id"]
-        return RedirectResponse(url=f"{request.url_for('ui_login_form')}?error_message=Error with 2FA setup. Please login again.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{request.url_for('ui_login_form')}?error_message={quote_plus(_("Error with 2FA setup. Please login again."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     # The stronger factor wins and switches the weaker one off. The login handler only
     # *redirects* accounts with a security key to the WebAuthn page — it still sets
@@ -264,7 +266,7 @@ def ui_login_totp_submit_route(
         )
         return RedirectResponse(
             url=f"{request.url_for('ui_login_totp_form')}?error_message="
-                f"{quote_plus('Too many failed attempts. Please try again later.')}",
+                f"{quote_plus(_('Too many failed attempts. Please try again later.'))}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
@@ -279,7 +281,7 @@ def ui_login_totp_submit_route(
             )
         except Exception as e:
             logger.warning(f"Security event logging failed (TOTP_FAILED): {e}")
-        return RedirectResponse(url=f"{request.url_for('ui_login_totp_form')}?error_message=Invalid 2FA code. Please try again.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{request.url_for('ui_login_totp_form')}?error_message={quote_plus(_("Invalid 2FA code. Please try again."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     del request.session["pending_2fa_user_id"]
 
@@ -490,6 +492,7 @@ def ui_forgot_password_submit_route(
     client_ip: str = Depends(get_client_ip)
 ):
     """Handle forgot password form submission."""
+    _ = get_translator(request)
     from app.notifications import send_password_reset_email
     from app.security_events import security_event_logger, SecurityEventType, SecurityEventSeverity
 
@@ -498,7 +501,7 @@ def ui_forgot_password_submit_route(
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
         forgot_form_url = str(request.url_for('ui_forgot_password_form'))
-        return RedirectResponse(url=f"{forgot_form_url}?error_message={quote_plus(str(e.detail))}", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{forgot_form_url}?error_message={quote_plus(_(str(e.detail)))}", status_code=status.HTTP_303_SEE_OTHER)
 
     # Check rate limiting - blocked IPs are blocked for all auth types
     if security_manager.is_blocked(client_ip):
@@ -673,6 +676,7 @@ def ui_reset_password_submit_route(
     client_ip: str = Depends(get_client_ip)
 ):
     """Handle password reset form submission."""
+    _ = get_translator(request)
     from app.security_events import security_event_logger, SecurityEventType, SecurityEventSeverity
 
     # Verify CSRF token
@@ -680,7 +684,7 @@ def ui_reset_password_submit_route(
         verify_csrf_token(request, csrf_token)
     except HTTPException as e:
         reset_form_url = str(request.url_for('ui_reset_password_form', token=token))
-        return RedirectResponse(url=f"{reset_form_url}?error_message={quote_plus(str(e.detail))}", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url=f"{reset_form_url}?error_message={quote_plus(_(str(e.detail)))}", status_code=status.HTTP_303_SEE_OTHER)
 
     # Validate token
     user = crud.user.get_user_by_password_reset_token(db, token=token)

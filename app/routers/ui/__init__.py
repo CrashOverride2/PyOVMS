@@ -1,6 +1,6 @@
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
-from typing import Optional, Dict, Tuple
+from typing import Callable, Optional, Dict, Tuple
 import datetime
 from jinja2 import pass_context
 from jinja2.utils import htmlsafe_json_dumps
@@ -119,12 +119,39 @@ def humanize_key(key: str) -> str:
         return key
     return key.replace('_', ' ').capitalize()
 
+def get_request_locale(request: Request) -> str:
+    """The locale BabelMiddleware picked for this request, or the configured default."""
+    if hasattr(request.state, 'babel') and hasattr(request.state.babel, 'locale'):
+        return str(request.state.babel.locale)
+    return settings.BABEL_DEFAULT_LOCALE
+
+
+def get_translator(request: Request) -> Callable[[str], str]:
+    """
+    gettext for this request's locale, without building a template context.
+
+    For routes that answer with a redirect rather than a page. Those carry their
+    message in the query string (`?success_message=…`), and the message was written
+    into it as an English literal — so the flash line above an otherwise translated
+    page stayed English no matter what the browser asked for. They cannot use the `_`
+    from get_common_template_vars() without paying for a CSRF token, three filesystem
+    checks and the whole settings fan-out to format one sentence.
+
+    Messages that interpolate a value must use *named* placeholders and the `%`
+    operator — `_("Vehicle '%(id)s' added.") % {"id": vid}` — never an f-string. An
+    f-string is formatted before gettext ever sees it, so the lookup is a different
+    string on every call and always misses; named placeholders also let a translator
+    reorder them, which positional %s does not.
+    """
+    locale = get_request_locale(request)
+    translations = translations_cache.get(locale)
+    return translations.gettext if translations else (lambda text: text)
+
+
 def get_common_template_vars(request: Request, current_user: Optional[models_db.User]) -> dict:
     # Install the appropriate translation for this request
     # Uses locale determined by BabelMiddleware from browser's Accept-Language header
-    user_locale = settings.BABEL_DEFAULT_LOCALE
-    if hasattr(request.state, 'babel') and hasattr(request.state.babel, 'locale'):
-        user_locale = str(request.state.babel.locale)
+    user_locale = get_request_locale(request)
 
     if user_locale in translations_cache:
         templates.env.install_gettext_translations(translations_cache[user_locale])
@@ -144,10 +171,7 @@ def get_common_template_vars(request: Request, current_user: Optional[models_db.
         settings.APNS_TOPIC
     ])
 
-    if user_locale in translations_cache:
-        gettext = translations_cache[user_locale].gettext
-    else:
-        gettext = lambda x: x
+    gettext = get_translator(request)
 
     is_mqtt_configured = bool(settings.MQTT_PASSWD_FILE and settings.MQTT_ACL_FILE)
 
