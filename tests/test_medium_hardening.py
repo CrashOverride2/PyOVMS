@@ -105,15 +105,21 @@ def test_implausible_vehicle_timestamp_is_replaced_by_server_time():
     `m.time.utc = 9999-01-01` used to become last_seen_v3 directly: the car counted
     as online forever, connection-loss alerts never fired, and the write throttle —
     which compared against that same future value — suppressed every later update.
+
+    The check now lives in _resolve_timestamp(); what _on_message still has to get
+    right is calling it before the timestamp goes anywhere. The behaviour of the
+    resolver itself is covered in tests/test_vehicle_clock.py.
     """
     from app.mqtt_metrics_subscriber import MqttMetricsSubscriber
 
+    resolver = _code_only(MqttMetricsSubscriber._resolve_timestamp)
+    assert "MAX_VEHICLE_CLOCK_SKEW_SECONDS" in resolver
+
     source = _code_only(MqttMetricsSubscriber._on_message)
 
-    assert "MAX_VEHICLE_CLOCK_SKEW_SECONDS" in source
-    skew_check = source.index("MAX_VEHICLE_CLOCK_SKEW_SECONDS")
+    resolve_call = source.index("_resolve_timestamp")
     charge_call = source.index("charge_manager.process_metric")
-    assert skew_check < charge_call, (
+    assert resolve_call < charge_call, (
         "the timestamp reaches the charge manager before it is validated"
     )
 

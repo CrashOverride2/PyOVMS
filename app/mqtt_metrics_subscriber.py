@@ -22,6 +22,15 @@ class MqttMetricsSubscriber:
     # forged value, and both are better served by server time.
     MAX_VEHICLE_CLOCK_SKEW_SECONDS = 300
 
+    # How long a measured clock offset stays usable. A module's offset is a slow
+    # property -- a few seconds, drifting over days -- so this only has to outlast the
+    # idle publish interval of the quietest module.
+    CLOCK_OFFSET_TTL_SECONDS = 3600
+
+    # A broken clock stays broken and the module republishes it on every wake-up, so
+    # the warning is rate limited per vehicle. It says the same thing the tenth time.
+    CLOCK_WARNING_INTERVAL_SECONDS = 3600
+
     def __init__(self):
         self._client: mqtt.Client = None
         self._SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -30,6 +39,10 @@ class MqttMetricsSubscriber:
         # Monotonic seconds, not wall clock: the throttle must not be steerable by a
         # payload-derived timestamp, and it must survive a system clock adjustment.
         self._last_seen_write_at: dict[str, float] = {}
+        # (offset_seconds, monotonic_measured_at) per vehicle, written only when an
+        # m.time.utc message actually arrives -- see _resolve_timestamp.
+        self._clock_offsets: dict[str, tuple[float, float]] = {}
+        self._clock_warned_at: dict[str, float] = {}
 
     def connect(self, username: str, password: str):
         if not settings.MQTT_BROKER_HOST:
@@ -96,41 +109,10 @@ class MqttMetricsSubscriber:
 
             metric_changed = metrics_manager.update_metric(vehicle_id, metric_name, metric_value)
 
-            # Try to get vehicle's actual timestamp from m.time.utc metric
-            # Fall back to server time if not available
-            vehicle_timestamp = None
-            try:
-                time_utc_value = metrics_manager.get_metric_value(vehicle_id, "m.time.utc")
-                if time_utc_value:
-                    # Parse datetime string format: '2025-10-29 19:35:30 UTC'
-                    time_str = time_utc_value.strip()
-                    if time_str.endswith(' UTC'):
-                        time_str = time_str[:-4].strip()
-                    vehicle_timestamp = datetime.datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S').replace(tzinfo=datetime.timezone.utc)
-            except (ValueError, TypeError) as e:
-                logger.debug(f"Could not parse m.time.utc for vehicle {vehicle_id}: {e}")
-
-            # Use the vehicle's own clock only when it is plausible.
-            #
-            # This timestamp drives last_seen_v3 (the online indicator), last_message_at
-            # and the start/end times of charge sessions — and it arrives as a metric the
-            # vehicle publishes. Unchecked, `m.time.utc = 9999-01-01` pinned the car
-            # "online" forever, so connection-loss alerts never fired, and the write
-            # throttle below (which compared against the same value) suppressed every
-            # later update. A clock that far out is wrong whatever the cause, so fall
-            # back to server time instead of trusting it.
             now_utc = datetime.datetime.now(datetime.timezone.utc)
-            timestamp = now_utc
-            if vehicle_timestamp is not None:
-                skew = abs((vehicle_timestamp - now_utc).total_seconds())
-                if skew <= self.MAX_VEHICLE_CLOCK_SKEW_SECONDS:
-                    timestamp = vehicle_timestamp
-                else:
-                    logger.warning(
-                        f"Ignoring implausible m.time.utc for vehicle '{vehicle_id}': "
-                        f"{vehicle_timestamp.isoformat()} is {skew:.0f}s from server time; "
-                        f"using server time instead."
-                    )
+            timestamp = self._resolve_timestamp(
+                vehicle_id, metric_name, metric_value, msg.retain, now_utc
+            )
 
             if metric_changed or not msg.retain:
                 charge_manager.process_metric(vehicle_id, metric_name, metric_value, timestamp)
@@ -164,6 +146,95 @@ class MqttMetricsSubscriber:
                 
         except Exception as e:
             logger.error(f"Error processing MQTT metric message on topic {msg.topic}: {e}", exc_info=True)
+
+    def _resolve_timestamp(
+        self,
+        vehicle_id: str,
+        metric_name: str,
+        metric_value,
+        retained: bool,
+        now_utc: datetime.datetime,
+    ) -> datetime.datetime:
+        """
+        Decide which clock stamps this metric.
+
+        Server time is the arrival time and is always available; the vehicle's clock is
+        only ever used as a *correction* to it, measured at the moment `m.time.utc`
+        itself arrives. Reading the cached `m.time.utc` for every metric -- which is
+        what this used to do -- stamped a message that arrived now with the module's
+        clock reading from its previous wake-up. An idle module publishes its changed
+        metrics in one burst every 5-10 minutes, so that reading was a whole publish
+        interval old: silently accepted whenever it happened to fall inside the
+        plausibility window, and otherwise logged once per message in the burst -- 21
+        identical lines claiming a healthy module was 601s out.
+
+        This timestamp drives last_seen_v3 (the online indicator), last_message_at and
+        the start/end times of charge sessions, so getting it from the arrival of the
+        message rather than from a cache is the point.
+        """
+        if metric_name == "m.time.utc":
+            # A retained value is old by definition and its age is unknowable, so it
+            # can neither measure an offset nor evidence a broken clock.
+            if retained:
+                return now_utc
+
+            vehicle_timestamp = self._parse_vehicle_clock(vehicle_id, metric_value)
+            if vehicle_timestamp is None:
+                return now_utc
+
+            skew = (vehicle_timestamp - now_utc).total_seconds()
+            if abs(skew) > self.MAX_VEHICLE_CLOCK_SKEW_SECONDS:
+                # Unchecked, `m.time.utc = 9999-01-01` pinned the car "online" forever,
+                # so connection-loss alerts never fired, and the write throttle below
+                # (which compared against the same value) suppressed every later
+                # update. A clock that far out is wrong whatever the cause.
+                self._clock_offsets.pop(vehicle_id, None)
+                self._warn_about_clock(vehicle_id, vehicle_timestamp, skew)
+                return now_utc
+
+            self._clock_offsets[vehicle_id] = (skew, time.monotonic())
+            return vehicle_timestamp
+
+        measured = self._clock_offsets.get(vehicle_id)
+        if measured is None:
+            return now_utc
+
+        offset_seconds, measured_at = measured
+        if (time.monotonic() - measured_at) > self.CLOCK_OFFSET_TTL_SECONDS:
+            del self._clock_offsets[vehicle_id]
+            return now_utc
+
+        return now_utc + datetime.timedelta(seconds=offset_seconds)
+
+    @staticmethod
+    def _parse_vehicle_clock(vehicle_id: str, raw_value) -> datetime.datetime | None:
+        """Parse the module's clock reading, format '2025-10-29 19:35:30 UTC'."""
+        if not raw_value:
+            return None
+        try:
+            time_str = str(raw_value).strip()
+            if time_str.endswith(' UTC'):
+                time_str = time_str[:-4].strip()
+            return datetime.datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S').replace(
+                tzinfo=datetime.timezone.utc
+            )
+        except (ValueError, TypeError) as e:
+            logger.debug(f"Could not parse m.time.utc for vehicle {vehicle_id}: {e}")
+            return None
+
+    def _warn_about_clock(
+        self, vehicle_id: str, vehicle_timestamp: datetime.datetime, skew: float
+    ) -> None:
+        now = time.monotonic()
+        warned_at = self._clock_warned_at.get(vehicle_id)
+        if warned_at is not None and (now - warned_at) < self.CLOCK_WARNING_INTERVAL_SECONDS:
+            return
+        self._clock_warned_at[vehicle_id] = now
+        logger.warning(
+            f"Ignoring implausible m.time.utc for vehicle '{vehicle_id}': "
+            f"{vehicle_timestamp.isoformat()} is {abs(skew):.0f}s from server time; "
+            f"using server time instead."
+        )
 
     def disconnect(self):
         if self._client:
