@@ -308,11 +308,15 @@ async def ui_delete_user_route(
         return RedirectResponse(url=f"{redirect_url}?error_message={quote_plus(_("Could not delete user %(name)s. They may own vehicles or AP profiles.") % {'name': deleted_username})}", status_code=status.HTTP_303_SEE_OTHER)
 
     try:
+        # user_id=None: the row is already gone, and security_events.user_id is a real
+        # foreign key — writing the dead id here failed the insert, and the `except`
+        # below swallowed it, so the deletion was the one action missing from the audit
+        # trail. The id is kept in the details instead.
         security_event_logger.log_event(
             db=db, event_type=SecurityEventType.USER_DELETED,
-            user_id=deleted_user_id, username=deleted_username,
+            user_id=None, username=deleted_username,
             ip_address=client_ip,
-            details={"deleted_by": current_admin.username}
+            details={"deleted_by": current_admin.username, "deleted_user_id": deleted_user_id}
         )
     except Exception:
         pass

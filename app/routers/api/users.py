@@ -209,11 +209,13 @@ async def delete_user_api(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Cannot delete user {db_user.username}. They may own associated data.")
     try:
         ip_addr = request.client.host if request.client else None
+        # user_id=None — see the UI delete route: the user row no longer exists, so the
+        # foreign key rejects it and the audit record is lost silently.
         security_event_logger.log_event(
             db=db, event_type=SecurityEventType.USER_DELETED,
-            user_id=deleted_user_id, username=deleted_username,
+            user_id=None, username=deleted_username,
             ip_address=ip_addr,
-            details={"deleted_by_admin": current_admin.username}
+            details={"deleted_by_admin": current_admin.username, "deleted_user_id": deleted_user_id}
         )
     except Exception:
         pass

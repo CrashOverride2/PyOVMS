@@ -167,6 +167,21 @@ def delete_user(db: Session, user_id: int) -> Optional[models_db.User]:
             v.vehicle_id for v in db.query(models_db.Vehicle).filter(models_db.Vehicle.owner_id == db_user.id).all()
         ]
 
+        # The audit trail outlives the account, so security_events is not cascaded — but
+        # it is also the one table referencing users.id with no ORM relationship behind
+        # it, so nothing in the unit of work would clear the reference. Done explicitly
+        # rather than left to the FK's ON DELETE SET NULL: SQLite does not enforce
+        # foreign keys at all here (see the PRAGMA note in app/database.py), so relying
+        # on the constraint alone would leave a dangling user_id on that backend.
+        orphaned_events = db.query(models_db.SecurityEvent).filter(
+            models_db.SecurityEvent.user_id == db_user.id
+        ).update({models_db.SecurityEvent.user_id: None}, synchronize_session=False)
+        if orphaned_events:
+            logger.info(
+                f"Detached {orphaned_events} security event(s) from user "
+                f"'{db_user.username}'; the events themselves are kept."
+            )
+
         db.delete(db_user)
         db.commit()
 

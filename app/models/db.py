@@ -297,7 +297,16 @@ class SecurityEvent(Base):
     id = Column(Integer, primary_key=True, index=True)
     event_type = Column(String(50), nullable=False, index=True)
     severity = Column(String(20), nullable=False, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", name="fk_security_event_user_id"), nullable=True)
+    # SET NULL, not CASCADE: deleting an account must not delete the audit trail that
+    # records what it did — `username` keeps the row readable after the id is gone.
+    # This is also the only FK to `users` with no ORM relationship behind it, so nothing
+    # in the unit of work touches it; without the ondelete, deleting a user that had ever
+    # produced a security event failed outright on PostgreSQL/MySQL.
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id", name="fk_security_event_user_id", ondelete="SET NULL"),
+        nullable=True,
+    )
     username = Column(String(50), nullable=True, index=True)
     ip_address = Column(String(45), nullable=True, index=True)  # IPv6 max length
     user_agent = Column(String(255), nullable=True)
