@@ -2,6 +2,7 @@ import asyncio
 import logging
 from typing import Dict, Set
 from fastapi import WebSocket
+from starlette.websockets import WebSocketState
 import msgpack
 
 logger = logging.getLogger(__name__)
@@ -22,21 +23,50 @@ class WebSocketConnectionManager:
         logger.info(f"WebSocket client '{client_id}' connected.")
 
     async def disconnect(self, client_id: str):
-        """Removes a WebSocket connection and all its subscriptions."""
+        """
+        Removes a WebSocket connection and all its subscriptions.
+
+        The bookkeeping runs first and unconditionally; closing the socket is best effort
+        and comes last. A client that simply vanished — closed tab, phone off the network —
+        is the *normal* way a connection ends, and closing a socket whose peer is already
+        gone raises: uvicorn signals ClientDisconnected and starlette re-raises it as
+        WebSocketDisconnect(1006), which is not a RuntimeError. That escaped from here,
+        with two consequences. The subscription cleanup below the close never ran, so the
+        client id stayed in `subscriptions` forever: the topic never emptied and the
+        broadcaster kept querying the database, parsing messages and packing a payload for
+        that vehicle every 2 seconds, for nobody, until the next restart. And because the
+        endpoint calls this from its `finally`, the exception propagated out of the ASGI
+        app, so every ordinary disconnect printed a full traceback into the log.
+        """
         async with self._lock:
-            if client_id in self.active_connections:
-                ws = self.active_connections.pop(client_id)
-                try:
-                    await ws.close()
-                except RuntimeError as e:
-                    logger.debug(f"Closing websocket connection for '{client_id}': {e}")
-                
-                for topic in list(self.subscriptions.keys()):
-                    if client_id in self.subscriptions.get(topic, set()):
-                        self.subscriptions[topic].remove(client_id)
-                    if not self.subscriptions[topic]:
-                        del self.subscriptions[topic]
-                logger.info(f"WebSocket client '{client_id}' disconnected and cleaned up.")
+            ws = self.active_connections.pop(client_id, None)
+
+            for topic in list(self.subscriptions.keys()):
+                subscribers = self.subscriptions[topic]
+                subscribers.discard(client_id)
+                if not subscribers:
+                    del self.subscriptions[topic]
+
+        if ws is None:
+            # Already disconnected — broadcast_to_topic() reaps failed sends, and the
+            # endpoint's `finally` reaps the same client a moment later.
+            return
+
+        try:
+            # Nothing to send once either side has said goodbye; skipping it here is what
+            # keeps the common case quiet. The guard is not sufficient on its own: a send
+            # that fails is how we learn about the connections it cannot see.
+            if (
+                ws.application_state is not WebSocketState.DISCONNECTED
+                and ws.client_state is not WebSocketState.DISCONNECTED
+            ):
+                await ws.close()
+        except Exception as e:
+            # Deliberately not a bare `except`: CancelledError is a BaseException and must
+            # keep propagating during shutdown.
+            logger.debug(f"Closing websocket connection for '{client_id}': {e}")
+
+        logger.info(f"WebSocket client '{client_id}' disconnected and cleaned up.")
 
     async def subscribe(self, client_id: str, topic: str):
         """Subscribes a client to a topic."""
