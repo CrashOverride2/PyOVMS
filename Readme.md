@@ -1,8 +1,8 @@
-# pyOVMS — Python Open Vehicle Monitoring System Server
+# PyOVMS — Python Open Vehicle Monitoring System Server
 
 PyOVMS is a modern, Python-based server for the Open Vehicle Monitoring System (OVMS) V2 and V3 protocols. Built on FastAPI, it provides a clean web interface for real-time vehicle monitoring, management, and control.
 
-![pyOVMS Dashboard](doc/PyOVMS_Main.jpg)
+![PyOVMS Dashboard](doc/PyOVMS_Main.jpg)
 
 **Key capabilities at a glance:**
 V2 (TCP) and V3 (MQTT) protocol support · Real-time WebSocket UI · Push notifications (NTFY / Email / FCM / APNs / UnifiedPush) · 2FA + WebAuthn/Passkeys · Rate limiting & security dashboard · Optional trip logging (Karto) · Optional charge session logging · Self-hosted maps (Protomaps) · SQLite / PostgreSQL / MySQL
@@ -45,14 +45,14 @@ Jump to the section that matches your goal:
 
 ## Quick Setup
 
-For people who want pyOVMS running locally or on a fresh Ubuntu server with minimal friction.
+For people who want PyOVMS running locally or on a fresh Ubuntu server with minimal friction.
 
 ### Option A — Automated (Ubuntu 24.04)
 
 One script installs Python, the FlashMQ MQTT broker, a dedicated system user, a virtual environment, auto-generated secrets, and a systemd service:
 
 ```bash
-wget https://git.0-c.de/Crash_Override/OVMS-Server/raw/branch/main/install.sh
+wget https://raw.githubusercontent.com/CrashOverride2/PyOVMS/main/install.sh
 chmod +x install.sh
 sudo ./install.sh
 ```
@@ -63,13 +63,13 @@ Done. The service starts automatically. Check the journal for the first-run admi
 sudo journalctl -u pyovms -n 50
 ```
 
-The script installs to `/opt/pyOVMS`, runs the server as the `ovms` user, and configures FlashMQ for the V3 protocol — so [Step 2 of the production setup](#step-2--v3-protocol--mqtt) is already done for you.
+The script installs to `/opt/PyOVMS`, runs the server as the `ovms` user, and configures FlashMQ for the V3 protocol — so [Step 2 of the production setup](#step-2--v3-protocol--mqtt) is already done for you.
 
 ### Option B — Manual (any platform)
 
 ```bash
-git clone https://git.0-c.de/Crash_Override/OVMS-Server.git pyOVMS
-cd pyOVMS
+git clone https://github.com/CrashOverride2/PyOVMS.git PyOVMS
+cd PyOVMS
 pip install -r requirements.txt
 python run.py
 ```
@@ -131,7 +131,7 @@ Do **not** use `--env-file` instead of the bind mount: Docker passes those value
 
 ## Production Setup
 
-For deploying pyOVMS on a public server with HTTPS, a real database, MQTT for V3 vehicles, and optional services.
+For deploying PyOVMS on a public server with HTTPS, a real database, MQTT for V3 vehicles, and optional services.
 
 If you used the [automated installer](#option-a--automated-ubuntu-2404), Steps 1 and 2 are already done — continue at [Step 3](#step-3--reverse-proxy-https).
 
@@ -155,7 +155,7 @@ Already running on SQLite? See [Migrating SQLite → PostgreSQL](#migrating-sqli
 
 ### Step 2 — V3 Protocol / MQTT
 
-If your vehicles use the V3 (MQTT) protocol, pyOVMS needs a running MQTT broker and write access to its password and ACL files. PyOVMS manages the contents of these files automatically — you configure the paths once. Both **FlashMQ** (what the automated installer sets up) and **Mosquitto** are supported; the file formats are identical.
+If your vehicles use the V3 (MQTT) protocol, PyOVMS needs a running MQTT broker and write access to its password and ACL files. PyOVMS manages the contents of these files automatically — you configure the paths once. Both **FlashMQ** (what the automated installer sets up) and **Mosquitto** are supported; the file formats are identical.
 
 → **[MQTT Setup Guide](doc/MQTT_SETUP.md)**
 
@@ -230,8 +230,8 @@ For contributors and anyone who wants to modify the code, templates, or translat
 ### Setup
 
 ```bash
-git clone https://git.0-c.de/Crash_Override/OVMS-Server.git pyOVMS
-cd pyOVMS
+git clone https://github.com/CrashOverride2/PyOVMS.git PyOVMS
+cd PyOVMS
 pip install -r requirements.txt
 pip install -r requirements-dev.txt   # pytest, ruff, pip-audit
 
@@ -342,7 +342,7 @@ Every document in this repository, and when you need it:
 
 Copyright (C) 2026 Carsten Schmiemann
 
-pyOVMS is free software, licensed under the **GNU General Public License, version 3 only** ([`LICENSE`](LICENSE), [SPDX](https://spdx.org/licenses/GPL-3.0-only.html): `GPL-3.0-only`). It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+PyOVMS is free software, licensed under the **GNU General Public License, version 3 only** ([`LICENSE`](LICENSE), [SPDX](https://spdx.org/licenses/GPL-3.0-only.html): `GPL-3.0-only`). It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 Pointing the footer at your own source is therefore a courtesy rather than a duty — but a useful one, because users of your instance have no other way to find the code they are actually talking to:
 
@@ -352,7 +352,7 @@ SOURCE_CODE_URL="https://your.forge/your/pyovms-fork"
 
 ### Third-party components
 
-pyOVMS bundles third-party code, all under licenses compatible with GPL-3.0:
+PyOVMS bundles third-party code, all under licenses compatible with GPL-3.0:
 
 | Component | License |
 |---|---|

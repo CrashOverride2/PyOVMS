@@ -1,6 +1,6 @@
 {
   "name": "pyovms",
-  "version": "2.2.1",
+  "version": "2.3.6",
   "description": "Tailwind CSS build for PyOVMS",
   "scripts": {
     "build": "tailwindcss -i ./app/static/css/input.css -o ./app/static/css/main.css",
