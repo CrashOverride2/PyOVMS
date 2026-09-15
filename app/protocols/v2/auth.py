@@ -137,8 +137,14 @@ async def handle_authentication(conn: ClientConnection, line: str):
             # unknown one, which turned the deliberately identical error handling into
             # a vehicle-id enumeration oracle; and the write clears
             # unused_reminder_sent_at, so an unauthenticated peer could keep resetting
-            # the 90-day inactivity warning and the auto-deletion that follows it.
-            crud.vehicle.update_vehicle_last_seen_tcp(db, vehicle_id_from_client)
+            # the 365-day inactivity warning and the auto-deletion that follows it.
+            #
+            # Cars only. An app authenticates with the same server password, and the
+            # write used to run for it too: a phone that still had the vehicle
+            # configured kept "last seen" current for a car that had not connected in
+            # a year, so the warning never went out and the vehicle was never deleted.
+            if conn.client_type == 'C':
+                crud.vehicle.update_vehicle_last_seen_tcp(db, vehicle_id_from_client)
 
             conn.client_token = client_token
             conn.server_token = generate_server_token()

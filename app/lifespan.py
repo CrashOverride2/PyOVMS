@@ -24,6 +24,7 @@ import datetime
 from app import crud
 from app.services.charge_logger.charge_manager import charge_manager
 from app.security_manager import security_manager, set_notification_function
+from app.security_events import security_event_logger, SecurityEventType
 from app.notifications import send_admin_security_notification
 from app import notifications
 from app.services.vehicle_service import trigger_karto_vehicle_deletion
@@ -127,6 +128,38 @@ async def periodic_vehicle_data_broadcaster(shutdown_event: asyncio.Event):
         db.close()
         module_logger.info("Vehicle data broadcaster task finished.")
 
+def purge_expired_registrations(db) -> int:
+    """
+    Delete accounts whose e-mail verification link expired without being used.
+
+    Runs hourly rather than in the daily lifecycle pass: the link is valid for
+    EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS, and whoever mistyped their address wants
+    the username back the same day, not after up to two of them. The deletion goes
+    through crud.user.delete_user() like every other account removal and is recorded
+    as USER_DELETED — with user_id=None, since the row is gone by then.
+    """
+    removed = 0
+    for user in crud.user.get_users_with_expired_verification(db):
+        username, email, user_id = user.username, user.email, user.id
+        try:
+            crud.user.delete_user(db, user_id)
+        except Exception as e:
+            module_logger.error(f"Housekeeping: Failed to delete unverified account '{username}': {e}", exc_info=True)
+            db.rollback()
+            continue
+        removed += 1
+        module_logger.info(f"Housekeeping: Deleted unverified account '{username}' ({email}); its verification link expired unused.")
+        try:
+            security_event_logger.log_event(
+                db=db, event_type=SecurityEventType.USER_DELETED,
+                user_id=None, username=username,
+                details={"reason": "verification_expired", "deleted_user_id": user_id, "email": email},
+            )
+        except Exception as e:
+            module_logger.warning(f"Housekeeping: Could not record deletion of '{username}': {e}")
+    return removed
+
+
 async def periodic_housekeeping(shutdown_event: asyncio.Event):
     """Periodically cleans up old data from the database."""
     while not shutdown_event.is_set():
@@ -150,6 +183,10 @@ async def periodic_housekeeping(shutdown_event: asyncio.Event):
                     module_logger.info(f"Housekeeping: Deactivated {num_exp_keys} expired API keys.")
                 
                 crud.apikey.delete_expired_api_keys(db)
+
+                num_unverified = await run_in_threadpool(purge_expired_registrations, db)
+                if num_unverified > 0:
+                    module_logger.info(f"Housekeeping: Deleted {num_unverified} account(s) with an expired verification link.")
 
                 await run_in_threadpool(charge_manager.check_for_stale_sessions, db)
             finally:

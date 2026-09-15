@@ -169,21 +169,15 @@ class ConnectionManager:
             logger.debug(f"TCP Connection {conn_to_remove.addr_str} not found in list for vehicle {conn_to_remove.vehicle_id} during removal.")
 
     def add_connection(self, conn: ClientConnection):
-        from app.database import SessionLocal
-        from app.crud.vehicle import update_vehicle_last_seen_tcp 
-
         if not conn.vehicle_id or not conn.client_type:
             logger.error(f"TCP Attempt to add connection without vehicle_id or client_type: {conn.addr_str}")
             return
 
         logger.info(f"TCP Adding connection for {conn.vehicle_id} ({conn.addr_str}), type: {conn.client_type}")
-        
-        db = SessionLocal()
-        try:
-            update_vehicle_last_seen_tcp(db, conn.vehicle_id)
-            logger.debug(f"TCP Updated last_seen_tcp for {conn.vehicle_id} in DB.")
-        finally:
-            db.close()
+
+        # No last_seen_tcp write here. The handshake (protocols/v2/auth.py) writes it,
+        # for cars only; a second write used to happen at this point for every client
+        # type, which is what let an app connection count as vehicle activity.
 
         if conn.client_type == 'C':
             old_conn = self.car_connections.get(conn.vehicle_id)

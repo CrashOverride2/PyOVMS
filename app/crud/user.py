@@ -223,6 +223,36 @@ def activate_user_and_clear_token(db: Session, user: models_db.User) -> models_d
     db.refresh(user)
     return user
 
+def get_users_with_expired_verification(db: Session) -> List[models_db.User]:
+    """
+    Registrations whose verification link expired unused.
+
+    An unverified account can never log in, so nothing would ever warn or delete it
+    through the lifecycle housekeeping (that path only considers active users) — it
+    stayed forever, and with it the username and the e-mail address: the registration
+    form answers a collision with the generic success page, so one typo in the address
+    locked the chosen username for good.
+
+    The *pending token* is the discriminator, not is_active alone. An account an admin
+    deactivated has is_active=False and no token, and one an admin activated by hand
+    keeps its token but is_active=True; neither is touched here. Accounts with
+    vehicles are excluded as well: none can arrive there through the registration
+    flow, and this pass must never cascade into vehicle data.
+    """
+    now = datetime.datetime.now(datetime.timezone.utc)
+    return (
+        db.query(models_db.User)
+        .filter(
+            models_db.User.is_admin == False,
+            models_db.User.is_active == False,
+            models_db.User.email_verification_token.isnot(None),
+            models_db.User.email_verification_token_expires_at.isnot(None),
+            models_db.User.email_verification_token_expires_at <= now,
+            ~models_db.User.vehicles.any(),
+        )
+        .all()
+    )
+
 # --- TOTP (2FA) ---
 def enable_totp_for_user(db: Session, user: models_db.User, totp_secret: str) -> models_db.User:
     from app.utils.crypto import encrypt_data

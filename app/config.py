@@ -102,7 +102,7 @@ class Settings(BaseSettings):
     TCP_PORT: int = 6867
     TCP_SSL_PORT: int = 6870
     HTTP_PORT: int = 8000 
-    SERVER_VERSION: str = "2.4.1" 
+    SERVER_VERSION: str = "2.4.2" 
     SERVER_BASE_URL: str = "http://localhost:8000"
 
     SSL_CERT_FILE: Optional[str] = "cert.pem"

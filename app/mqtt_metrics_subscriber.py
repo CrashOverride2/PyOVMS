@@ -131,14 +131,16 @@ class MqttMetricsSubscriber:
 
             db = self._SessionLocal()
             try:
-                vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_id)
+                # Through the CRUD function, not a direct column write: it also clears
+                # unused_reminder_sent_at. Written directly, a V3-only vehicle that came
+                # back after the 365-day warning kept its mark — the auto-deletion
+                # itself re-checks last_seen and spared it, but the next time it went
+                # quiet for a year it was deleted on the spot, with no second warning.
+                vehicle_db = crud.vehicle.update_vehicle_last_seen_v3(db, vehicle_id, timestamp)
                 if not vehicle_db:
                     mqtt_topic_auth.clear_cache()
                     return
 
-                vehicle_db.last_seen_v3 = timestamp
-                vehicle_db.last_message_at = timestamp
-                db.commit()
                 self._last_seen_write_at[vehicle_id] = time.monotonic()
                 logger.debug(f"Updated last_seen_v3 for vehicle '{vehicle_id}' to {timestamp} based on metric '{metric_name}'")
             finally:
