@@ -39,6 +39,8 @@ sudo cp 404.html 429.html 502.html 504.html /var/www/html/
 
 Choose either Nginx or Caddy. Both cover the same PyOVMS feature set. Caddy is simpler because it manages TLS certificates automatically. Nginx is a good choice if you already run it or need fine-grained control.
 
+Whichever you pick, allow request bodies of at least **4 MB**. The OVMS Connect app uploads its configuration backups as JSON text of up to 256 K characters (`CONFIG_BACKUP_MAX_PAYLOAD_CHARS`) — up to 1 MiB of UTF-8. The Nginx config below sets `client_max_body_size 4m;` explicitly, and Caddy imposes no limit by default.
+
 ### Option A — Nginx
 
 ```bash

@@ -2,6 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+    /* Shared tab layout (profile, edit_vehicle, vehicle_detail):
+       ≥ lg → sidebar navigation on the left, panels on the right
+       < lg → a wrapping "segmented control" track above the panels
+       The page scripts only toggle `tab-btn-active`; the look lives here. */
+    .tab-layout {
+        @apply grid grid-cols-1 gap-6 lg:gap-8;
+    }
+    @screen lg {
+        .tab-layout {
+            /* minmax(0, 1fr): the panel column may shrink below its min-content
+               width, so overflow-x-auto tables scroll instead of widening it. */
+            grid-template-columns: 13rem minmax(0, 1fr);
+        }
+    }
+
+    .tab-nav {
+        @apply flex gap-1;
+        /* < lg: pills in a bordered track that wrap to a second line */
+        @apply max-lg:flex-wrap max-lg:p-1 max-lg:rounded-xl max-lg:bg-dark-bg max-lg:border max-lg:border-border-color;
+        /* ≥ lg: vertical, sticky under the sticky top nav (~69px). self-start is
+           required: a stretched grid item has no room to stick. */
+        @apply lg:flex-col lg:self-start lg:sticky lg:top-20;
+    }
+
+    .tab-panels {
+        @apply min-w-0;
+    }
+
+    .tab-btn {
+        @apply inline-flex items-center gap-2 rounded-lg border border-transparent text-sm font-medium text-text-secondary transition-colors;
+        @apply hover:text-text-primary hover:bg-white/5;
+        @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current;
+        @apply disabled:opacity-50 disabled:cursor-not-allowed;
+        @apply max-lg:whitespace-nowrap max-lg:px-2.5 max-lg:py-1;
+        @apply lg:w-full lg:px-3 lg:py-2 lg:text-left;
+    }
+    .tab-btn-danger {
+        @apply hover:text-red-400;
+    }
+
+    /* Active state, accent chosen on the <nav>. Same specificity (0,2,0) as
+       .tab-btn:hover above, so source order is what keeps the accent on hover.
+       The danger override comes last for the same reason. */
+    .tab-nav-yellow .tab-btn-active {
+        @apply text-neon-yellow bg-neon-yellow/10 border-neon-yellow/40;
+    }
+    .tab-nav-magenta .tab-btn-active {
+        @apply text-neon-magenta bg-neon-magenta/10 border-neon-magenta/40;
+    }
+    .tab-nav-blue .tab-btn-active {
+        @apply text-neon-blue bg-neon-blue/10 border-neon-blue/40;
+    }
+    .tab-btn-danger.tab-btn-active {
+        @apply text-red-400 bg-red-500/10 border-red-500/40;
+    }
+}
+
 @layer utilities {
     .break-anywhere {
         word-break: break-word;

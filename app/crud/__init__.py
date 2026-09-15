@@ -16,6 +16,8 @@ different module — that package has its own crud.)
 from . import (
     apikey,
     autoprovision,
+    command_favorite,
+    config_backup,
     historical_data,
     push_subscription,
     system_setting,
@@ -26,6 +28,8 @@ from . import (
 __all__ = [
     "apikey",
     "autoprovision",
+    "command_favorite",
+    "config_backup",
     "historical_data",
     "push_subscription",
     "system_setting",

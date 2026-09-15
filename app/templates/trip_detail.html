@@ -327,10 +327,10 @@ document.addEventListener('alpine:init', () => {
                     if (response.ok) {
                         window.location.href = tripDetailConfig.tripDeletedRedirect;
                     } else {
-                        response.json().then(data => alert(`{{ _('Error deleting trip: ') }}${data.detail || response.statusText}`));
+                        response.json().then(data => window.ovmsDialog.alert({ message: `{{ _('Error deleting trip: ') }}${data.detail || response.statusText}`, danger: true }));
                     }
                 })
-                .catch(err => alert(`{{ _('Network error: ') }}${err.message}`));
+                .catch(err => window.ovmsDialog.alert({ message: `{{ _('Network error: ') }}${err.message}`, danger: true }));
         },
         
         formatDateTime(isoString) {

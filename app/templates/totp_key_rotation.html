@@ -246,10 +246,10 @@ document.addEventListener('alpine:init', () => {
                     this.newKeyInstructions = result.instructions;
                     this.newKeyGenerated = true;
                 } else {
-                    alert('{{ _('Failed to generate key') }}');
+                    window.ovmsDialog.alert({ message: {{ _('Failed to generate key') | tojson | safe }}, danger: true });
                 }
             } catch (error) {
-                alert('{{ _('Error:') }} ' + error.message);
+                window.ovmsDialog.alert({ message: {{ _('Error:') | tojson | safe }} + ' ' + error.message, danger: true });
             } finally {
                 this.isGenerating = false;
                 this.refreshUi();
@@ -257,7 +257,9 @@ document.addEventListener('alpine:init', () => {
         },
 
         async rotateAllUsers() {
-            if (!confirm('{{ _('Are you sure you want to rotate ALL users to version') }} ' + this.targetVersion + '?')) {
+            const question = {{ _('Are you sure you want to rotate ALL users to version %(version)s?') | tojson | safe }}
+                .replace('%(version)s', String(this.targetVersion));
+            if (!await window.ovmsDialog.confirm({ message: question, danger: true })) {
                 return;
             }
 

@@ -425,8 +425,8 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        clearLogs() {
-            if (confirm('Clear all log lines from view?')) {
+        async clearLogs() {
+            if (await window.ovmsDialog.confirm({{ _('Clear all log lines from view?') | tojson | safe }})) {
                 this.logLines = [];
                 this.logStats = {
                     info: 0,

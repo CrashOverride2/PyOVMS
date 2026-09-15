@@ -260,3 +260,94 @@ def test_every_written_zone_designator_was_actually_converted():
 
 def test_the_zone_designator_scan_still_finds_the_calls_it_guards():
     assert len(list(_zone_asserting_strftime_calls())) >= 4
+
+
+# --- the config backup payload has to be as wide on MySQL as everywhere else ------
+
+@pytest.mark.parametrize("name,expected", [
+    ("sqlite", "TEXT"),
+    ("postgresql", "TEXT"),
+    ("mysql", "LONGTEXT"),
+])
+def test_config_backup_payload_column_is_wide_enough_on_every_backend(name, expected):
+    """
+    A bare `Text` is 64 KiB on MySQL and unbounded on the other two. The app's backup
+    document is JSON text that a user with several vehicles and a few dozen commands
+    pushes past that, and MySQL truncates silently — the row is stored, the JSON is
+    cut mid-string, and the app finds out on restore.
+    """
+    from sqlalchemy.schema import CreateTable
+
+    ddl = str(CreateTable(models_db.ConfigBackup.__table__).compile(dialect=DIALECTS[name]))
+    payload_line = next(line for line in ddl.splitlines() if "payload " in line)
+
+    assert expected in payload_line, f"{name}: {payload_line.strip()!r}"
+    if name != "mysql":
+        assert "LONGTEXT" not in payload_line
+
+
+@pytest.mark.parametrize("name", list(DIALECTS))
+def test_the_auto_eviction_query_compiles_on_every_backend(name):
+    """OFFSET without LIMIT is spelled three different ways; SQLAlchemy knows them,
+    provided the query is built the way it expects. Compiling is the cheap proof."""
+    from app.crud import config_backup as crud_backup
+
+    db = SessionLocal()
+    try:
+        query = crud_backup.stale_auto_ids_query(db, owner_id=1, device_id="abcd")
+        sql = str(query.statement.compile(dialect=DIALECTS[name]))
+    finally:
+        db.close()
+
+    assert "config_backups" in sql
+    assert "OFFSET" in sql.upper() or "LIMIT" in sql.upper()
+
+
+
+@pytest.mark.parametrize("name", list(DIALECTS))
+def test_the_device_window_query_compiles_on_every_backend(name):
+    """Grouped by device and ordered by an aggregate — MySQL's ONLY_FULL_GROUP_BY
+    and PostgreSQL both accept ordering by the aggregate expression itself, but
+    not by a column outside the GROUP BY; compiling shows which one was written."""
+    from app.crud import config_backup as crud_backup
+
+    db = SessionLocal()
+    try:
+        query = crud_backup.auto_windows_by_staleness_query(db, owner_id=1)
+        sql = str(query.statement.compile(dialect=DIALECTS[name]))
+    finally:
+        db.close()
+
+    assert "GROUP BY config_backups.device_id" in sql
+    assert "ORDER BY max(config_backups.created_at)" in sql
+
+
+@pytest.mark.parametrize("name", list(DIALECTS))
+def test_the_command_favorites_query_compiles_on_every_backend(name):
+    """Ordered by a column called `position` — a name that is reserved or a function
+    in more than one SQL dialect. Compiling shows whether it needs quoting anywhere;
+    the migration and the model spell it bare."""
+    from app.crud import command_favorite as crud_favorite
+
+    db = SessionLocal()
+    try:
+        query = crud_favorite.favorites_query(db, owner_id=1)
+        sql = str(query.statement.compile(dialect=DIALECTS[name]))
+    finally:
+        db.close()
+
+    assert "ORDER BY command_favorites.position, command_favorites.id" in sql
+
+
+@pytest.mark.parametrize("name, locks", [("sqlite", False), ("postgresql", True), ("mysql", True)])
+def test_the_owner_lock_is_a_row_lock_where_the_backend_has_one(name, locks):
+    """store_backup() serialises a user's writers with SELECT ... FOR UPDATE on
+    their users row. SQLite has no row locks and one writer per database, so the
+    clause must vanish there rather than fail."""
+    from sqlalchemy import select
+
+    from app.models import db as models_db
+
+    statement = select(models_db.User.id).where(models_db.User.id == 1).with_for_update()
+    sql = str(statement.compile(dialect=DIALECTS[name]))
+    assert ("FOR UPDATE" in sql) is locks, sql

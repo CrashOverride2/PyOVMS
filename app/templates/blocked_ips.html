@@ -216,7 +216,8 @@ document.addEventListener('alpine:init', () => {
         },
 
         async removeBlock(ip) {
-            if (!confirm(`Unblock ${ip}?`)) return;
+            const question = {{ _('Unblock %(ip)s?') | tojson | safe }}.replace('%(ip)s', ip);
+            if (!await window.ovmsDialog.confirm(question)) return;
             try {
                 const resp = await fetch(`/api/v1/security/blocked-ips/${encodeURIComponent(ip)}`, {
                     method: 'DELETE',

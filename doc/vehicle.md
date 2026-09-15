@@ -128,6 +128,10 @@ The prompt is the module ID (`ZOE90$` above). `?` on its own lists the available
 
 Previously sent commands can be recalled from the history and re-executed. If the vehicle is offline on the selected protocol, the input is disabled and says so.
 
+**Favorites.** Type a command and press the **★** next to *Send* to keep it under a short label. Favorites appear as buttons below the input; one click sends the command on the selected protocol (the buttons are disabled while the vehicle is offline there), and × removes one. They belong to your account, not to the vehicle, so the same set shows up in every vehicle's terminal and on every device you log in from. Up to 50 can be kept.
+
+**Output height.** Drag the handle between the output and the input line to make the output taller or shorter; the height is remembered by the browser. Double-click the handle to return to the default.
+
 ---
 
 ## Cell Stats

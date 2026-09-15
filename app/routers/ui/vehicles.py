@@ -496,6 +496,12 @@ async def ui_vehicle_detail_page_route(
     }
             
     push_subscriptions = crud.push_subscription.get_subscriptions_for_vehicle(db, db_vehicle.id)
+    # The terminal's favorites are the user's, not the vehicle's; rendered into the
+    # page like the metrics so the tab needs no request of its own.
+    command_favorites = [
+        models_api.CommandFavoriteInfo.model_validate(f).model_dump()
+        for f in crud.command_favorite.list_favorites(db, current_user.id)
+    ]
 
     return templates.TemplateResponse(request, "vehicle_detail.html", {
         **common_vars, "vehicle": vehicle_info, "is_v2_online": is_v2_online, "is_v3_online": is_v3_online,
@@ -507,6 +513,8 @@ async def ui_vehicle_detail_page_route(
         # Matches the sibling metric groups above.
         "initial_live_data": initial_live_data, "page_title": f"Vehicle Detail: {vehicle_id_upper}",
         "push_subscriptions": push_subscriptions, "datalog_summary": datalog_summary,
+        "command_favorites": command_favorites,
+        "max_command_favorites": crud.command_favorite.MAX_COMMAND_FAVORITES_PER_USER,
     })
 
 @router.get("/{vehicle_module_id}/trip/{trip_id}", response_class=HTMLResponse, name="ui_vehicle_trip_detail_page")

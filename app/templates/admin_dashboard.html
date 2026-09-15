@@ -161,7 +161,11 @@
                         <td class="px-4 py-2 whitespace-nowrap font-medium space-x-2">
                             <a href="{{ url_for('ui_edit_vehicle_form', vehicle_db_id=vehicle.id) }}" class="text-neon-magenta hover:text-neon-magenta-darker text-xs">{{ _('Edit') }}</a>
                             {% if vehicle.unused_reminder_sent_at %}
-                            <form method="post" action="{{ url_for('ui_admin_clear_vehicle_auto_delete', vehicle_db_id=vehicle.id) }}" class="inline" onsubmit="return confirm('{{ _('Cancel auto-delete marking for') }} {{ vehicle.vehicle_id }}?')">
+                            {# .js-confirm-form, not an inline onsubmit: the CSP allows no inline handlers, so
+                               the old confirm() never ran and the form submitted unasked. #}
+                            {% set clear_msg = _("Cancel auto-delete marking for %(vehicle_id)s?") % {'vehicle_id': vehicle.vehicle_id} %}
+                            <form method="post" action="{{ url_for('ui_admin_clear_vehicle_auto_delete', vehicle_db_id=vehicle.id) }}" class="inline js-confirm-form"
+                                  data-confirm-safe data-confirm-message='{{ clear_msg | tojson }}'>
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                 <button type="submit" class="px-2 py-0.5 text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-500/50 rounded-md hover:bg-orange-500/30 transition-colors">{{ _('Cancel deletion') }}</button>
                             </form>

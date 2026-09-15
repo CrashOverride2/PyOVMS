@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Index, LargeBinary, JSON, UniqueConstraint
+from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import false as sa_false
 from app.database import Base
@@ -40,6 +41,10 @@ class User(Base):
     auto_provision_profiles = relationship("AutoProvisionProfile", back_populates="owner", cascade="all, delete-orphan")
     api_keys = relationship("ApiKey", back_populates="user", cascade="all, delete-orphan")
     webauthn_credentials = relationship("WebAuthnCredential", back_populates="user", cascade="all, delete-orphan") 
+    # ORM cascade, not decorative: app/database.py leaves SQLite foreign keys off, so
+    # the ondelete="CASCADE" on the column does nothing there.
+    config_backups = relationship("ConfigBackup", back_populates="owner", cascade="all, delete-orphan")
+    command_favorites = relationship("CommandFavorite", back_populates="owner", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(username='{self.username}', admin={self.is_admin})>"
@@ -239,6 +244,96 @@ class SystemSetting(Base):
 
     def __repr__(self):
         return f"<SystemSetting(key='{self.key}')>"
+
+
+class ConfigBackup(Base):
+    """
+    A snapshot of the OVMS Connect app's own configuration, kept for its owner.
+
+    The payload is the app's canonical backup document as JSON text — themes,
+    vehicle layouts, dashboard slots, custom commands. Two things are deliberately
+    absent from it and enforced at the API: credentials (the router refuses a payload
+    naming any) and images (they stay in the app's local ZIP export). That is what
+    makes plain text the right storage: readable in psql, no encryption key to lose
+    the rows to, and small enough (8–40 KiB typically) that deduplication is not
+    worth a second table.
+
+    `kind` is 'auto' or 'manual', and they age differently: auto rows roll per
+    (owner, device) with the oldest evicted, manual rows are pinned and capped by
+    refusing the insert. `device_id` is the app's sha256(persistent client id)[:16];
+    NULL only for an app that predates the field, and those rows share one bucket.
+    """
+    __tablename__ = "config_backups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(
+        Integer,
+        ForeignKey("users.id", name="fk_configbackup_owner_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    owner = relationship("User", back_populates="config_backups")
+
+    kind = Column(String(10), nullable=False)
+    label = Column(String(100), nullable=True)
+    device_id = Column(String(32), nullable=True)
+    device_name = Column(String(64), nullable=True)
+    app_version = Column(String(32), nullable=True)
+    platform = Column(String(16), nullable=True)
+    schema_version = Column(Integer, nullable=False)
+    # Text is the same on SQLite and PostgreSQL; MySQL's TEXT stops at 64 KiB, which
+    # a document with many vehicles and commands reaches — hence LONGTEXT there.
+    payload = Column(Text().with_variant(LONGTEXT(), "mysql"), nullable=False)
+    stored_chars = Column(Integer, nullable=False)
+    # crud.config_backup.content_digest: the document *without* `meta`, whose
+    # createdAt the app renews on every collect. A digest of the text itself would
+    # never match two uploads of the same configuration.
+    payload_sha256 = Column(String(64), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False,
+                        default=lambda: datetime.datetime.now(datetime.timezone.utc))
+
+    __table_args__ = (
+        Index("ix_config_backups_owner_kind_device_created",
+              "owner_id", "kind", "device_id", "created_at"),
+    )
+
+    def __repr__(self):
+        return f"<ConfigBackup(id={self.id}, owner_id={self.owner_id}, kind='{self.kind}')>"
+
+
+class CommandFavorite(Base):
+    """
+    A saved terminal command, shown as a one-click button in the command terminal.
+
+    Owned by a *user*, not a vehicle: the same handful of commands (`stat`,
+    `wakeup`, `charge start`) is wanted on every vehicle, and a per-vehicle list
+    would have to be typed in again for each one. `command` is the raw text as
+    typed — the terminal adds the V2 `7,` prefix at send time, so one row serves
+    both protocols. `position` orders the buttons; new rows append.
+    """
+    __tablename__ = "command_favorites"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(
+        Integer,
+        ForeignKey("users.id", name="fk_commandfavorite_owner_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    owner = relationship("User", back_populates="command_favorites")
+
+    label = Column(String(40), nullable=False)
+    command = Column(String(200), nullable=False)
+    position = Column(Integer, nullable=False, default=0, server_default="0")
+    created_at = Column(DateTime(timezone=True), nullable=False,
+                        default=lambda: datetime.datetime.now(datetime.timezone.utc))
+
+    __table_args__ = (
+        Index("ix_command_favorites_owner_position", "owner_id", "position"),
+    )
+
+    def __repr__(self):
+        return f"<CommandFavorite(id={self.id}, owner_id={self.owner_id}, label='{self.label}')>"
 
 
 class WebAuthnCredential(Base):

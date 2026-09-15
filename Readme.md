@@ -163,6 +163,8 @@ If your vehicles use the V3 (MQTT) protocol, PyOVMS needs a running MQTT broker 
 
 Running behind Nginx or Caddy is strongly recommended. The `doc/reverse proxy/` folder contains ready-to-use configs for both, including TLS hardening, WebSocket proxying, custom error pages, and optional blocks for Karto, Protomaps and Valhalla.
 
+Allow request bodies of at least 4 MB (`client_max_body_size 4m;` in Nginx): the app's configuration backups are JSON uploads of up to 256 K *characters*, which is up to 1 MiB of UTF-8 and up to three times that again if the client escapes non-ASCII text as `\uXXXX`.
+
 → **[Reverse Proxy Setup](doc/reverse%20proxy/README.md)**
 
 ### Step 4 — Passwordless / 2FA Authentication (optional)

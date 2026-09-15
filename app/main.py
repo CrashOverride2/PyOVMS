@@ -318,9 +318,19 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     # fails here first, and the default body is a nested list of pydantic errors.
     if _wants_html_error_page(request):
         return _render_error_page(request, http_status.HTTP_422_UNPROCESSABLE_ENTITY, "")
+    # Without pydantic's `input`: it is the client's own value echoed back — a
+    # 256 KiB payload refused for its length came back in full, and a string
+    # pydantic refused *because* UTF-8 cannot encode it (the JSON escape \ud800,
+    # half a surrogate pair) made this very response fail to encode, so any
+    # endpoint with a string field in its body was a 500 for the price of six
+    # bytes. `loc`, `msg` and `type` say everything the client needs.
+    errors = [
+        {key: value for key, value in error.items() if key != "input"}
+        for error in exc.errors()
+    ]
     return JSONResponse(
         status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={"detail": jsonable_encoder(exc.errors())},
+        content={"detail": jsonable_encoder(errors)},
     )
 
 

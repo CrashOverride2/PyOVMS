@@ -17,12 +17,20 @@
     </div>
     {% endif %}
 
-    <div x-ref="terminalOutput"
-        class="h-64 overflow-y-auto overflow-x-auto bg-black text-white p-3 font-mono text-sm border border-gray-700 rounded-md mb-2 scroll-smooth custom-scrollbar">
+    <div x-ref="terminalOutput" :style="terminalUi.outputStyle"
+        class="h-64 min-h-[8rem] overflow-y-auto overflow-x-auto bg-black text-white p-3 font-mono text-sm border border-gray-700 rounded-md scroll-smooth custom-scrollbar">
         <template x-for="line in commandHistory" :key="line.id">
             <div :class="line.cssClass"><span x-text="line.text"></span></div>
         </template>
     </div>
+    {# Drag handle: pointer events, so it works by touch as well; the chosen height is
+       kept in localStorage. Double-click restores the default. #}
+    <div @pointerdown="startTerminalResize" @dblclick="resetTerminalOutputHeight"
+        title="{{ _('Drag to resize, double-click to reset') }}"
+        class="group flex items-center justify-center h-4 mb-1 cursor-row-resize touch-none select-none">
+        <span class="w-12 h-1 rounded-full bg-gray-600 group-hover:bg-neon-blue/70 transition-colors"></span>
+    </div>
+
     <form @submit.prevent="submitCommand"
         class="flex items-center bg-black border border-gray-700 rounded-md overflow-x-auto custom-scrollbar">
         <span class="text-green-400 font-mono text-sm pl-3 pr-1 py-2 select-none whitespace-nowrap"
@@ -37,9 +45,53 @@
                 autocomplete="off">
             <span x-show="isSubmitting" class="animate-pulse text-yellow-400 font-mono text-sm px-2">...</span>
         </div>
+        {# Always rendered, disabled while there is nothing to save: a slot that appears
+           and disappears would move the input line. #}
+        <button type="button" @click="openSaveFavoriteForm" :disabled="favoritesUi.saveButtonDisabled"
+            title="{{ _('Save as favorite') }}" aria-label="{{ _('Save as favorite') }}"
+            class="px-2 py-1 text-2xl leading-none text-yellow-400 hover:text-yellow-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors">&#9733;</button>
         <button type="submit" :disabled="terminalUi.sendDisabled"
             class="px-4 py-2 text-sm font-medium text-dark-bg bg-neon-blue border-l border-gray-700 rounded-r-md hover:bg-neon-blue-darker disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors">
             {{ _('Send') }}
         </button>
     </form>
+
+    {# Everything about favorites sits below the input line, so opening the form or
+       adding a chip never shifts it. Labels and commands are user text and reach the
+       DOM through x-text / :title only. #}
+    <div x-show="favoritesUi.showSaveForm" x-cloak class="mt-2 p-3 bg-gray-800/60 rounded-md border border-neon-blue/20">
+        <form @submit.prevent="saveFavorite" class="flex flex-wrap items-end gap-2">
+            <div class="flex-grow min-w-[10rem]">
+                <label for="favoriteLabelInput" class="block text-xs text-text-secondary mb-1">{{ _('Label') }}</label>
+                <input type="text" id="favoriteLabelInput" x-ref="favoriteLabelInput" maxlength="40" autocomplete="off"
+                    :value="favoriteDraft.label" @input="handleFavoriteLabelInput"
+                    @keydown.escape.prevent="cancelSaveFavoriteForm"
+                    class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:border-neon-blue">
+            </div>
+            <button type="submit" :disabled="favoritesUi.saveDisabled"
+                class="px-3 py-1.5 text-sm font-medium text-dark-bg bg-neon-blue rounded hover:bg-neon-blue-darker disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors">
+                {{ _('Save') }}
+            </button>
+            <button type="button" @click="cancelSaveFavoriteForm"
+                class="px-3 py-1.5 text-sm bg-gray-600 text-text-primary rounded hover:bg-gray-500 transition-colors">
+                {{ _('Cancel') }}
+            </button>
+            <p class="w-full text-xs font-mono text-text-secondary truncate" x-text="favoriteDraft.command"></p>
+            <p x-show="favoritesUi.hasError" class="w-full text-xs text-red-400" x-text="favoritesUi.error"></p>
+        </form>
+    </div>
+    {# The chip sends immediately; the × is its own click target (@click.stop). #}
+    <div x-show="favoritesUi.hasFavorites" class="flex flex-wrap items-center gap-2 mt-2">
+        <template x-for="fav in commandFavorites" :key="fav.id">
+            <span class="inline-flex items-stretch rounded border border-neon-blue/40 bg-gray-800/60 font-mono text-xs overflow-hidden">
+                <button type="button" @click="sendFavorite" :data-favorite-id="fav.id" :title="fav.command"
+                    :disabled="favoritesUi.sendDisabled"
+                    class="px-2 py-1 text-neon-blue hover:bg-neon-blue/20 disabled:opacity-40 disabled:cursor-not-allowed max-w-[12rem] truncate transition-colors"
+                    x-text="fav.label"></button>
+                <button type="button" @click.stop="deleteFavorite" :data-favorite-id="fav.id"
+                    title="{{ _('Remove favorite') }}" aria-label="{{ _('Remove favorite') }}"
+                    class="px-1.5 border-l border-neon-blue/40 text-text-secondary hover:text-red-400 hover:bg-red-500/10 transition-colors">&times;</button>
+            </span>
+        </template>
+    </div>
 </div>

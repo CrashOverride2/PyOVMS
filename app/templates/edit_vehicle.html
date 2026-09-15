@@ -4,221 +4,202 @@
 
 {% block content %}
 <div class="max-w-4xl mx-auto" id="edit-vehicle-page">
-    <div class="flex justify-start mb-6">
-        <a href="{{ url_for('ui_admin_dashboard') if is_admin else url_for('ui_dashboard') }}" class="px-4 py-2 text-sm font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">← {{ _('Back') }}</a>
-    </div>
-    <h1 class="text-2xl md:text-3xl font-bold mb-2 text-center text-neon-magenta">{{ _(page_title) }}</h1>
-    {% if vehicle and is_admin %}
-        <p class="text-sm text-center text-text-secondary mb-6">{{ _('Owner') }}: {{ vehicle.owner_username or 'N/A' }}</p>
-    {% endif %}
-
-    <div class="mb-6 border-b border-border-color overflow-hidden">
-        <div class="overflow-x-auto pb-2 custom-scrollbar">
-            <nav class="-mb-px flex space-x-6 min-w-max" aria-label="{{ _('Tabs') }}">
-                <button type="button" data-tab-btn="general" class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-text-secondary hover:text-text-primary hover:border-gray-500">{{ _('General') }}</button>
-                <button type="button" data-tab-btn="connectivity" class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-text-secondary hover:text-text-primary hover:border-gray-500">{{ _('Connectivity') }}</button>
-                <button type="button" data-tab-btn="danger" class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-text-secondary hover:text-text-primary hover:border-gray-500">{{ _('Danger Zone') }}</button>
-            </nav>
+    <div class="flex items-center gap-4 mb-6">
+        <a href="{{ url_for('ui_admin_dashboard') if is_admin else url_for('ui_dashboard') }}"
+           class="flex-none px-4 py-2 text-sm font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">← {{ _('Back') }}</a>
+        <div class="min-w-0">
+            <h1 class="break-words text-2xl md:text-3xl font-bold text-neon-magenta">{{ _(page_title) }}</h1>
+            {% if is_admin %}
+            <p class="text-sm text-text-secondary">{{ _('Owner') }}: {{ vehicle.owner_username or 'N/A' }}</p>
+            {% endif %}
         </div>
     </div>
 
-    <form action="{{ form_action_url }}" method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <div data-tab-panel="general" class="bg-card-bg p-6 rounded-lg border border-border-color/70 shadow-lg">
-            <h2 class="text-xl font-semibold text-neon-magenta mb-4">{{ _('General Settings') }}</h2>
-            <div class="space-y-6">
-                {% if is_admin and not vehicle %}
-                    {% if all_users %}
-                    <div>
-                        <label for="owner_id" class="block text-sm font-medium text-text-secondary">{{ _('Vehicle Owner') }}</label>
-                        <select id="owner_id" name="owner_id" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-magenta focus:ring-1 focus:ring-neon-magenta sm:text-sm">
-                            {% for user in all_users %}
-                            <option value="{{ user.id }}">
-                                {{ user.username }} ({{ user.full_name or user.email }})
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <p class="mt-1 text-xs text-gray-500">{{ _('As an admin, you must assign this vehicle to a user.') }}</p>
-                    </div>
-                    {% else %}
-                    <div class="p-3 my-4 bg-yellow-900/40 border border-yellow-700/60 rounded-md text-sm text-yellow-200">
-                        <h3 class="font-semibold text-neon-yellow">{{ _('No Users Available') }}</h3>
-                        <p class="mt-1">{{ _('There are no non-admin users to assign a vehicle to. Please') }} <a href="{{ url_for('ui_add_user_form') }}" class="font-bold underline hover:text-yellow-100">{{ _('create a user') }}</a> {{ _('first.') }}</p>
-                    </div>
-                    {% endif %}
-                {% endif %}
-                <div>
-                    <label for="vehicle_id" class="block text-sm font-medium text-text-secondary">{{ _('Vehicle/Module ID (Unique)') }}</label>
-                    {% if vehicle %}
-                    <input type="text" name="vehicle_id" id="vehicle_id" readonly value="{{ vehicle.vehicle_id }}" class="mt-1 block w-full px-3 py-2 bg-input-bg/50 border-border-color text-text-secondary rounded-md shadow-sm cursor-not-allowed sm:text-sm" title="{{ _('The Vehicle ID cannot be changed after creation.') }}">
-                    <p class="mt-1 text-xs text-gray-500">{{ _('The Vehicle ID cannot be changed after creation.') }}</p>
-                    {% else %}
-                    <input type="text" name="vehicle_id" id="vehicle_id" required value="" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-magenta focus:ring-1 focus:ring-neon-magenta sm:text-sm" placeholder="{{ _('e.g., TESTCAR') }}">
-                    {% endif %}
-                </div>
-                <div>
-                    <label for="vehicle_name" class="block text-sm font-medium text-text-secondary">{{ _('Vehicle Name (Display Name)') }}</label>
-                    <input type="text" name="vehicle_name" id="vehicle_name" value="{{ vehicle.vehicle_name if vehicle and vehicle.vehicle_name else '' }}" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-magenta focus:ring-1 focus:ring-neon-magenta sm:text-sm" placeholder="{{ _('e.g., My Tesla Model 3') }}">
-                </div>
-                <div>
-                    <label for="server_password" class="block text-sm font-medium text-text-secondary">{{ _('Server Password (for V2 & V3/MQTT Auth)') }}</label>
-                    <input type="password" name="server_password" id="server_password" {% if not vehicle %}required{% endif %} value="" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-magenta focus:ring-1 focus:ring-neon-magenta sm:text-sm" placeholder="{{ _('Leave blank if not changing') if vehicle else _('Required for new vehicle') }}">
-                    {% if vehicle %}<p class="mt-1 text-xs text-gray-500">{{ _('Leave blank to keep the current server password.') }}</p>{% endif %}
-                </div>
-                <details>
-                    <summary class="flex justify-between items-center w-full text-left py-2 cursor-pointer">
-                        <span class="text-base font-semibold text-neon-yellow">{{ _('Advanced Security (Paranoid Mode)') }}</span>
-                        <svg class="w-5 h-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                    </summary>
-                    <div class="mt-2 space-y-4 border-l-2 border-neon-yellow/50 pl-4 py-2">
-                        <p class="text-sm text-text-secondary">{{ _('"Paranoid mode" is an optional security feature where the module requires a password for all commands. The module sends a token to the server, which the server uses with the Module Password to encrypt a response.') }}</p>
-                        <div><label for="module_password" class="block text-sm font-medium text-text-secondary">{{ _('Module Password') }}</label><input type="password" name="module_password" id="module_password" value="" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-yellow focus:ring-1 focus:ring-neon-yellow sm:text-sm" placeholder="{{ _('Leave blank if not changing') }}"><p class="mt-1 text-xs text-gray-500">{{ _('Also known as the "register password" in some module configs.') }}</p></div>
-                        <div><label for="paranoid_token" class="block text-sm font-medium text-text-secondary">{{ _('Paranoid Token (Auto-populated by module)') }}</label><input type="text" name="paranoid_token" id="paranoid_token" value="{{ paranoid_token_display }}" class="mt-1 block w-full px-3 py-2 bg-input-bg/50 border-border-color text-text-secondary rounded-md shadow-sm sm:text-sm cursor-not-allowed" readonly disabled><p class="mt-1 text-xs text-gray-500">{{ _("This value is sent by the vehicle when it's in paranoid mode and is generally not edited manually.") }}</p></div>
-                    </div>
-                </details>
-            </div>
-        </div>
-
-        <div data-tab-panel="connectivity" class="hidden bg-card-bg p-6 rounded-lg border border-border-color/70 shadow-lg">
-            <h2 class="text-xl font-semibold text-neon-magenta mb-4">{{ _('Connectivity Settings') }}</h2>
-            <div class="space-y-6">
-                <div>
-                    <label class="block text-sm font-medium text-text-secondary">{{ _('Communication Protocol') }}</label>
-                    <p class="text-xs text-gray-400 mb-2">{{ _('Select which protocol(s) this vehicle will use to connect.') }}</p>
-                    <div class="mt-2 space-y-2">
-                        <div class="flex items-center"><input id="proto_both" name="protocol" type="radio" value="both" class="h-4 w-4 text-neon-magenta border-gray-500 focus:ring-neon-magenta" {% if not is_mqtt_configured %}disabled{% endif %}><label for="proto_both" class="ml-3 block text-sm font-medium {% if not is_mqtt_configured %}text-gray-500{% else %}text-text-primary{% endif %}">{{ _('V2 (TCP) & V3 (MQTT)') }} {% if not is_mqtt_configured %}({{ _('V3 Not Configured') }}){% endif %}</label></div>
-                        <div class="flex items-center"><input id="proto_v2" name="protocol" type="radio" value="v2" class="h-4 w-4 text-neon-magenta border-gray-500 focus:ring-neon-magenta"><label for="proto_v2" class="ml-3 block text-sm font-medium text-text-primary">{{ _('V2 Only (TCP)') }}</label></div>
-                        <div class="flex items-center"><input id="proto_v3" name="protocol" type="radio" value="v3" class="h-4 w-4 text-neon-magenta border-gray-500 focus:ring-neon-magenta" {% if not is_mqtt_configured %}disabled{% endif %}><label for="proto_v3" class="ml-3 block text-sm font-medium {% if not is_mqtt_configured %}text-gray-500{% else %}text-text-primary{% endif %}">{{ _('V3 Only (MQTT)') }} {% if not is_mqtt_configured %}({{ _('Not Configured') }}){% endif %}</label></div>
-                    </div>
-                </div>
-                <div id="notif_pref_container" class="hidden pt-4 border-t border-border-color/30">
-                    <label class="block text-sm font-medium text-text-secondary">{{ _('Notification Source') }}</label>
-                    <p class="text-xs text-gray-400 mb-2">{{ _('When both protocols are active, choose which one sends alerts to avoid duplicates.') }}</p>
-                    <div class="mt-2 space-y-2"><div class="flex items-center"><input id="notif_pref_v3" name="notification_preference" type="radio" value="v3" {% if not vehicle or vehicle.notification_preference == 'v3' %}checked{% endif %} class="h-4 w-4 text-neon-magenta border-gray-500 focus:ring-neon-magenta"><label for="notif_pref_v3" class="ml-3 block text-sm font-medium text-text-primary">{{ _('Prefer V3 (MQTT)') }}</label></div><div class="flex items-center"><input id="notif_pref_v2" name="notification_preference" type="radio" value="v2" {% if vehicle and vehicle.notification_preference == 'v2' %}checked{% endif %} class="h-4 w-4 text-neon-magenta border-gray-500 focus:ring-neon-magenta"><label for="notif_pref_v2" class="ml-3 block text-sm font-medium text-text-primary">{{ _('Prefer V2 (TCP)') }}</label></div></div>
-                </div>
-
-                <details id="v3_info_wrapper" class="hidden">
-                    <summary class="flex justify-between items-center w-full text-left py-2 cursor-pointer">
-                        <span class="text-base font-semibold text-neon-yellow">{{ _('V3/MQTT Configuration Details') }}</span>
-                        <svg class="w-5 h-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                    </summary>
-                    <div class="mt-2 space-y-4 border-l-2 border-neon-yellow/50 pl-4 py-2">
-                        <div class="p-4 bg-card-bg/50 border-l-4 border-neon-blue rounded-r-lg space-y-4">
-                            <p class="text-sm text-text-secondary">{{ _('Use the following details to configure V3/MQTT on your vehicle module.') }}</p>
-                            
-                            <!-- Username -->
-                            <div class="space-y-1">
-                                <label class="text-xs font-bold uppercase text-text-secondary tracking-wider">{{ _('MQTT Username') }}</label>
-                                <div class="flex items-center">
-                                    <code id="v3UsernameText" class="flex-grow p-2 bg-input-bg text-text-primary rounded-l-md font-mono">{{ _('<VEHICLE ID>') }}</code>
-                                    <button type="button" data-copy-target="v3UsernameText" class="px-3 py-2 bg-neon-blue text-dark-bg rounded-r-md hover:bg-neon-blue-darker transition-colors flex-shrink-0">{{ _('Copy') }}</button>
-                                </div>
-                            </div>
-                
-                            <!-- Password -->
-                            <div class="space-y-1">
-                                <label class="text-xs font-bold uppercase text-text-secondary tracking-wider">{{ _('MQTT Password') }}</label>
-                                <div class="p-2 bg-input-bg text-text-secondary rounded-md italic">
-                                    {{ _('Use the "Server Password" from the General tab.') }}
-                                </div>
-                            </div>
-                
-                            <!-- Topic Prefix -->
-                            <div class="space-y-1">
-                                <label class="text-xs font-bold uppercase text-text-secondary tracking-wider">{{ _('MQTT Topic Prefix') }}</label>
-                                <div class="flex items-center">
-                                    <code id="v3TopicText" class="flex-grow p-2 bg-input-bg text-text-primary rounded-l-md font-mono break-all">ovms/{{ current_user.username }}/{{ _('<VEHICLE ID>') }}/</code>
-                                    <button type="button" data-copy-target="v3TopicText" class="px-3 py-2 bg-neon-blue text-dark-bg rounded-r-md hover:bg-neon-blue-darker transition-colors flex-shrink-0">{{ _('Copy') }}</button>
-                                </div>
-                                <p class="pt-1 text-xs text-neon-yellow">{{ _('Note: The trailing slash (/) is required!') }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </details>
-                
-                <div class="pt-4 mt-2 border-t border-border-color/30">
-                    <details id="cli_helper">
-                    <summary class="flex justify-between items-center w-full text-left py-2 cursor-pointer">
-                        <span class="text-base font-semibold text-neon-yellow">{{ _('Module CLI Helper') }}</span>
-                        <svg class="w-5 h-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                    </summary>
-                    <div class="mt-2 space-y-6 border-l-2 border-neon-yellow/50 pl-4 py-2">
-                        <p class="text-xs text-text-secondary">{{ _("Use these commands in your module's terminal to quickly configure the server connection. The values will update as you type in the form above.") }}</p>
-
-                        <!-- V2 Configuration -->
-                        <div id="v2_cli_section" class="hidden">
-                            <div class="flex justify-between items-center mb-1">
-                                <h4 class="text-md font-semibold text-neon-blue">{{ _('V2 Server CLI Configuration') }}</h4>
-                                <button type="button" data-copy-target="v2CommandsText" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">{{ _('Copy') }}</button>
-                            </div>
-                            <pre id="v2CommandsText" class="bg-black p-3 rounded text-sm text-green-300 font-mono overflow-x-auto custom-scrollbar"></pre>
-                        </div>
-
-                        <!-- V3 Configuration -->
-                        <div id="v3_cli_section" class="hidden">
-                             <div class="flex justify-between items-center mb-1">
-                                <h4 class="text-md font-semibold {% if not is_mqtt_configured %}text-gray-500{% else %}text-neon-magenta{% endif %}">{{ _('V3 Server CLI Configuration') }}</h4>
-                                <button type="button" data-copy-target="v3CommandsText" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded" {% if not is_mqtt_configured %}disabled{% endif %}>{{ _('Copy') }}</button>
-                            </div>
-                            <pre id="v3CommandsText" class="bg-black p-3 rounded text-sm font-mono overflow-x-auto custom-scrollbar {% if not is_mqtt_configured %}text-gray-500{% else %}text-green-300{% endif %}"></pre>
-                        </div>
-                    </div>
-                    </details>
-                </div>
-
-                <div class="pt-4 border-t border-border-color/30">
-                    <label class="block text-sm font-medium text-text-secondary">{{ _('Optional Services') }}</label>
-                    <div class="mt-2 space-y-2">
-                        {% if settings.ENABLE_KARTO_TRIP_TRACKING %}
-                        <div id="trip_tracking_container">
-                            <div class="flex items-center">
-                                <input id="enable_trip_tracking" name="enable_trip_tracking" type="checkbox" value="true" {% if vehicle and vehicle.enable_trip_tracking %}checked{% endif %} class="h-4 w-4 text-neon-blue border-gray-500 rounded focus:ring-neon-blue">
-                                <label for="enable_trip_tracking" class="ml-2 block text-sm text-text-primary">{{ _('Enable Trip Tracking') }}</label>
-                            </div>
-                            <p class="text-xs text-gray-400 mt-1 ml-6">{{ _('Allow the Karto service to record and analyze trip data for this vehicle.') }}</p>
-                        </div>
-                        {% endif %}
-                        <div class="flex items-center">
-                            <input id="enable_charge_logging" name="enable_charge_logging" type="checkbox" value="true" {% if vehicle and vehicle.enable_charge_logging %}checked{% endif %} class="h-4 w-4 text-neon-blue border-gray-500 rounded focus:ring-neon-blue">
-                            <label for="enable_charge_logging" class="ml-2 block text-sm text-text-primary">{{ _('Enable Charge Logging') }}</label>
-                        </div>
-                         <p class="text-xs text-gray-400 mt-1 ml-6">{{ _('Record charging sessions for this vehicle.') }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="mt-8" id="save_action_container">
-            <button type="submit" class="w-full px-4 py-2.5 text-sm font-medium text-dark-bg bg-neon-magenta border border-neon-magenta rounded-md hover:bg-neon-magenta-darker hover:border-neon-magenta-darker hover:shadow-lg hover:shadow-neon-magenta/40 transition-all duration-200"
-                    {% if is_admin and not vehicle and not all_users %}disabled{% endif %}>
-                {% if vehicle %}{{ _('Update Vehicle') }}{% else %}{{ _('Add Vehicle') }}{% endif %}
+    <div class="tab-layout">
+        <nav class="tab-nav tab-nav-magenta" aria-label="{{ _('Tabs') }}">
+            <button type="button" data-tab-btn="general" class="tab-btn">
+                <svg class="h-4 w-4 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+                <span>{{ _('General') }}</span>
             </button>
-        </div>
-    </form>
+            <button type="button" data-tab-btn="connectivity" class="tab-btn">
+                <svg class="h-4 w-4 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9.348 14.652a3.75 3.75 0 0 1 0-5.304m5.304 0a3.75 3.75 0 0 1 0 5.304m-7.425 2.121a6.75 6.75 0 0 1 0-9.546m9.546 0a6.75 6.75 0 0 1 0 9.546M5.106 18.894c-3.808-3.807-3.808-9.98 0-13.788m13.788 0c3.808 3.807 3.808 9.98 0 13.788M12 12h.008v.008H12V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>
+                <span>{{ _('Connectivity') }}</span>
+            </button>
+            <button type="button" data-tab-btn="danger" class="tab-btn tab-btn-danger">
+                <svg class="h-4 w-4 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
+                <span>{{ _('Danger Zone') }}</span>
+            </button>
+        </nav>
 
-    <div data-tab-panel="danger" class="hidden">
-        <div class="bg-card-bg p-6 rounded-lg border border-red-500/70 shadow-lg">
-        {% if vehicle and vehicle.id %}
-        <div>
-            <h2 class="text-xl font-semibold text-red-400 mb-3">{{ _('Delete This Vehicle') }}</h2>
-            <p class="text-sm text-red-200 mb-2">{{ _('Deleting this vehicle is a permanent action. All of its historical data will be immediately and irreversibly erased.') }}</p>
-            <p class="text-sm text-red-200 mb-4">{{ (_('To confirm, please type <strong>%(id)s</strong> into the box below.') % {'id': vehicle.vehicle_id}) | safe }}</p>
-            <form action="{{ url_for('ui_delete_vehicle', vehicle_db_id=vehicle.id) }}" method="post">
+        <div class="tab-panels">
+            <form action="{{ form_action_url }}" method="post">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <div>
-                    <label for="delete_confirmation" class="sr-only">{{ _('Type %(id)s to confirm') % {'id': vehicle.vehicle_id} }}</label>
-                    <input type="text" name="delete_confirmation" id="delete_confirmation" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-red-500 focus:ring-1 focus:ring-red-500 sm:text-sm" placeholder="{{ _('Type %(id)s here') % {'id': vehicle.vehicle_id} }}">
+                <div data-tab-panel="general" class="bg-card-bg p-6 rounded-lg border border-border-color/70 shadow-lg">
+                    <h2 class="text-xl font-semibold text-neon-magenta mb-4">{{ _('General Settings') }}</h2>
+                    <div class="space-y-6">
+                        <div>
+                            <label for="vehicle_id" class="block text-sm font-medium text-text-secondary">{{ _('Vehicle/Module ID (Unique)') }}</label>
+                            <input type="text" name="vehicle_id" id="vehicle_id" readonly value="{{ vehicle.vehicle_id }}" class="mt-1 block w-full px-3 py-2 bg-input-bg/50 border-border-color text-text-secondary rounded-md shadow-sm cursor-not-allowed sm:text-sm" title="{{ _('The Vehicle ID cannot be changed after creation.') }}">
+                            <p class="mt-1 text-xs text-gray-500">{{ _('The Vehicle ID cannot be changed after creation.') }}</p>
+                        </div>
+                        <div>
+                            <label for="vehicle_name" class="block text-sm font-medium text-text-secondary">{{ _('Vehicle Name (Display Name)') }}</label>
+                            <input type="text" name="vehicle_name" id="vehicle_name" value="{{ vehicle.vehicle_name or '' }}" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-magenta focus:ring-1 focus:ring-neon-magenta sm:text-sm" placeholder="{{ _('e.g., My Tesla Model 3') }}">
+                        </div>
+                        <div>
+                            <label for="server_password" class="block text-sm font-medium text-text-secondary">{{ _('Server Password (for V2 & V3/MQTT Auth)') }}</label>
+                            <input type="password" name="server_password" id="server_password" value="" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-magenta focus:ring-1 focus:ring-neon-magenta sm:text-sm" placeholder="{{ _('Leave blank if not changing') }}">
+                            <p class="mt-1 text-xs text-gray-500">{{ _('Leave blank to keep the current server password.') }}</p>
+                        </div>
+                        <details>
+                            <summary class="flex justify-between items-center w-full text-left py-2 cursor-pointer">
+                                <span class="text-base font-semibold text-neon-yellow">{{ _('Advanced Security (Paranoid Mode)') }}</span>
+                                <svg class="w-5 h-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                            </summary>
+                            <div class="mt-2 space-y-4 border-l-2 border-neon-yellow/50 pl-4 py-2">
+                                <p class="text-sm text-text-secondary">{{ _('"Paranoid mode" is an optional security feature where the module requires a password for all commands. The module sends a token to the server, which the server uses with the Module Password to encrypt a response.') }}</p>
+                                <div><label for="module_password" class="block text-sm font-medium text-text-secondary">{{ _('Module Password') }}</label><input type="password" name="module_password" id="module_password" value="" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-yellow focus:ring-1 focus:ring-neon-yellow sm:text-sm" placeholder="{{ _('Leave blank if not changing') }}"><p class="mt-1 text-xs text-gray-500">{{ _('Also known as the "register password" in some module configs.') }}</p></div>
+                                <div><label for="paranoid_token" class="block text-sm font-medium text-text-secondary">{{ _('Paranoid Token (Auto-populated by module)') }}</label><input type="text" name="paranoid_token" id="paranoid_token" value="{{ paranoid_token_display }}" class="mt-1 block w-full px-3 py-2 bg-input-bg/50 border-border-color text-text-secondary rounded-md shadow-sm sm:text-sm cursor-not-allowed" readonly disabled><p class="mt-1 text-xs text-gray-500">{{ _("This value is sent by the vehicle when it's in paranoid mode and is generally not edited manually.") }}</p></div>
+                            </div>
+                        </details>
+                    </div>
                 </div>
-                <div class="mt-4">
-                    <button id="delete_submit_button" type="submit" disabled class="w-full px-4 py-2 text-sm font-medium text-dark-bg bg-red-600 border border-red-500 rounded-md hover:bg-red-700 transition-colors disabled:bg-gray-600 disabled:border-gray-500 disabled:cursor-not-allowed">
-                        {{ _('Delete Vehicle Permanently') }}
+
+                <div data-tab-panel="connectivity" class="hidden bg-card-bg p-6 rounded-lg border border-border-color/70 shadow-lg">
+                    <h2 class="text-xl font-semibold text-neon-magenta mb-4">{{ _('Connectivity Settings') }}</h2>
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-text-secondary">{{ _('Communication Protocol') }}</label>
+                            <p class="text-xs text-gray-400 mb-2">{{ _('Select which protocol(s) this vehicle will use to connect.') }}</p>
+                            <div class="mt-2 space-y-2">
+                                <div class="flex items-center"><input id="proto_both" name="protocol" type="radio" value="both" class="h-4 w-4 text-neon-magenta border-gray-500 focus:ring-neon-magenta" {% if not is_mqtt_configured %}disabled{% endif %}><label for="proto_both" class="ml-3 block text-sm font-medium {% if not is_mqtt_configured %}text-gray-500{% else %}text-text-primary{% endif %}">{{ _('V2 (TCP) & V3 (MQTT)') }} {% if not is_mqtt_configured %}({{ _('V3 Not Configured') }}){% endif %}</label></div>
+                                <div class="flex items-center"><input id="proto_v2" name="protocol" type="radio" value="v2" class="h-4 w-4 text-neon-magenta border-gray-500 focus:ring-neon-magenta"><label for="proto_v2" class="ml-3 block text-sm font-medium text-text-primary">{{ _('V2 Only (TCP)') }}</label></div>
+                                <div class="flex items-center"><input id="proto_v3" name="protocol" type="radio" value="v3" class="h-4 w-4 text-neon-magenta border-gray-500 focus:ring-neon-magenta" {% if not is_mqtt_configured %}disabled{% endif %}><label for="proto_v3" class="ml-3 block text-sm font-medium {% if not is_mqtt_configured %}text-gray-500{% else %}text-text-primary{% endif %}">{{ _('V3 Only (MQTT)') }} {% if not is_mqtt_configured %}({{ _('Not Configured') }}){% endif %}</label></div>
+                            </div>
+                        </div>
+                        <div id="notif_pref_container" class="hidden pt-4 border-t border-border-color/30">
+                            <label class="block text-sm font-medium text-text-secondary">{{ _('Notification Source') }}</label>
+                            <p class="text-xs text-gray-400 mb-2">{{ _('When both protocols are active, choose which one sends alerts to avoid duplicates.') }}</p>
+                            <div class="mt-2 space-y-2"><div class="flex items-center"><input id="notif_pref_v3" name="notification_preference" type="radio" value="v3" {% if vehicle.notification_preference == 'v3' %}checked{% endif %} class="h-4 w-4 text-neon-magenta border-gray-500 focus:ring-neon-magenta"><label for="notif_pref_v3" class="ml-3 block text-sm font-medium text-text-primary">{{ _('Prefer V3 (MQTT)') }}</label></div><div class="flex items-center"><input id="notif_pref_v2" name="notification_preference" type="radio" value="v2" {% if vehicle.notification_preference == 'v2' %}checked{% endif %} class="h-4 w-4 text-neon-magenta border-gray-500 focus:ring-neon-magenta"><label for="notif_pref_v2" class="ml-3 block text-sm font-medium text-text-primary">{{ _('Prefer V2 (TCP)') }}</label></div></div>
+                        </div>
+
+                        <details id="v3_info_wrapper" class="hidden">
+                            <summary class="flex justify-between items-center w-full text-left py-2 cursor-pointer">
+                                <span class="text-base font-semibold text-neon-yellow">{{ _('V3/MQTT Configuration Details') }}</span>
+                                <svg class="w-5 h-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                            </summary>
+                            <div class="mt-2 space-y-4 border-l-2 border-neon-yellow/50 pl-4 py-2">
+                                <div class="p-4 bg-card-bg/50 border-l-4 border-neon-blue rounded-r-lg space-y-4">
+                                    <p class="text-sm text-text-secondary">{{ _('Use the following details to configure V3/MQTT on your vehicle module.') }}</p>
+                            
+                                    <!-- Username -->
+                                    <div class="space-y-1">
+                                        <label class="text-xs font-bold uppercase text-text-secondary tracking-wider">{{ _('MQTT Username') }}</label>
+                                        <div class="flex items-center">
+                                            <code id="v3UsernameText" class="flex-grow p-2 bg-input-bg text-text-primary rounded-l-md font-mono">{{ _('<VEHICLE ID>') }}</code>
+                                            <button type="button" data-copy-target="v3UsernameText" class="px-3 py-2 bg-neon-blue text-dark-bg rounded-r-md hover:bg-neon-blue-darker transition-colors flex-shrink-0">{{ _('Copy') }}</button>
+                                        </div>
+                                    </div>
+                
+                                    <!-- Password -->
+                                    <div class="space-y-1">
+                                        <label class="text-xs font-bold uppercase text-text-secondary tracking-wider">{{ _('MQTT Password') }}</label>
+                                        <div class="p-2 bg-input-bg text-text-secondary rounded-md italic">
+                                            {{ _('Use the "Server Password" from the General tab.') }}
+                                        </div>
+                                    </div>
+                
+                                    <!-- Topic Prefix -->
+                                    <div class="space-y-1">
+                                        <label class="text-xs font-bold uppercase text-text-secondary tracking-wider">{{ _('MQTT Topic Prefix') }}</label>
+                                        <div class="flex items-center">
+                                            <code id="v3TopicText" class="flex-grow p-2 bg-input-bg text-text-primary rounded-l-md font-mono break-all">ovms/{{ current_user.username }}/{{ _('<VEHICLE ID>') }}/</code>
+                                            <button type="button" data-copy-target="v3TopicText" class="px-3 py-2 bg-neon-blue text-dark-bg rounded-r-md hover:bg-neon-blue-darker transition-colors flex-shrink-0">{{ _('Copy') }}</button>
+                                        </div>
+                                        <p class="pt-1 text-xs text-neon-yellow">{{ _('Note: The trailing slash (/) is required!') }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+                
+                        <div class="pt-4 mt-2 border-t border-border-color/30">
+                            <details id="cli_helper">
+                            <summary class="flex justify-between items-center w-full text-left py-2 cursor-pointer">
+                                <span class="text-base font-semibold text-neon-yellow">{{ _('Module CLI Helper') }}</span>
+                                <svg class="w-5 h-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                            </summary>
+                            <div class="mt-2 space-y-6 border-l-2 border-neon-yellow/50 pl-4 py-2">
+                                <p class="text-xs text-text-secondary">{{ _("Use these commands in your module's terminal to quickly configure the server connection. The values will update as you type in the form above.") }}</p>
+
+                                <!-- V2 Configuration -->
+                                <div id="v2_cli_section" class="hidden">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <h4 class="text-md font-semibold text-neon-blue">{{ _('V2 Server CLI Configuration') }}</h4>
+                                        <button type="button" data-copy-target="v2CommandsText" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">{{ _('Copy') }}</button>
+                                    </div>
+                                    <pre id="v2CommandsText" class="bg-black p-3 rounded text-sm text-green-300 font-mono overflow-x-auto custom-scrollbar"></pre>
+                                </div>
+
+                                <!-- V3 Configuration -->
+                                <div id="v3_cli_section" class="hidden">
+                                     <div class="flex justify-between items-center mb-1">
+                                        <h4 class="text-md font-semibold {% if not is_mqtt_configured %}text-gray-500{% else %}text-neon-magenta{% endif %}">{{ _('V3 Server CLI Configuration') }}</h4>
+                                        <button type="button" data-copy-target="v3CommandsText" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded" {% if not is_mqtt_configured %}disabled{% endif %}>{{ _('Copy') }}</button>
+                                    </div>
+                                    <pre id="v3CommandsText" class="bg-black p-3 rounded text-sm font-mono overflow-x-auto custom-scrollbar {% if not is_mqtt_configured %}text-gray-500{% else %}text-green-300{% endif %}"></pre>
+                                </div>
+                            </div>
+                            </details>
+                        </div>
+
+                        <div class="pt-4 border-t border-border-color/30">
+                            <label class="block text-sm font-medium text-text-secondary">{{ _('Optional Services') }}</label>
+                            <div class="mt-2 space-y-2">
+                                {% if settings.ENABLE_KARTO_TRIP_TRACKING %}
+                                <div id="trip_tracking_container">
+                                    <div class="flex items-center">
+                                        <input id="enable_trip_tracking" name="enable_trip_tracking" type="checkbox" value="true" {% if vehicle.enable_trip_tracking %}checked{% endif %} class="h-4 w-4 text-neon-blue border-gray-500 rounded focus:ring-neon-blue">
+                                        <label for="enable_trip_tracking" class="ml-2 block text-sm text-text-primary">{{ _('Enable Trip Tracking') }}</label>
+                                    </div>
+                                    <p class="text-xs text-gray-400 mt-1 ml-6">{{ _('Allow the Karto service to record and analyze trip data for this vehicle.') }}</p>
+                                </div>
+                                {% endif %}
+                                <div class="flex items-center">
+                                    <input id="enable_charge_logging" name="enable_charge_logging" type="checkbox" value="true" {% if vehicle.enable_charge_logging %}checked{% endif %} class="h-4 w-4 text-neon-blue border-gray-500 rounded focus:ring-neon-blue">
+                                    <label for="enable_charge_logging" class="ml-2 block text-sm text-text-primary">{{ _('Enable Charge Logging') }}</label>
+                                </div>
+                                 <p class="text-xs text-gray-400 mt-1 ml-6">{{ _('Record charging sessions for this vehicle.') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8" id="save_action_container">
+                    <button type="submit" class="w-full px-4 py-2.5 text-sm font-medium text-dark-bg bg-neon-magenta border border-neon-magenta rounded-md hover:bg-neon-magenta-darker hover:border-neon-magenta-darker hover:shadow-lg hover:shadow-neon-magenta/40 transition-all duration-200">
+                        {{ _('Update Vehicle') }}
                     </button>
                 </div>
             </form>
-        </div>
-        {% else %}
-            <p class="text-text-secondary">{{ _('The danger zone is available after the vehicle has been created.') }}</p>
-        {% endif %}
+
+            <div data-tab-panel="danger" class="hidden">
+                <div class="bg-card-bg p-6 rounded-lg border border-red-500/70 shadow-lg">
+                    <h2 class="text-xl font-semibold text-red-400 mb-3">{{ _('Delete This Vehicle') }}</h2>
+                    <p class="text-sm text-red-200 mb-2">{{ _('Deleting this vehicle is a permanent action. All of its historical data will be immediately and irreversibly erased.') }}</p>
+                    <p class="text-sm text-red-200 mb-4">{{ (_('To confirm, please type <strong>%(id)s</strong> into the box below.') % {'id': vehicle.vehicle_id}) | safe }}</p>
+                    <form action="{{ url_for('ui_delete_vehicle', vehicle_db_id=vehicle.id) }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <div>
+                            <label for="delete_confirmation" class="sr-only">{{ _('Type %(id)s to confirm') % {'id': vehicle.vehicle_id} }}</label>
+                            <input type="text" name="delete_confirmation" id="delete_confirmation" class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-red-500 focus:ring-1 focus:ring-red-500 sm:text-sm" placeholder="{{ _('Type %(id)s here') % {'id': vehicle.vehicle_id} }}">
+                        </div>
+                        <div class="mt-4">
+                            <button id="delete_submit_button" type="submit" disabled class="w-full px-4 py-2 text-sm font-medium text-dark-bg bg-red-600 border border-red-500 rounded-md hover:bg-red-700 transition-colors disabled:bg-gray-600 disabled:border-gray-500 disabled:cursor-not-allowed">
+                                {{ _('Delete Vehicle Permanently') }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -227,33 +208,44 @@
 {% block extra_scripts %}
 <script nonce="{{ request.state.csp_nonce }}">
 document.addEventListener('DOMContentLoaded', () => {
-    const activeClass = 'border-neon-magenta text-neon-magenta';
-    const inactiveClass = 'border-transparent text-text-secondary hover:text-text-primary hover:border-gray-500';
-    const dangerActiveClass = 'border-red-500 text-red-500';
     const tabButtons = Array.from(document.querySelectorAll('[data-tab-btn]'));
     const tabPanels = Array.from(document.querySelectorAll('[data-tab-panel]'));
     const saveActionContainer = document.getElementById('save_action_container');
+    const allowedTabs = new Set(tabButtons.map((button) => button.dataset.tabBtn));
+    const defaultTab = 'general';
 
-    function setTab(tabName) {
+    // A flash message answers the submit that produced it. Left in the URL while the
+    // user moves on, it came back on whichever tab the next reload landed on.
+    const flashParams = ['success_message', 'error_message', 'info_message'];
+
+    function syncTabToUrl(tab) {
+        const url = new URL(window.location.href); // keeps other params and #hash
+        url.searchParams.set('tab', tab);
+        flashParams.forEach((param) => url.searchParams.delete(param));
+        if (url.href !== window.location.href) window.history.replaceState(window.history.state, '', url);
+    }
+
+    function setTab(tabName, { syncUrl = false } = {}) {
+        const tab = allowedTabs.has(tabName) ? tabName : defaultTab;
         tabPanels.forEach((panel) => {
-            panel.classList.toggle('hidden', panel.dataset.tabPanel !== tabName);
+            panel.classList.toggle('hidden', panel.dataset.tabPanel !== tab);
         });
         tabButtons.forEach((button) => {
-            const isActive = button.dataset.tabBtn === tabName;
-            const isDanger = button.dataset.tabBtn === 'danger';
-            button.classList.remove('border-neon-magenta', 'text-neon-magenta', 'border-red-500', 'text-red-500', 'border-transparent', 'text-text-secondary', 'hover:text-text-primary', 'hover:border-gray-500');
-            const classNames = (isActive ? (isDanger ? dangerActiveClass : activeClass) : inactiveClass).split(' ');
-            button.classList.add(...classNames);
+            button.classList.toggle('tab-btn-active', button.dataset.tabBtn === tab);
         });
         if (saveActionContainer) {
-            saveActionContainer.classList.toggle('hidden', tabName === 'danger');
+            saveActionContainer.classList.toggle('hidden', tab === 'danger');
         }
+        if (syncUrl) syncTabToUrl(tab);
     }
 
     tabButtons.forEach((button) => {
-        button.addEventListener('click', () => setTab(button.dataset.tabBtn));
+        button.addEventListener('click', () => setTab(button.dataset.tabBtn, { syncUrl: true }));
     });
-    setTab('general');
+    // A `?tab=` this page cannot honour is corrected in place, so a reload does not
+    // resolve it again; a URL without one stays clean.
+    const requestedTab = new URLSearchParams(window.location.search).get('tab');
+    setTab(requestedTab || defaultTab, { syncUrl: requestedTab !== null && !allowedTabs.has(requestedTab) });
 
     const vehicleIdInput = document.getElementById('vehicle_id');
     const serverPasswordInput = document.getElementById('server_password');
@@ -267,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const v2CommandsText = document.getElementById('v2CommandsText');
     const v3CommandsText = document.getElementById('v3CommandsText');
     const serverHost = new URL('{{ settings.SERVER_BASE_URL }}').hostname;
-    const initialProtocol = `{{ (vehicle.protocol if vehicle else 'both') | e }}`;
+    const initialProtocol = `{{ vehicle.protocol | e }}`;
     const vehiclePlaceholder = `{{ _('<VEHICLE ID>') }}`;
     const passwordPlaceholder = `{{ _('<Server Password>') }}`;
     const mqttConfigured = {{ is_mqtt_configured | lower }};
@@ -348,7 +340,7 @@ server v3 start`;
 
     const deleteConfirmationInput = document.getElementById('delete_confirmation');
     const deleteSubmitButton = document.getElementById('delete_submit_button');
-    const requiredDeleteText = `{{ vehicle.vehicle_id if vehicle else '' }}`;
+    const requiredDeleteText = `{{ vehicle.vehicle_id }}`;
     if (deleteConfirmationInput && deleteSubmitButton) {
         const updateDeleteButtonState = () => {
             deleteSubmitButton.disabled = deleteConfirmationInput.value !== requiredDeleteText;

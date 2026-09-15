@@ -1,0 +1,67 @@
+<!-- Configuration backups tab: snapshots the OVMS Connect app stored for this account -->
+<div data-tab-panel="backups" class="hidden space-y-6">
+    <div class="bg-card-bg p-6 rounded-lg border border-neon-blue/50 shadow-lg">
+        <h2 class="text-xl font-semibold text-neon-blue mb-4">{{ _('Configuration Backups') }}</h2>
+        <p class="text-sm text-text-secondary mb-6">
+            {{ _('Snapshots of the OVMS Connect app settings on your devices: themes, vehicle layouts, dashboard fields and custom commands. The app keeps passwords, API keys and images out of them, but a custom command is stored exactly as you typed it, including a PIN written into its text. Restoring happens in the app; here you can download or delete them.') }}
+        </p>
+
+        <div class="space-y-5">
+            {% for group in config_backup_groups %}
+            <div class="bg-input-bg/50 border border-border-color/50 rounded-md overflow-hidden">
+                <!-- One block per device, the device with the newest snapshot first -->
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 bg-card-bg/70 border-b border-border-color/50">
+                    <span class="font-semibold text-text-primary">{{ group.name or _('Unknown device') }}</span>
+                    {% if group.suffix %}
+                    {# Two devices with the same name: the first characters of the id tell them apart #}
+                    <span class="font-mono text-xs text-text-secondary">{{ group.suffix }}</span>
+                    {% endif %}
+                    {% if group.platform %}<span class="text-xs text-text-secondary">{{ group.platform }}</span>{% endif %}
+                    <span class="ml-auto text-xs text-text-secondary">
+                        {{ _('%(manual)s manual · %(auto)s automatic') | format(manual=group.manual|length, auto=group.auto|length) }}
+                    </span>
+                </div>
+                {# Pinned snapshots first, then the rolling automatic ones; a heavier rule between the two #}
+                {% for backup in group.manual + group.auto %}
+                <div class="{% if not loop.first %}border-t {% if group.manual and loop.index0 == group.manual|length %}border-border-color/70{% else %}border-border-color/30{% endif %}{% endif %}">
+                    <!-- Row 1: date, kind, label -->
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 pt-2.5 pb-1">
+                        <span class="font-medium text-text-primary">{{ backup.created_at | datetimeformat }}</span>
+                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full
+                                   {{ 'bg-blue-700/70 text-blue-200' if backup.kind == 'manual' else 'bg-gray-700/70 text-gray-300' }}">
+                            {{ _('Manual') if backup.kind == 'manual' else _('Automatic') }}
+                        </span>
+                        {% if backup.label %}
+                        <span class="text-sm text-text-secondary">{{ backup.label }}</span>
+                        {% endif %}
+                    </div>
+                    <!-- Row 2: version, size, actions -->
+                    <div class="flex flex-wrap items-center gap-x-5 gap-y-1 px-4 pb-2.5 text-xs text-text-secondary">
+                        <span>
+                            <span class="font-medium text-text-secondary/70">{{ _('App version:') }}</span>
+                            {{ backup.app_version or '—' }}
+                        </span>
+                        <span>
+                            <span class="font-medium text-text-secondary/70">{{ _('Size:') }}</span>
+                            {{ (backup.stored_chars / 1024) | round(1) }} KiB
+                        </span>
+                        <span class="ml-auto flex items-center gap-x-4">
+                            <a href="{{ url_for('ui_download_config_backup', backup_id=backup.id) }}"
+                               class="text-neon-blue hover:text-neon-blue-darker font-medium transition-colors">{{ _('Download') }}</a>
+                            {% set confirm_msg = _("Delete this backup? This action cannot be undone.") %}
+                            <form action="{{ url_for('ui_delete_config_backup', backup_id=backup.id) }}" method="post" class="inline js-confirm-form"
+                                  {# Single quotes, as on the API key list: |tojson emits a double-quoted
+                                     string and escapes ' itself, which is what makes this delimiter safe. #}
+                                  data-confirm-message='{{ confirm_msg | tojson }}'>
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <button type="submit" class="text-red-500 hover:text-red-400 font-medium transition-colors">{{ _('Delete') }}</button>
+                            </form>
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>

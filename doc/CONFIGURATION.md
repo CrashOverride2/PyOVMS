@@ -220,6 +220,27 @@ Enabled per vehicle in its settings, not globally.
 |----------|-------------|---------|
 | `PROTOMAPS_URL` | URL to a `.pmtiles` file. Falls back to OpenStreetMap if unset. | `None` |
 
+### Configuration Backups (OVMS Connect app)
+
+Snapshots of the app's own settings — themes, vehicle layouts, dashboard fields, custom
+commands — stored per user as JSON text under `/api/v1/config-backups`, so a reinstall
+can be set up from the account. The app keeps credentials and images out of the
+document and the server refuses one that carries either (422). `auto` snapshots are
+taken by the app in the background and roll per device; `manual` ones are pinned by
+the user and capped instead. Users see, download and delete their snapshots on the
+profile page.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CONFIG_BACKUP_ENABLED` | Kill switch. `false` answers uploads, pinning and downloads with `403 config_backups_disabled` and the listing with `enabled: false`, so the app stops offering the feature. Deleting stays possible, on the API and on the profile page, which keeps showing what is stored: switching the feature off must not strand anyone's data. | `True` |
+| `CONFIG_BACKUP_MAX_AUTO` | Automatic snapshots kept per user and device; the oldest is evicted on insert. | `10` |
+| `CONFIG_BACKUP_MAX_MANUAL` | Pinned snapshots per user. The next one is refused with `409`, never evicted. | `10` |
+| `CONFIG_BACKUP_MAX_DEVICES` | Devices with automatic snapshots per user. The device id is chosen by the app, so this is what bounds the row count; a new device beyond it evicts the automatic snapshots of the device not heard from the longest. Pinned snapshots are never touched. At least `1`. | `20` |
+| `CONFIG_BACKUP_AUTO_COALESCE_MINUTES` | An automatic snapshot younger than this replaces the newest one instead of adding a row, so the window measures time rather than app switches. Measured from the newest row's `created_at`, which is the date of its *content* — an upload of unchanged content does not refresh it. `0` disables coalescing. | `360` |
+| `CONFIG_BACKUP_MIN_AUTO_INTERVAL_SECONDS` | An automatic upload of *unchanged* content within this interval of the newest row is answered `200` without a write. Changed content is always stored. | `60` |
+| `CONFIG_BACKUP_MAX_PAYLOAD_CHARS` | Largest single snapshot, in characters of JSON text (256 KiB). A typical document is 8–40 KiB. On the wire a character can be up to four bytes, more if the client escapes non-ASCII — see the reverse-proxy body-size note in the README. | `262144` |
+| `CONFIG_BACKUP_MAX_TOTAL_CHARS_PER_USER` | Everything one user may keep, in characters (8 MiB). Exceeding it answers `413`. | `8388608` |
+
 ---
 
 ## Web UI

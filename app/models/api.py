@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import Optional, List, Dict, Any
 import ipaddress
 import re
+import unicodedata
 from urllib.parse import urlparse
 
 from app.utils.email_validation import validate_optional_email_address
@@ -316,6 +317,44 @@ class CommandResponse(BaseModel):
     response_data: Optional[str] = None
     success: bool
     error_message: Optional[str] = None
+
+# --- Command Favorite Models ---
+def _reject_control_characters(v: str) -> str:
+    """One line, printable. A newline in a stored command would either be sent to
+    the module as two commands or break the terminal's line rendering.
+
+    By Unicode category, not `ord(ch) < 32`: that missed the C1 controls
+    (U+0080–U+009F, NEL among them) and the LINE/PARAGRAPH SEPARATOR
+    (U+2028/2029), which log viewers read as line breaks — and the label is logged.
+    Cc covers C0, DEL and C1 together; Cf is deliberately allowed, because the ZWJ
+    that joins an emoji sequence is one, and a label may be an emoji."""
+    if any(unicodedata.category(ch) in ('Cc', 'Zl', 'Zp') for ch in v):
+        raise ValueError('must not contain control characters')
+    return v
+
+class CommandFavoriteCreate(BaseModel):
+    label: str = Field(..., min_length=1, max_length=40)
+    command: str = Field(..., min_length=1, max_length=200)
+
+    # Strip before the length limits apply, so "   stat   " is a 4-character command.
+    @field_validator('label', 'command', mode='before')
+    @classmethod
+    def strip_text(cls, v):
+        return v.strip() if isinstance(v, str) else v
+
+    @field_validator('label', 'command')
+    @classmethod
+    def single_line(cls, v: str) -> str:
+        return _reject_control_characters(v)
+
+class CommandFavoriteInfo(BaseModel):
+    id: int
+    label: str
+    command: str
+    position: int
+
+    class Config:
+        from_attributes = True
 
 # --- Status Models ---
 class StatusResponse(BaseModel):

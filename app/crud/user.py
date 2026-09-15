@@ -158,7 +158,7 @@ def _queue_broker_resync_for_user(db: Session, user_db: models_db.User) -> None:
 def delete_user(db: Session, user_id: int) -> Optional[models_db.User]:
     db_user = get_user_by_id(db, user_id)
     if db_user:
-        logger.warning(f"DELETING user '{db_user.username}' (ID: {db_user.id}). All associated data (vehicles, logs, API keys) will be deleted by cascade.")
+        logger.warning(f"DELETING user '{db_user.username}' (ID: {db_user.id}). All associated data (vehicles, logs, API keys, configuration backups, command favorites) will be deleted by cascade.")
 
         # Note the owned vehicles before the cascade removes them: their broker
         # logins have to be revoked explicitly, an ACL rebuild alone would leave

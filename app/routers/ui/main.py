@@ -25,6 +25,7 @@ from .autoprovision import router as autoprovision_ui_router
 from .totp_rotation import router as totp_rotation_ui_router
 from .webauthn import router as webauthn_ui_router
 from .security_events import router as security_events_ui_router
+from .command_favorites import router as command_favorites_ui_router
 from .wellknown import router as wellknown_ui_router
 from app.utils.csrf_dependency import csrf_protect
 
@@ -70,6 +71,7 @@ router.include_router(autoprovision_ui_router, prefix="/admin/autoprovision", ta
 router.include_router(totp_rotation_ui_router, prefix="/admin/totp", tags=["Web UI - TOTP Rotation"])
 router.include_router(security_events_ui_router, prefix="/admin", tags=["Web UI - Security Events"])
 router.include_router(vehicles_ui_router, prefix="/vehicle", tags=["Web UI - Vehicles"])
+router.include_router(command_favorites_ui_router, prefix="/terminal", tags=["Web UI - Command Favorites"])
 router.include_router(users_ui_router, prefix="/users", tags=["Web UI - Users"])
 router.include_router(profile_ui_router, prefix="/profile", tags=["Web UI - Profile"])
 router.include_router(webauthn_ui_router, prefix="/profile", tags=["Web UI - WebAuthn"])

@@ -35,6 +35,7 @@ from .apikeys import router as apikeys_router
 from .websockets import router as websockets_router
 from .security_events import router as security_events_router
 from .device_auth import router as device_auth_router
+from .config_backups import router as config_backups_router
 
 router.include_router(users_router)
 router.include_router(users_me_router)
@@ -43,6 +44,7 @@ router.include_router(websockets_router)
 # Unauthenticated by design: this is where a device exchanges credentials for a key.
 router.include_router(device_auth_router)
 router.include_router(security_events_router, prefix="/security", tags=["Security Events API"])
+router.include_router(config_backups_router)
 
 
 @router.get("/auth/ping", status_code=200, dependencies=[Depends(require_active_api_user)])

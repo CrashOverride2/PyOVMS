@@ -1,6 +1,7 @@
+import re
 from urllib.parse import quote_plus
 from fastapi import APIRouter, Request, Depends, Form, HTTPException, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 from typing import Optional
 import datetime
@@ -24,6 +25,7 @@ from app.services.vehicle_service import (
     KartoDeletionFailed,
     trigger_karto_deletion_for_user_vehicles,
 )
+from app.utils.timestamps import as_utc
 from app.utils.step_up import (
     has_recent_reauth,
     mark_reauthenticated,
@@ -63,6 +65,8 @@ def ui_profile_page_route(
         WebAuthnCredential.is_active == True
     ).order_by(WebAuthnCredential.created_at.desc()).all()
 
+    config_backups = crud.config_backup.list_backups(db, owner_id=current_user.id)
+
     return templates.TemplateResponse(request, "profile.html", {
         **common_vars,
         "page_title": "My Profile",
@@ -72,6 +76,10 @@ def ui_profile_page_route(
         "newly_created_api_keys": newly_created_api_keys,
         "all_timezones": sorted(available_timezones()),
         "webauthn_credentials": webauthn_credentials,
+        # The tab is only rendered when this is non-empty — see profile.html. The
+        # groups are what the tab actually iterates: one block per device.
+        "config_backups": config_backups,
+        "config_backup_groups": crud.config_backup.group_by_device(config_backups),
     })
 
 def _reissue_session_cookie(request: Request, response, user) -> None:
@@ -599,3 +607,65 @@ async def ui_delete_profile_submit_route(
         if key in request.session: del request.session[key]
         
     return redirect_response
+
+
+# --- Configuration backups (OVMS Connect app snapshots) --------------------------
+#
+# Read, download and delete only. The app is the sole producer of a well-formed
+# document, so there is no upload here, and "keep" (pinning an auto snapshot) is
+# an app action too.
+#
+# Deliberately not behind CONFIG_BACKUP_ENABLED: the switch stops the app from
+# taking snapshots and being handed them, but what is stored stays the user's to
+# download and delete — an operator turning the feature off must not strand it.
+
+@router.get("/config-backups/{backup_id}/download", name="ui_download_config_backup")
+def ui_download_config_backup_route(
+    request: Request,
+    backup_id: int,
+    db: Session = Depends(get_db),
+    current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated),
+):
+    """The stored document, unchanged, as a .json download.
+
+    No rehydration and no second container format: the server hands out what it
+    holds, and the app imports a bare .json exactly as it imports its own ZIP.
+    """
+    backup = crud.config_backup.get_backup(db, owner_id=current_user.id, backup_id=backup_id)
+    if backup is None:
+        raise HTTPException(status_code=404, detail="Backup not found")
+
+    stamp = as_utc(backup.created_at).strftime("%Y%m%d-%H%M%S")
+    raw_name = f"ovms-connect-backup-{stamp}" + (f"-{backup.label}" if backup.label else "")
+    # The label is user text. Anything outside this set — a quote, a CR/LF — would
+    # otherwise be written straight into the header (see vehicles.py for the idiom).
+    safe_name = re.sub(r'[^A-Za-z0-9_.-]+', '_', raw_name)[:120] + ".json"
+    return Response(
+        content=backup.payload,
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}"'},
+    )
+
+
+@router.post("/config-backups/{backup_id}/delete", response_class=RedirectResponse,
+             name="ui_delete_config_backup")
+def ui_delete_config_backup_route(
+    request: Request,
+    backup_id: int,
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db),
+    current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated),
+):
+    _ = get_translator(request)
+    base_redirect_url = str(request.url_for('ui_profile_page'))
+
+    try:
+        verify_csrf_token(request, csrf_token)
+    except HTTPException as e:
+        return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(_(str(e.detail)))}&tab=backups", status_code=status.HTTP_303_SEE_OTHER)
+
+    if not crud.config_backup.delete_backup(db, owner_id=current_user.id, backup_id=backup_id):
+        return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(_("Backup not found."))}&tab=backups", status_code=status.HTTP_303_SEE_OTHER)
+
+    # After the last row is gone the tab disappears; setTab() falls back to "info".
+    return RedirectResponse(url=f"{base_redirect_url}?success_message={quote_plus(_("Backup deleted."))}&tab=backups", status_code=status.HTTP_303_SEE_OTHER)

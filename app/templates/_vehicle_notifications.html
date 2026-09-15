@@ -25,8 +25,7 @@
             <span class="text-text-secondary font-mono text-xs opacity-50" title="{{ _('Device ID') }}: {{ sub.device_id }}">…{{ sub.device_id[-8:] }}</span>
             {% endif %}
             <form method="POST" action="{{ request.url_for('ui_delete_push_subscription', vehicle_module_id=vehicle.vehicle_id, subscription_id=sub.id) }}"
-                  @submit.prevent="confirmAndSubmit"
-                  data-confirm="{{ _('Remove this notification?') }}">
+                  class="js-confirm-form" data-confirm-message='{{ _('Remove this notification?') | tojson }}'>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <button type="submit" class="text-xs text-red-400 hover:text-red-300 underline ml-1">{{ _('Remove') }}</button>
             </form>

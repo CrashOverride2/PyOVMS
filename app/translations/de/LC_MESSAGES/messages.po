@@ -28,6 +28,11 @@ msgstr ""
 "alle Befehle ein Passwort benötigt. Das Modul sendet ein Token an den Server, das der"
 " Server zusammen mit dem Modul-Passwort verwendet, um eine Antwort zu verschlüsseln."
 
+#: app/templates/profile_config_backups_tab.html
+#, python-format
+msgid "%(manual)s manual · %(auto)s automatic"
+msgstr "%(manual)s manuell · %(auto)s automatisch"
+
 #: app/templates/_vehicle_logs.html
 msgid "(days to keep)."
 msgstr "(Aufbewahrung in Tagen)."
@@ -61,7 +66,7 @@ msgstr "12V-Batterie"
 msgid "12V Battery:"
 msgstr "12V-Batterie:"
 
-#: app/templates/profile_webauthn_tab.html
+#: app/templates/profile.html app/templates/profile_webauthn_tab.html
 msgid "2FA"
 msgstr "2FA"
 
@@ -228,7 +233,7 @@ msgstr "Sicherheitsschlüssel hinzufügen"
 msgid "Add User"
 msgstr "Benutzer hinzufügen"
 
-#: app/templates/base.html app/templates/edit_vehicle.html
+#: app/templates/base.html
 msgid "Add Vehicle"
 msgstr "Fahrzeug hinzufügen"
 
@@ -425,6 +430,10 @@ msgstr ""
 "Fahrzeug wird in 7 Tagen automatisch gelöscht, wenn keine Kommunikation empfangen "
 "wird."
 
+#: app/templates/profile_config_backups_tab.html
+msgid "App version:"
+msgstr "App-Version:"
+
 #: app/templates/profile.html
 #, python-format
 msgid "Are you sure you want to delete API key '%(key_name)s'? This action cannot be undone."
@@ -469,12 +478,9 @@ msgid "Are you sure you want to remove this security key?"
 msgstr "Sind Sie sicher, dass Sie diesen Sicherheitsschlüssel entfernen möchten?"
 
 #: app/templates/totp_key_rotation.html
-msgid "Are you sure you want to rotate ALL users to version"
-msgstr "Sind Sie sicher, dass Sie ALLE Benutzer auf Version rotieren möchten"
-
-#: app/templates/edit_vehicle.html
-msgid "As an admin, you must assign this vehicle to a user."
-msgstr "Als Administrator müssen Sie dieses Fahrzeug einem Benutzer zuweisen."
+#, python-format
+msgid "Are you sure you want to rotate ALL users to version %(version)s?"
+msgstr "Sind Sie sicher, dass Sie ALLE Benutzer auf Version %(version)s rotieren möchten?"
 
 #: app/templates/add_vehicle_wizard.html
 msgid "Assign this vehicle to a registered user. Administrators cannot own vehicles."
@@ -572,6 +578,10 @@ msgstr "Auto-Scroll: AUS"
 msgid "Auto-scroll: ON"
 msgstr "Auto-Scroll: AN"
 
+#: app/templates/profile_config_backups_tab.html
+msgid "Automatic"
+msgstr "Automatisch"
+
 #: app/templates/totp_key_rotation.html
 msgid "Available Key Versions"
 msgstr "Verfügbare Schlüsselversionen"
@@ -648,6 +658,18 @@ msgstr "Zur Startseite"
 #: app/templates/_vehicle_logs.html
 msgid "Backtrace:"
 msgstr "Backtrace:"
+
+#: app/routers/ui/profile.py
+msgid "Backup deleted."
+msgstr "Backup gelöscht."
+
+#: app/routers/ui/profile.py
+msgid "Backup not found."
+msgstr "Backup nicht gefunden."
+
+#: app/templates/profile.html
+msgid "Backups"
+msgstr "Backups"
 
 #: app/templates/_vehicle_notifications.html
 msgid "Basic Auth"
@@ -772,7 +794,8 @@ msgstr "Kann als primäre Anmeldemethode verwendet werden (passwortlos)"
 msgid "Can be used as primary or second factor authentication"
 msgstr "Kann als primäre oder zweite Faktor-Authentifizierung verwendet werden"
 
-#: app/templates/_vehicle_notifications.html app/templates/admin_dashboard.html
+#: app/templates/_vehicle_notifications.html app/templates/_vehicle_terminal.html
+#: app/templates/admin_dashboard.html app/templates/base.html
 #: app/templates/charge_detail.html app/templates/confirm_password.html
 #: app/templates/trip_detail.html app/templates/vehicle_detail.html
 msgid "Cancel"
@@ -786,9 +809,15 @@ msgstr "Zeichnen abbrechen"
 msgid "Cancel and return to login"
 msgstr "Abbrechen und zur Anmeldung zurückkehren"
 
-#: app/templates/admin_dashboard.html app/templates/users_management.html
-msgid "Cancel auto-delete marking for"
-msgstr "Automatische Löschmarkierung aufheben für"
+#: app/templates/users_management.html
+#, python-format
+msgid "Cancel auto-delete marking for %(username)s?"
+msgstr "Automatische Löschmarkierung für %(username)s aufheben?"
+
+#: app/templates/admin_dashboard.html
+#, python-format
+msgid "Cancel auto-delete marking for %(vehicle_id)s?"
+msgstr "Automatische Löschmarkierung für %(vehicle_id)s aufheben?"
 
 #: app/templates/admin_dashboard.html app/templates/users_management.html
 msgid "Cancel deletion"
@@ -902,6 +931,10 @@ msgstr "Leeren"
 msgid "Clear Map & Search"
 msgstr "Karte & Suche zurücksetzen"
 
+#: app/templates/admin_logs.html
+msgid "Clear all log lines from view?"
+msgstr "Alle Logzeilen aus der Ansicht entfernen?"
+
 #: app/templates/_trip_statistics.html
 msgid "Click a bar on the chart to see details."
 msgstr "Klicken Sie auf einen Balken im Diagramm, um Details anzuzeigen."
@@ -930,11 +963,20 @@ msgstr ""
 msgid "Command Terminal"
 msgstr "Befehlsterminal"
 
+#: app/routers/ui/command_favorites.py
+#, python-format
+msgid "Command must be 1–%(n)d characters on a single line."
+msgstr "Der Befehl muss 1–%(n)d Zeichen in einer Zeile umfassen."
+
 #: app/templates/edit_vehicle.html
 msgid "Communication Protocol"
 msgstr "Kommunikationsprotokoll"
 
-#: app/templates/confirm_password.html
+#: app/templates/profile_config_backups_tab.html
+msgid "Configuration Backups"
+msgstr "Konfigurations-Backups"
+
+#: app/templates/base.html app/templates/confirm_password.html
 msgid "Confirm"
 msgstr "Bestätigen"
 
@@ -1011,6 +1053,14 @@ msgid "Could not delete user %(name)s. They may own vehicles or AP profiles."
 msgstr ""
 "Benutzer %(name)s konnte nicht gelöscht werden. Möglicherweise sind ihm noch "
 "Fahrzeuge oder AP-Profile zugeordnet."
+
+#: app/templates/vehicle_detail.html
+msgid "Could not remove favorite."
+msgstr "Favorit konnte nicht entfernt werden."
+
+#: app/templates/vehicle_detail.html
+msgid "Could not save favorite."
+msgstr "Favorit konnte nicht gespeichert werden."
 
 #: app/templates/_vehicle_cell_stats.html
 msgid "Count:"
@@ -1089,7 +1139,7 @@ msgid "Debug Data"
 msgstr "Debug-Daten"
 
 #: app/templates/autoprovision_management.html app/templates/profile.html
-#: app/templates/users_management.html
+#: app/templates/profile_config_backups_tab.html app/templates/users_management.html
 msgid "Delete"
 msgstr "Löschen"
 
@@ -1120,6 +1170,10 @@ msgstr "Fahrt löschen"
 #: app/templates/edit_vehicle.html
 msgid "Delete Vehicle Permanently"
 msgstr "Fahrzeug endgültig löschen"
+
+#: app/templates/profile_config_backups_tab.html
+msgid "Delete this backup? This action cannot be undone."
+msgstr "Dieses Backup löschen? Diese Aktion kann nicht rückgängig gemacht werden."
 
 #: app/templates/edit_vehicle.html
 msgid ""
@@ -1181,6 +1235,10 @@ msgstr "Verbindung getrennt. Erneuter Verbindungsaufbau in "
 msgid "Disconnected: "
 msgstr "Verbindung getrennt: "
 
+#: app/templates/base.html
+msgid "Dismiss"
+msgstr "Schließen"
+
 #: app/templates/admin_dashboard.html
 msgid ""
 "Display a message to all users on their dashboard. Useful for maintenance "
@@ -1226,9 +1284,17 @@ msgstr "Haben Sie noch kein Konto?"
 msgid "Donation"
 msgstr "Spende"
 
+#: app/templates/profile_config_backups_tab.html
+msgid "Download"
+msgstr "Herunterladen"
+
 #: app/templates/_vehicle_logs.html
 msgid "Download Crash Logs (CSV)"
 msgstr "Absturzprotokolle herunterladen (CSV)"
+
+#: app/templates/_vehicle_terminal.html
+msgid "Drag to resize, double-click to reset"
+msgstr "Zum Ändern der Höhe ziehen, Doppelklick setzt zurück"
 
 #: app/templates/_trip_search_heatmap.html
 msgid "Draw Box on Map"
@@ -1502,6 +1568,10 @@ msgstr "Anmeldeinformationen konnten nicht überprüft werden"
 #: app/templates/totp_key_rotation.html
 msgid "Failed:"
 msgstr "Fehlgeschlagen:"
+
+#: app/routers/ui/command_favorites.py
+msgid "Favorite not found."
+msgstr "Favorit nicht gefunden."
 
 #: app/templates/base.html
 msgid "Firmware Repo"
@@ -1935,6 +2005,15 @@ msgstr "Schlüsselversionsverteilung"
 msgid "Key Versions in Use"
 msgstr "Verwendete Schlüsselversionen"
 
+#: app/templates/_vehicle_terminal.html
+msgid "Label"
+msgstr "Bezeichnung"
+
+#: app/routers/ui/command_favorites.py
+#, python-format
+msgid "Label must be 1–%(n)d characters on a single line."
+msgstr "Die Bezeichnung muss 1–%(n)d Zeichen in einer Zeile umfassen."
+
 #: app/templates/_vehicle_logs.html
 msgid "Last"
 msgstr "Letzter"
@@ -2168,6 +2247,10 @@ msgstr ""
 "Verwalten Sie Ihre API-Schlüssel für den programmatischen Zugriff. Bewahren Sie die "
 "Schlüssel sicher auf, da sie nur einmal angezeigt werden."
 
+#: app/templates/profile_config_backups_tab.html
+msgid "Manual"
+msgstr "Manuell"
+
 #: app/templates/blocked_ips.html
 msgid "Manually Block an IP"
 msgstr "IP manuell sperren"
@@ -2287,6 +2370,10 @@ msgstr "Name"
 msgid "Navigate to:"
 msgstr "Navigieren zu:"
 
+#: app/templates/vehicle_detail.html
+msgid "Network error"
+msgstr "Netzwerkfehler"
+
 #: app/templates/charge_detail.html app/templates/trip_detail.html
 #: app/templates/vehicle_detail.html
 msgid "Network error: "
@@ -2347,10 +2434,6 @@ msgstr "Nein"
 #: app/templates/blocked_ips.html
 msgid "No IPs are currently blocked."
 msgstr "Derzeit sind keine IPs gesperrt."
-
-#: app/templates/edit_vehicle.html
-msgid "No Users Available"
-msgstr "Keine Benutzer verfügbar."
 
 #: app/templates/_vehicle_metrics.html
 msgid "No V2 metrics data available."
@@ -2474,6 +2557,10 @@ msgstr "Nicht erlaubt"
 msgid "Note: The trailing slash (/) is required!"
 msgstr "Hinweis: Der abschließende Schrägstrich (/) ist erforderlich!"
 
+#: app/templates/base.html
+msgid "Notice"
+msgstr "Hinweis"
+
 #: app/templates/_vehicle_notifications.html
 msgid "Notification Settings"
 msgstr "Benachrichtigungseinstellungen"
@@ -2506,6 +2593,10 @@ msgstr ""
 "Anzahl der Verwendungen dieses Schlüssels. Hohe Zahlen sind bei Plattform-"
 "Authentifikatoren (Touch ID, Windows Hello) normal, da diese bei jeder Verwendung "
 "hochzählen."
+
+#: app/templates/base.html
+msgid "OK"
+msgstr "OK"
 
 #: app/templates/email/admin_ip_blocked.txt
 msgid "OVMS Security Alert - IP Address Blocked"
@@ -2601,10 +2692,6 @@ msgstr "Besitzer"
 msgid "Owner Email"
 msgstr "E-Mail des Besitzers"
 
-#: app/templates/vehicle_detail.html
-msgid "Owner:"
-msgstr "Besitzer:"
-
 #: app/templates/_charge_list.html app/templates/_trip_list.html
 #: app/templates/_trip_search_heatmap.html app/templates/vehicle_datalogs.html
 msgid "Page"
@@ -2619,7 +2706,8 @@ msgid "Paranoid Token (Auto-populated by module)"
 msgstr "Paranoid-Token (wird vom Modul automatisch ausgefüllt)"
 
 #: app/templates/_vehicle_notifications.html app/templates/confirm_password.html
-#: app/templates/edit_user.html app/templates/login.html app/templates/register.html
+#: app/templates/edit_user.html app/templates/login.html app/templates/profile.html
+#: app/templates/register.html
 msgid "Password"
 msgstr "Passwort"
 
@@ -2672,6 +2760,10 @@ msgstr "Phishing-resistent - kann nicht durch gefälschte Websites getäuscht we
 msgid "Platform authenticators (Touch ID, Face ID, Windows Hello)"
 msgstr "Plattform-Authentifikatoren (Touch ID, Face ID, Windows Hello)"
 
+#: app/templates/base.html
+msgid "Please confirm"
+msgstr "Bitte bestätigen"
+
 #: app/templates/webauthn_register.html
 msgid "Please enter a name for your security key"
 msgstr "Bitte geben Sie einen Namen für Ihren Sicherheitsschlüssel ein"
@@ -2714,6 +2806,10 @@ msgstr "Zurück"
 #: app/templates/base.html app/templates/privacy_policy.html
 msgid "Privacy Policy"
 msgstr "Datenschutzrichtlinie"
+
+#: app/templates/profile.html
+msgid "Profile"
+msgstr "Profil"
 
 #: app/routers/ui/autoprovision.py
 #, python-format
@@ -2913,6 +3009,10 @@ msgstr "Remote Textdatei mit automatischer Aktualisierung"
 msgid "Remove"
 msgstr "Entfernen"
 
+#: app/templates/_vehicle_terminal.html
+msgid "Remove favorite"
+msgstr "Favorit entfernen"
+
 #: app/templates/_vehicle_notifications.html
 msgid "Remove this notification?"
 msgstr "Diese Benachrichtigung entfernen?"
@@ -2936,10 +3036,6 @@ msgstr "Neuen Zurücksetzungslink anfordern"
 #: app/templates/error.html
 msgid "Request could not be completed"
 msgstr "Anfrage konnte nicht abgeschlossen werden"
-
-#: app/templates/edit_vehicle.html
-msgid "Required for new vehicle"
-msgstr "Erforderlich für neues Fahrzeug"
 
 #: app/templates/reset_password_invalid.html
 msgid "Reset Link Expired"
@@ -3029,6 +3125,10 @@ msgstr "SOC:"
 msgid "Saturday"
 msgstr "Samstag"
 
+#: app/templates/_vehicle_terminal.html
+msgid "Save"
+msgstr "Speichern"
+
 #: app/templates/admin_dashboard.html
 msgid "Save & Refresh Now"
 msgstr "Speichern & jetzt aktualisieren"
@@ -3040,6 +3140,10 @@ msgstr "Einstellungen speichern"
 #: app/templates/add_vehicle_wizard.html
 msgid "Save Vehicle"
 msgstr "Fahrzeug speichern"
+
+#: app/templates/_vehicle_terminal.html
+msgid "Save as favorite"
+msgstr "Als Favorit speichern"
 
 #: app/templates/vehicle_detail.html
 msgid "Search & Heatmap"
@@ -3209,9 +3313,27 @@ msgstr ""
 "Eine einfache Anmeldung bricht die Löschung ab. Sie können auch ein neues Fahrzeug "
 "registrieren, um Ihr Konto wieder zu aktivieren."
 
+#: app/templates/profile_config_backups_tab.html
+msgid "Size:"
+msgstr "Größe:"
+
 #: app/templates/totp_key_rotation.html
 msgid "Skipped:"
 msgstr "Übersprungen:"
+
+#: app/templates/profile_config_backups_tab.html
+msgid ""
+"Snapshots of the OVMS Connect app settings on your devices: themes, vehicle layouts, "
+"dashboard fields and custom commands. The app keeps passwords, API keys and images "
+"out of them, but a custom command is stored exactly as you typed it, including a PIN "
+"written into its text. Restoring happens in the app; here you can download or delete "
+"them."
+msgstr ""
+"Sicherungen der Einstellungen der OVMS-Connect-App auf deinen Geräten: Themes, "
+"Fahrzeug-Layouts, Dashboard-Felder und eigene Kommandos. Passwörter, API-Keys und "
+"Bilder hält die App heraus, ein eigenes Kommando wird aber genau so gespeichert, wie "
+"du es eingegeben hast, samt einer in seinen Text geschriebenen PIN. Wiederhergestellt"
+" wird in der App; hier kannst du sie herunterladen oder löschen."
 
 #: app/templates/error.html
 msgid "Something went wrong"
@@ -3467,10 +3589,6 @@ msgstr ""
 "Die blau hervorgehobenen Felder enthalten Ihre Werte. Aktivieren Sie nach dem "
 "Speichern auch \"Server V3 starten\" in der Autostart-Konfiguration (siehe unten)."
 
-#: app/templates/edit_vehicle.html
-msgid "The danger zone is available after the vehicle has been created."
-msgstr "Die Gefahrenzone ist verfügbar, nachdem das Fahrzeug erstellt wurde."
-
 #: app/templates/error.html
 msgid "The form was submitted with missing or unexpected fields."
 msgstr "Das Formular wurde mit fehlenden oder unerwarteten Feldern abgeschickt."
@@ -3508,12 +3626,6 @@ msgid ""
 "The verification link is invalid, has expired, or the account has already been "
 "activated."
 msgstr "Der Bestätigungslink ist ungültig, abgelaufen oder das Konto wurde bereits aktiviert."
-
-#: app/templates/edit_vehicle.html
-msgid "There are no non-admin users to assign a vehicle to. Please"
-msgstr ""
-"Es sind keine Nicht-Admin-Benutzer vorhanden, denen ein Fahrzeug zugewiesen werden "
-"kann. Bitte"
 
 #: app/templates/confirm_password.html
 msgid ""
@@ -3757,10 +3869,6 @@ msgstr "Fahrten"
 msgid "Tuesday"
 msgstr "Dienstag"
 
-#: app/templates/profile.html
-msgid "Two-Factor Auth"
-msgstr "Zwei-Faktor-Authentifizierung"
-
 #: app/templates/profile.html app/templates/webauthn_register.html
 msgid "Two-Factor Authentication (2FA)"
 msgstr "Zwei-Faktor-Authentifizierung (2FA)"
@@ -3803,12 +3911,21 @@ msgid "Unblock"
 msgstr "Entsperren"
 
 #: app/templates/blocked_ips.html
+#, python-format
+msgid "Unblock %(ip)s?"
+msgstr "%(ip)s entsperren?"
+
+#: app/templates/blocked_ips.html
 msgid "Unblocks At"
 msgstr "Entsperrt am"
 
 #: app/templates/edit_user.html
 msgid "Unique username"
 msgstr "Eindeutiger Benutzername"
+
+#: app/templates/profile_config_backups_tab.html
+msgid "Unknown device"
+msgstr "Unbekanntes Gerät"
 
 #: app/templates/profile_webauthn_tab.html
 msgid "Unnamed Security Key"
@@ -3895,10 +4012,6 @@ msgstr "Benutzer '%(name)s' erfolgreich gelöscht."
 msgid "User '%(name)s' updated successfully."
 msgstr "Benutzer '%(name)s' erfolgreich aktualisiert."
 
-#: app/templates/profile.html
-msgid "User Information"
-msgstr "Benutzerinformationen"
-
 #: app/templates/edit_user.html
 msgid "User Management"
 msgstr "Benutzerverwaltung"
@@ -3939,8 +4052,8 @@ msgstr "Benutzer müssen ihre 2FA NICHT neu einrichten. Die Rotation ist für si
 
 #: app/templates/profile.html
 msgid ""
-"Using an authenticator app (like Google Authenticator, Authy, etc.) adds \"\n"
-"                       \"an extra layer of security to your account."
+"Using an authenticator app (like Google Authenticator, Authy, etc.) adds an extra "
+"layer of security to your account."
 msgstr ""
 "Die Verwendung einer Authenticator-App (wie Google Authenticator, Authy, usw.) fügt "
 "Ihrem Konto eine zusätzliche Sicherheitsebene hinzu."
@@ -4080,7 +4193,7 @@ msgstr "Fahrzeugname"
 msgid "Vehicle Name (Display Name)"
 msgstr "Fahrzeugname (Anzeigename)"
 
-#: app/templates/add_vehicle_wizard.html app/templates/edit_vehicle.html
+#: app/templates/add_vehicle_wizard.html
 msgid "Vehicle Owner"
 msgstr "Fahrzeugbesitzer"
 
@@ -4249,6 +4362,11 @@ msgstr "Ja, Ladevorgang löschen"
 msgid "Yes, Delete Trip"
 msgstr "Ja, Fahrt löschen"
 
+#: app/routers/ui/command_favorites.py
+#, python-format
+msgid "You can keep at most %(n)d favorites."
+msgstr "Sie können höchstens %(n)d Favoriten speichern."
+
 #: app/templates/email/admin_new_user_notification.html
 #: app/templates/email/admin_new_user_notification.txt
 msgid "You can manage all server users from the User Management page."
@@ -4414,10 +4532,6 @@ msgstr "und"
 msgid "by"
 msgstr "von"
 
-#: app/templates/edit_vehicle.html
-msgid "create a user"
-msgstr "erstellen Sie einen Benutzer"
-
 #: app/templates/_trip_search_heatmap.html
 msgid "e.g., -0.5,51.3,0.3,51.7"
 msgstr "z.B. -0.5,51.3,0.3,51.7"
@@ -4437,14 +4551,6 @@ msgstr "z.B. Mein Skript-Schlüssel"
 #: app/templates/edit_vehicle.html
 msgid "e.g., My Tesla Model 3"
 msgstr "z.B. Mein Tesla Model 3"
-
-#: app/templates/edit_vehicle.html
-msgid "e.g., TESTCAR"
-msgstr "z.B. TESTWAGEN"
-
-#: app/templates/edit_vehicle.html
-msgid "first."
-msgstr "zuerst."
 
 #: app/templates/profile.html
 msgid "for each of your vehicles."
@@ -4507,4 +4613,43 @@ msgstr "Fahrzeug(e) stehen zur automatischen Löschung an"
 #: app/templates/register.html
 msgid "your@email.com"
 msgstr "ihre@email.com"
+
+#~ msgid "As an admin, you must assign this vehicle to a user."
+#~ msgstr "Als Administrator müssen Sie dieses Fahrzeug einem Benutzer zuweisen."
+
+#~ msgid "No Users Available"
+#~ msgstr "Keine Benutzer verfügbar."
+
+#~ msgid "Owner:"
+#~ msgstr "Besitzer:"
+
+#~ msgid "Passkeys"
+#~ msgstr "Passkeys"
+
+#~ msgid "Required for new vehicle"
+#~ msgstr "Erforderlich für neues Fahrzeug"
+
+#~ msgid "The danger zone is available after the vehicle has been created."
+#~ msgstr "Die Gefahrenzone ist verfügbar, nachdem das Fahrzeug erstellt wurde."
+
+#~ msgid "There are no non-admin users to assign a vehicle to. Please"
+#~ msgstr ""
+#~ "Es sind keine Nicht-Admin-Benutzer vorhanden,"
+#~ " denen ein Fahrzeug zugewiesen werden kann. "
+#~ "Bitte"
+
+#~ msgid "Two-Factor Auth"
+#~ msgstr "Zwei-Faktor-Authentifizierung"
+
+#~ msgid "User Information"
+#~ msgstr "Benutzerinformationen"
+
+#~ msgid "create a user"
+#~ msgstr "erstellen Sie einen Benutzer"
+
+#~ msgid "e.g., TESTCAR"
+#~ msgstr "z.B. TESTWAGEN"
+
+#~ msgid "first."
+#~ msgstr "zuerst."
 

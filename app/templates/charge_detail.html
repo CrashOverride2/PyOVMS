@@ -287,7 +287,7 @@ document.addEventListener('alpine:init', () => {
 
         exportChart() {
             if (!this.chart) {
-                alert('{{ _("Chart is not available for export.") }}');
+                window.ovmsDialog.alert({{ _("Chart is not available for export.") | tojson | safe }});
                 return;
             }
             const imageUrl = this.chart.toBase64Image();
@@ -314,10 +314,10 @@ document.addEventListener('alpine:init', () => {
                     if (response.ok) {
                         window.location.href = chargeDetailConfig.deleteRedirect;
                     } else {
-                        response.json().then(data => alert(`{{ _('Error deleting charge log: ') }}${data.detail || response.statusText}`));
+                        response.json().then(data => window.ovmsDialog.alert({ message: `{{ _('Error deleting charge log: ') }}${data.detail || response.statusText}`, danger: true }));
                     }
                 })
-                .catch(err => alert(`{{ _('Network error: ') }}${err.message}`));
+                .catch(err => window.ovmsDialog.alert({ message: `{{ _('Network error: ') }}${err.message}`, danger: true }));
         },
 
         formatDateTime(isoString) {

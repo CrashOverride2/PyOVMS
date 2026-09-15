@@ -102,7 +102,7 @@ class Settings(BaseSettings):
     TCP_PORT: int = 6867
     TCP_SSL_PORT: int = 6870
     HTTP_PORT: int = 8000 
-    SERVER_VERSION: str = "2.3.6" 
+    SERVER_VERSION: str = "2.4.1" 
     SERVER_BASE_URL: str = "http://localhost:8000"
 
     SSL_CERT_FILE: Optional[str] = "cert.pem"
@@ -148,6 +148,40 @@ class Settings(BaseSettings):
     # Force secure cookies even if not detecting HTTPS (for reverse proxy setups)
     FORCE_SECURE_COOKIES: bool = True
     MAX_API_KEYS_PER_USER: int = 50
+
+    # --- Configuration backups (OVMS Connect app) --------------------------------
+    #
+    # The app can keep snapshots of its own configuration on the account — themes,
+    # vehicle layouts, dashboard slots, custom commands — so a reinstall or a new
+    # phone is set up from the server instead of by hand. A snapshot is plain JSON
+    # text of a few tens of KiB: it carries no credentials (the router refuses a
+    # payload that names any) and no images (those stay in the app's local ZIP
+    # export). See app/crud/config_backup.py for the retention rules.
+    #
+    # `auto` snapshots roll — at most CONFIG_BACKUP_MAX_AUTO per (user, device),
+    # the oldest evicted on insert. `manual` snapshots are pinned and never
+    # evicted; the cap is enforced by refusing the create with 409 instead.
+    CONFIG_BACKUP_ENABLED: bool = True
+    CONFIG_BACKUP_MAX_AUTO: int = 10
+    CONFIG_BACKUP_MAX_MANUAL: int = 10
+    # Devices with an auto window per user. device_id is chosen by the client, so
+    # without this every new id opened another window of MAX_AUTO rows and the only
+    # bound on the row count was the character quota — some 440,000 rows of minimal
+    # documents. The device whose newest auto row is oldest loses its auto rows
+    # when a new device would exceed this; pinned rows are never touched. At least 1.
+    CONFIG_BACKUP_MAX_DEVICES: int = 20
+    # A new auto snapshot younger than this *replaces* the newest one rather than
+    # adding a row, so the window measures time instead of app switches. 0 = FIFO.
+    CONFIG_BACKUP_AUTO_COALESCE_MINUTES: int = 360
+    # Below this an auto upload of *unchanged* content is answered 200 without
+    # touching the row at all — the cheap guard against a client whose dirty flag
+    # never clears. Changed content is always stored (coalesced or created).
+    CONFIG_BACKUP_MIN_AUTO_INTERVAL_SECONDS: int = 60
+    # One snapshot, as JSON text (256 KiB). Generous against the real case and an
+    # honest limit, because the column holds exactly this text.
+    CONFIG_BACKUP_MAX_PAYLOAD_CHARS: int = 262_144
+    # Everything one user may keep (8 MiB) — the knob for operators.
+    CONFIG_BACKUP_MAX_TOTAL_CHARS_PER_USER: int = 8_388_608
 
     OTP_ISSUER_NAME: str = "PyOVMS"
     TOTP_ENCRYPTION_KEY: str = "0gXIqS9Z0kZ-Yg7tJ2eX_rU8wH6vI9nL0fA3cE1bS2k=_change_this_strong_random_key"
