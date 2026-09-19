@@ -18,65 +18,208 @@
     {% endif %}
 
     {% if vehicles %}
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+        <div class="flex items-center justify-end mb-2">
+            <span id="dashboard-live" class="inline-flex items-center gap-1.5 text-xs text-text-secondary" data-connected="0">
+                <span class="js-live-dot w-1.5 h-1.5 rounded-full bg-gray-500"></span>
+                <span class="js-live-text">{{ _('Connecting…') }}</span>
+            </span>
+        </div>
+        <div id="dashboard-vehicles" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
             {% for vehicle in vehicles %}
-            <div class="bg-card-bg border border-border-color rounded-lg p-4 shadow-md hover:border-neon-blue/70 hover:shadow-neon-glow-blue transition-all duration-300 ease-in-out flex flex-col justify-between">
-                <div>
-                    <div class="mb-3">
+            {% set live = live_payloads.get(vehicle.vehicle_id) or {} %}
+            <article x-data="dashboardVehicleCard" data-vehicle-id="{{ vehicle.vehicle_id }}"
+                     class="relative bg-card-bg border border-border-color rounded-xl shadow-md hover:border-neon-blue/70 hover:shadow-neon-glow-blue transition-all duration-300 ease-in-out flex flex-col overflow-hidden">
+                <script type="application/json" class="js-live-payload">{{ live | tojson }}</script>
+
+                <div class="px-4 pt-4 pb-3 flex items-start justify-between gap-3">
+                    <div class="min-w-0">
                         <h2 class="text-lg font-semibold text-neon-blue truncate" title="{{ vehicle.vehicle_name or vehicle.vehicle_id }}">
-                            <a href="{{ url_for('ui_vehicle_detail_page', vehicle_module_id=vehicle.vehicle_id) }}" class="hover:underline">
-                                {{ vehicle.vehicle_name or vehicle.vehicle_id }}
-                            </a>
+                            <a href="{{ url_for('ui_vehicle_detail_page', vehicle_module_id=vehicle.vehicle_id) }}" class="hover:underline">{{ vehicle.vehicle_name or vehicle.vehicle_id }}</a>
                         </h2>
-                        <div class="mt-1">
-                        {% if vehicle.authenticated %}
-                            <span class="px-2 py-0.5 text-xs font-medium text-green-300 bg-green-700/70 border border-green-500/50 rounded-full">
-                                {{ _('Online') }} <span class="font-bold">({{ vehicle.connection_type }})</span>
-                            </span>
-                        {% else %}
-                             <span class="px-2 py-0.5 text-xs font-medium text-red-300 bg-red-700/70 border border-red-500/50 rounded-full">{{ _('Offline') }}</span>
+                        {# The id under the name only when the name is something else. #}
+                        {% if vehicle.vehicle_name and vehicle.vehicle_name != vehicle.vehicle_id %}
+                        <p class="text-xs text-text-secondary truncate">{{ vehicle.vehicle_id }}</p>
                         {% endif %}
+                    </div>
+                    <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                      <div class="flex items-center gap-2">
+                        <span x-show="showLocked" :title="lockTitle" :class="lockClass" class="inline-flex" x-cloak>
+                            <svg x-show="isLocked" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+                            <svg x-show="isUnlocked" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+                        </span>
+                        <span x-show="isOn" class="inline-flex text-neon-yellow" :title="labels.vehicleOn" x-cloak>
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5.636 5.636a9 9 0 1012.728 0M12 3v9"/></svg>
+                        </span>
+                        <span :class="statusPillClass" class="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium border rounded-full whitespace-nowrap">
+                            <span :class="statusDotClass" class="w-1.5 h-1.5 rounded-full"></span>
+                            <span x-text="statusText">{{ _('Online') if (live.isV2Online or live.isV3Online) else _('Offline') }}</span>
+                        </span>
+                      </div>
+                      <span x-text="lastSeenText" :title="lastSeenTitle" class="text-xs text-text-secondary whitespace-nowrap">{{ (vehicle.last_seen_v3, vehicle.last_seen_tcp) | latest_timestamp | datetimeformat if (vehicle.last_seen_v3 or vehicle.last_seen_tcp) else _('Never') }}</span>
+                    </div>
+                </div>
+
+                <div class="px-4 pb-3">
+                    <div class="flex items-end justify-between gap-3">
+                        <div class="flex items-baseline gap-2">
+                            <span x-text="socText" :class="socClass" class="text-4xl font-bold leading-none tabular-nums">–</span>
+                        </div>
+                        <div x-show="showBatteryTemp" class="flex items-center gap-1 text-sm text-text-secondary pb-1" :title="labels.batteryTemp" x-cloak>
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3a2.25 2.25 0 00-2.25 2.25v9.033a4.5 4.5 0 104.5 0V5.25A2.25 2.25 0 0012 3z"/></svg>
+                            <span x-text="batteryTempText" class="tabular-nums"></span>
+                        </div>
+                        <div x-show="showRange" class="text-right pb-1" x-cloak>
+                            <span x-text="rangeText" class="text-2xl font-semibold text-text-primary tabular-nums"></span>
                         </div>
                     </div>
-
-                    <p class="text-xs text-text-secondary mb-0.5">{{ _('ID') }}: <span class="text-text-primary">{{ vehicle.vehicle_id }}</span></p>
-                    {% if is_admin %}
-                    <p class="text-xs text-text-secondary mb-2">{{ _('Owner') }}: <span class="text-text-primary">{{ vehicle.owner_username or 'N/A' }}</span></p>
-                    {% endif %}
-
-
-                    <div class="text-sm space-y-1 mb-3">
-                        {% if vehicle.latest_status_parsed and 'soc' in vehicle.latest_status_parsed and vehicle.latest_status_parsed.soc != "N/A" and vehicle.latest_status_parsed.soc is not none %}
-                            <p class="text-text-secondary">{{ _('SOC') }}: <span class="font-semibold text-base {% if vehicle.latest_status_parsed.soc|int >= 70 %}text-green-400{% elif vehicle.latest_status_parsed.soc|int >= 30 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ vehicle.latest_status_parsed.soc }}%</span></p>
-                        {% else %}
-                             <p class="text-text-secondary">{{ _('SOC') }}: <span class="font-medium text-gray-300">{{ _('N/A') }}</span></p>
-                        {% endif %}
-
-                        {% if vehicle.latest_diag_parsed and vehicle.latest_diag_parsed.vehicle_12v and vehicle.latest_diag_parsed.vehicle_12v != "N/A" %}
-                            <p class="text-text-secondary">{{ _('12V Battery') }}: <span class="font-medium text-gray-300">{{ vehicle.latest_diag_parsed.vehicle_12v }} V</span></p>
-                        {% else %}
-                             <p class="text-text-secondary">{{ _('12V Battery') }}: <span class="font-medium text-gray-300">{{_('N/A')}}</span></p>
-                        {% endif %}
-                        
-                        <p class="text-text-secondary">{{ _('Last Seen') }}: <span class="font-medium text-gray-300">{{ (vehicle.last_seen_v3, vehicle.last_seen_tcp) | latest_timestamp | datetimeformat if (vehicle.last_seen_v3 or vehicle.last_seen_tcp) else _('Never') }}</span></p>
-
+                    <div class="mt-3 h-2.5 rounded-full bg-dark-bg border border-border-color/60 overflow-hidden">
+                        <div :style="barStyle" :class="barClass" class="h-full rounded-full transition-all duration-700 ease-out"></div>
+                    </div>
+                    <div class="mt-2 min-h-[1.25rem] flex items-center justify-between gap-2 text-sm">
+                        <div x-show="isCharging" class="flex items-center gap-3 text-green-400" x-cloak>
+                            <span class="inline-flex items-center gap-1 font-medium">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4.5 13.5H11L10 22l8.5-11.5H12L13 2z"/></svg>
+                                <span x-text="chargePowerText" class="tabular-nums"></span>
+                            </span>
+                            <span x-show="showChargeEnergy" x-text="chargeEnergyText" class="text-text-secondary tabular-nums"></span>
+                        </div>
+                        <div x-show="isCharging" x-text="chargeEtaText" class="text-green-400 tabular-nums whitespace-nowrap" x-cloak></div>
+                        <div x-show="showChargeState" x-text="chargeStateText" :class="chargeStateClass" class="text-xs" x-cloak></div>
                     </div>
                 </div>
 
-                <div class="mt-auto pt-3 border-t border-border-color/30 flex space-x-2">
-                     <a href="{{ url_for('ui_vehicle_detail_page', vehicle_module_id=vehicle.vehicle_id) }}"
-                        class="flex-1 text-center px-3 py-1.5 text-xs font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">
-                        {{ _('Details') }}
-                     </a>
-                     <a href="{{ url_for('ui_edit_vehicle_form', vehicle_db_id=vehicle.id) }}"
-                        class="flex-1 text-center px-3 py-1.5 text-xs font-medium text-neon-magenta border border-neon-magenta rounded-md hover:bg-neon-magenta hover:text-dark-bg transition-colors duration-200">
-                        {{ _('Edit') }}
-                     </a>
+                <div class="px-4 pb-4 flex flex-wrap gap-2 text-xs">
+                    <div x-show="showV12" class="grow basis-[calc(50%-0.25rem)] flex items-center gap-2 rounded-lg bg-dark-bg/60 border border-border-color/40 px-3 py-2" x-cloak>
+                        <svg class="w-4 h-4 text-text-secondary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 10.5h.375c.621 0 1.125.504 1.125 1.125v2.25c0 .621-.504 1.125-1.125 1.125H21M3.75 18h15A2.25 2.25 0 0021 15.75v-6a2.25 2.25 0 00-2.25-2.25h-15A2.25 2.25 0 001.5 9.75v6A2.25 2.25 0 003.75 18z"/></svg>
+                        <div class="min-w-0">
+                            <div class="text-text-secondary">{{ _('12V Battery') }}</div>
+                            <div x-text="v12Text" :class="v12Class" class="font-semibold tabular-nums truncate">–</div>
+                        </div>
+                    </div>
+                    <div x-show="showSoh" class="grow basis-[calc(50%-0.25rem)] flex items-center gap-2 rounded-lg bg-dark-bg/60 border border-border-color/40 px-3 py-2" x-cloak>
+                        <svg class="w-4 h-4 text-text-secondary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
+                        <div class="min-w-0">
+                            <div class="text-text-secondary">{{ _('Battery health') }}</div>
+                            <div x-text="sohText" class="font-semibold text-text-primary tabular-nums truncate">–</div>
+                        </div>
+                    </div>
+                    <div x-show="showOdometer" class="grow basis-[calc(50%-0.25rem)] flex items-center gap-2 rounded-lg bg-dark-bg/60 border border-border-color/40 px-3 py-2" x-cloak>
+                        <svg class="w-4 h-4 text-text-secondary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l3 1.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <div class="min-w-0">
+                            <div class="text-text-secondary">{{ _('Odometer') }}</div>
+                            <div x-text="odometerText" class="font-semibold text-text-primary tabular-nums truncate">–</div>
+                        </div>
+                    </div>
+                    <div x-show="showAmbientTemp" class="grow basis-[calc(50%-0.25rem)] flex items-center gap-2 rounded-lg bg-dark-bg/60 border border-border-color/40 px-3 py-2" x-cloak>
+                        <svg class="w-4 h-4 text-text-secondary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>
+                        <div class="min-w-0">
+                            <div class="text-text-secondary">{{ _('Ambient temperature') }}</div>
+                            <div x-text="ambientTempText" class="font-semibold text-text-primary tabular-nums truncate">–</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
+
+                <div class="mt-auto px-4 py-3 border-t border-border-color/30 flex space-x-2">
+                    <a href="{{ url_for('ui_vehicle_detail_page', vehicle_module_id=vehicle.vehicle_id) }}"
+                       class="flex-1 text-center px-3 py-1.5 text-xs font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">
+                        {{ _('Details') }}
+                    </a>
+                    <a href="{{ url_for('ui_edit_vehicle_form', vehicle_db_id=vehicle.id) }}"
+                       class="flex-1 text-center px-3 py-1.5 text-xs font-medium text-neon-magenta border border-neon-magenta rounded-md hover:bg-neon-magenta hover:text-dark-bg transition-colors duration-200">
+                        {{ _('Edit') }}
+                    </a>
+                </div>
+            </article>
             {% endfor %}
         </div>
     {% else %}
         <p class="text-text-secondary text-center py-10">{{ _('No vehicles registered for your account.') }} <a href="{{ url_for('ui_add_vehicle_form') }}" class="text-neon-blue hover:underline font-semibold">{{ _('Add one now!') }}</a></p>
     {% endif %}
+{% endblock %}
+{% block scripts %}
+{% if vehicles %}
+<script src="{{ url_for('static', path='/js/vehicle_live_view.js') }}"></script>
+<script nonce="{{ request.state.csp_nonce }}">
+    const dashboardConfig = {
+        lang: {{ (user_locale or 'en') | tojson | safe }},
+        imperial: {{ user_prefers_imperial | tojson | safe }},
+        labels: {% include '_live_view_labels.html' %},
+        live: {{ _('Live') | tojson | safe }},
+        reconnecting: {{ _('Reconnecting…') | tojson | safe }},
+        vehicleOn: {{ _('Vehicle switched on') | tojson | safe }},
+        batteryTemp: {{ _('Battery temperature') | tojson | safe }}
+    };
+
+    (() => {
+        const view = window.ovmsLiveView.create(dashboardConfig);
+        const L = dashboardConfig.labels;
+
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('dashboardVehicleCard', () => ({
+                labels: { vehicleOn: dashboardConfig.vehicleOn, batteryTemp: dashboardConfig.batteryTemp },
+                payload: null,
+                statusText: L.offline, statusPillClass: '', statusDotClass: '',
+                socText: '–', socClass: 'text-text-secondary',
+                showRange: false, rangeText: '',
+                showBatteryTemp: false, batteryTempText: '',
+                barStyle: { width: '0%' }, barClass: 'bg-gray-600',
+                isCharging: false, chargePowerText: '', showChargeEnergy: false, chargeEnergyText: '', chargeEtaText: '',
+                showChargeState: false, chargeStateText: '', chargeStateClass: 'text-text-secondary',
+                showV12: false, v12Text: '', v12Class: 'text-text-primary',
+                showSoh: false, sohText: '',
+                showOdometer: false, odometerText: '',
+                showAmbientTemp: false, ambientTempText: '',
+                lastSeenText: L.never, lastSeenTitle: '',
+                showLocked: false, isLocked: false, isUnlocked: false, lockTitle: '', lockClass: '',
+                isOn: false,
+
+                _ageTimer: null,
+                _unsubscribe: null,
+
+                init() {
+                    const embedded = this.$root.querySelector('.js-live-payload');
+                    if (embedded) {
+                        try { this.apply(JSON.parse(embedded.textContent)); } catch (e) { /* no initial payload */ }
+                    }
+                    this._ageTimer = setInterval(() => { if (this.payload) this.applyLastSeen(); }, 30000);
+                    const vehicleId = this.$root.dataset.vehicleId;
+                    if (window.ovmsSocket && vehicleId) {
+                        this._unsubscribe = window.ovmsSocket.subscribe(`vehicle:${vehicleId}`, (data) => {
+                            if (data.type === 'update') this.apply(data.payload);
+                        });
+                    }
+                },
+                destroy() {
+                    clearInterval(this._ageTimer);
+                    if (this._unsubscribe) this._unsubscribe();
+                },
+
+                applyLastSeen() {
+                    const { text, title } = view.relative(this.payload.lastMessageAt);
+                    this.lastSeenText = text;
+                    this.lastSeenTitle = title;
+                },
+
+                apply(p) {
+                    if (!p || typeof p !== 'object') return;
+                    this.payload = p;
+                    Object.assign(this, view.derive(p));
+                }
+            }));
+        });
+
+        const indicator = document.getElementById('dashboard-live');
+        if (indicator && window.ovmsSocket) {
+            let everConnected = false;
+            window.ovmsSocket.onStatus((connected) => {
+                if (!connected && !everConnected) return;
+                everConnected = true;
+                indicator.dataset.connected = connected ? '1' : '0';
+                indicator.querySelector('.js-live-text').textContent = connected ? dashboardConfig.live : dashboardConfig.reconnecting;
+                indicator.querySelector('.js-live-dot').className = 'js-live-dot w-1.5 h-1.5 rounded-full ' + (connected ? 'bg-green-400 animate-pulse' : 'bg-gray-500');
+            });
+        }
+    })();
+</script>
+{% endif %}
 {% endblock %}

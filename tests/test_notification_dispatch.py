@@ -41,6 +41,7 @@ def _vehicle(**overrides):
     """A Vehicle-shaped object with every flag off and no legacy targets."""
     base = {
         "id": 1,
+        "owner_id": 42,
         "vehicle_id": "CAR1",
         "protocol": "v3",
         "notification_preference": None,
@@ -104,7 +105,15 @@ def dispatch_env(monkeypatch):
         senders={},
         badge_increments=0,
         scheduled_retries=[],
+        web=[],
     )
+
+    # The owner's browser is a recorder too: (owner_id, kwargs, every session closed).
+    def _notify_browser(owner_id, **kwargs):
+        env.web.append((owner_id, kwargs, all(s.closed for s in env.sessions)))
+        return True
+
+    monkeypatch.setattr(dispatcher, "notify_owner_browser", _notify_browser)
 
     # Record what would have been rescheduled instead of starting a real timer thread:
     # a test that leaves one behind fails somewhere else, minutes later.
@@ -372,6 +381,70 @@ def test_an_unknown_vehicle_does_not_reach_a_channel(dispatch_env):
 
     assert dispatch_env.sent == []
     assert all(s.closed for s in dispatch_env.sessions)
+
+
+# ---------------------------------------------------------------------------
+# the owner's browser is told
+# ---------------------------------------------------------------------------
+
+def test_the_browser_is_told_even_without_a_push_target(dispatch_env):
+    """
+    A vehicle with no push channel configured is exactly the one whose owner watches
+    the web UI, so the browser hook sits before the no-targets return — and after the
+    session is closed, like every other send.
+    """
+    _dispatch()
+
+    assert dispatch_env.sent == []
+    assert len(dispatch_env.web) == 1
+    owner_id, kwargs, sessions_closed = dispatch_env.web[0]
+    assert owner_id == 42
+    assert kwargs["vehicle_id"] == "CAR1"
+    assert sessions_closed, "the browser was told while a database session was still open"
+
+
+def test_a_rate_limited_notification_never_reaches_the_browser(dispatch_env):
+    burst = dispatcher.rate_limiter.burst
+
+    for n in range(burst + 3):
+        _dispatch(title=f"msg {n}")
+
+    assert len(dispatch_env.web) == burst
+
+
+def test_the_protocol_preference_also_gates_the_browser(dispatch_env):
+    """A protocol=both vehicle reports each event twice; the owner wants one toast."""
+    dispatch_env.vehicle = _vehicle(protocol="both", notification_preference="v2")
+
+    _dispatch(source_protocol="v3")
+    assert dispatch_env.web == []
+
+    dispatcher.rate_limiter.reset()
+    _dispatch(source_protocol="v2")
+    assert len(dispatch_env.web) == 1
+
+
+def test_an_unknown_vehicle_is_not_broadcast(dispatch_env):
+    dispatch_env.vehicle = None
+
+    _dispatch()
+
+    assert dispatch_env.web == []
+
+
+def test_the_browser_gets_the_clamped_text_and_a_timestamp(dispatch_env):
+    import datetime
+
+    _dispatch(title="T" * 5_000, message_plain="B" * 500_000, alert_type_char="A",
+              fcm_data_payload={"v3_subtype": "charge/done"})
+
+    _owner, kwargs, _closed = dispatch_env.web[0]
+    assert len(kwargs["title"]) <= dispatcher.MAX_TITLE_CHARS + 1
+    assert len(kwargs["body"]) <= dispatcher.MAX_BODY_CHARS + 1
+    assert kwargs["alert_type_char"] == "A"
+    assert kwargs["fcm_data_payload"] == {"v3_subtype": "charge/done"}
+    stamp = datetime.datetime.fromisoformat(kwargs["timestamp"])
+    assert stamp.tzinfo is not None
 
 
 # ---------------------------------------------------------------------------

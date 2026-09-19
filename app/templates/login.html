@@ -6,12 +6,6 @@
 <div class="max-w-md mx-auto bg-card-bg p-8 rounded-lg shadow-xl border border-neon-blue/50 mt-12">
     <h1 class="text-3xl font-bold mb-8 text-center text-neon-blue">{{ _(page_title) }}</h1>
 
-    {% if request.query_params.get('error_message') %}
-    <div class="bg-red-700/70 border border-red-500/50 text-red-200 px-4 py-3 rounded relative mb-4" role="alert">
-        <strong class="font-bold">{{ _('Error!') }}</strong>
-        <span class="block sm:inline">{{ _(request.query_params.get('error_message')) }}</span>
-    </div>
-    {% endif %}
 
     <form action="{{ url_for('ui_login_submit') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

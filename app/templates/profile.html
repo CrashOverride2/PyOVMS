@@ -97,6 +97,22 @@
                     <p><span class="font-medium text-text-secondary">{{ _('Joined:') }}</span> <span class="text-text-primary">{{ current_user.created_at | datetimeformat }}</span></p>
                     <p><span class="font-medium text-text-secondary">{{ _('TOTP Enabled:') }}</span> <span class="text-text-primary font-semibold {{ 'text-green-400' if is_totp_enabled else 'text-red-400' }}">{{ _('Yes') if is_totp_enabled else _('No') }}</span></p>
                 </div>
+                <hr class="border-border-color/50 my-6">
+                <div id="native-notifications" class="space-y-3">
+                    <h3 class="text-lg font-medium text-neon-yellow">{{ _('Browser notifications') }}</h3>
+                    <p class="text-sm text-text-secondary">{{ _('Show vehicle notifications as system notifications while this site is open in a background tab. Vehicle notifications always appear as a message in the page; this setting applies to this browser only.') }}</p>
+                    <p class="text-sm"><span class="font-medium text-text-secondary">{{ _('Status:') }}</span> <span id="native-notifications-state" class="text-text-primary"></span></p>
+                    <div class="flex flex-wrap gap-3">
+                        <button type="button" id="native-notifications-enable" hidden
+                                class="px-4 py-2 text-sm font-medium text-dark-bg bg-neon-yellow border border-neon-yellow rounded-md hover:bg-neon-yellow-darker hover:border-neon-yellow-darker transition-colors">
+                            {{ _('Enable in this browser') }}
+                        </button>
+                        <button type="button" id="native-notifications-disable" hidden
+                                class="px-4 py-2 text-sm font-medium text-text-primary bg-gray-600 rounded-md hover:bg-gray-500 transition-colors">
+                            {{ _('Disable') }}
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div data-tab-panel="password" class="hidden"> 
@@ -391,6 +407,29 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Browser notifications: render the state, and let the buttons change it.
+    const nativeApi = window.ovmsNativeNotifications;
+    const nativeState = document.getElementById('native-notifications-state');
+    const nativeEnable = document.getElementById('native-notifications-enable');
+    const nativeDisable = document.getElementById('native-notifications-disable');
+    if (nativeApi && nativeState && nativeEnable && nativeDisable) {
+        const stateLabels = {
+            unsupported: {{ _('Not supported by this browser.') | tojson | safe }},
+            denied: {{ _('Blocked in the browser settings. Allow notifications for this site there to use them.') | tojson | safe }},
+            enabled: {{ _('Enabled in this browser.') | tojson | safe }},
+            disabled: {{ _('Disabled.') | tojson | safe }}
+        };
+        const renderNative = () => {
+            const state = nativeApi.state();
+            nativeState.textContent = stateLabels[state] || '';
+            nativeEnable.hidden = state !== 'disabled';
+            nativeDisable.hidden = state !== 'enabled';
+        };
+        nativeEnable.addEventListener('click', () => { nativeApi.enable().then(renderNative); });
+        nativeDisable.addEventListener('click', () => { nativeApi.disable(); renderNative(); });
+        renderNative();
+    }
 
 });
 </script>

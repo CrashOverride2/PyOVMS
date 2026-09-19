@@ -13,23 +13,18 @@ from fastapi import Request, HTTPException, status
 import logging
 
 from app.config import settings
+from app.utils.i18n_markers import N_
 
 logger = logging.getLogger(__name__)
 
 
-def N_(message: str) -> str:
-    """
-    gettext_noop — mark a string for extraction without translating it here.
-
-    The details below travel two ways: an API caller gets them as the JSON body of a
-    403, where English is correct, and a UI route catches the exception and puts the
-    text in `?error_message=` for the next page to display, where it is the one
-    English line on an otherwise translated page. Translating at the raise site would
-    also mean resolving a locale in a function that has no template context, so the
-    strings are only *marked* here (pybabel extracts N_ by default) and the UI routes
-    translate them with `_(str(e.detail))` at the point of display.
-    """
-    return message
+# The details below travel two ways: an API caller gets them as the JSON body of a
+# 403, where English is correct, and a UI route catches the exception and puts the
+# text in `?error_message=` for the next page to display, where it is the one
+# English line on an otherwise translated page. Translating at the raise site would
+# also mean resolving a locale in a function that has no template context, so the
+# strings are only *marked* (N_, see app/utils/i18n_markers.py) and the UI routes
+# translate them with `_(str(e.detail))` at the point of display.
 
 
 # Initialize serializer with JWT secret (reusing existing secret)

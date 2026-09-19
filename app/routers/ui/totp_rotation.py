@@ -15,6 +15,7 @@ from . import templates, get_common_template_vars
 from app.dependencies import require_admin_user_from_cookie
 from app.totp_key_rotation import totp_key_manager
 from app.csrf_protection import verify_csrf_token
+from app.utils.i18n_markers import N_
 
 router = APIRouter()
 
@@ -43,7 +44,7 @@ def ui_totp_key_rotation_page_route(
 
     return templates.TemplateResponse(request, "totp_key_rotation.html", {
         **common_vars,
-        "page_title": "TOTP Key Rotation",
+        "page_title": N_("TOTP Key Rotation"),
         "total_totp_users": len(users_with_totp),
         "version_stats": version_stats,
         "available_keys": available_keys,

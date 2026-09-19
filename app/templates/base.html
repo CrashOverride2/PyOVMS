@@ -227,13 +227,13 @@
        reloads the page and the scroll position is restored (see the script at the end
        of the body), so a banner at the top of <main> would be out of view exactly when
        it has something to say. Success and info fade after a few seconds; an error
-       stays until dismissed. #}
+       stays until dismissed.  #}
     {% set flash_messages = [
         ('error', request.query_params.get('error_message'), _('Error!'), 'text-red-300 bg-red-700/90 border-red-500/50', true),
         ('success', request.query_params.get('success_message'), _('Success!'), 'text-green-300 bg-green-700/90 border-green-500/50', false),
         ('info', request.query_params.get('info_message'), _('Info:'), 'text-blue-300 bg-blue-700/90 border-blue-500/50', false),
     ] %}
-    <div id="ovms-toasts" class="fixed bottom-4 left-4 right-4 sm:left-auto sm:w-full sm:max-w-md z-[9998] flex flex-col gap-2 pointer-events-none" aria-live="polite">
+    <div id="ovms-flash" class="fixed inset-x-4 top-1/2 -translate-y-1/2 sm:inset-x-0 sm:mx-auto sm:max-w-md z-[9999] flex flex-col gap-2 pointer-events-none" aria-live="assertive">
         {% for kind, text, heading, classes, sticky in flash_messages if text %}
         <div class="ovms-toast pointer-events-auto flex items-start gap-3 p-4 text-sm border rounded-lg shadow-xl backdrop-blur-sm transition-opacity duration-300 {{ classes }}"
              role="alert" data-toast-kind="{{ kind }}"{% if sticky %} data-toast-sticky{% endif %}>
@@ -243,6 +243,7 @@
         </div>
         {% endfor %}
     </div>
+    <div id="ovms-toasts" class="fixed bottom-4 left-4 right-4 sm:left-auto sm:w-full sm:max-w-md z-[9998] flex flex-col gap-2 pointer-events-none" aria-live="polite"></div>
 
     <main class="container mx-auto p-4 sm:p-6 mt-6 flex-grow">
         {% block content %}{% endblock %}
@@ -448,19 +449,302 @@
     </script>
 
     <script nonce="{{ request.state.csp_nonce }}">
-        // Flash toasts: dismiss on ×, and success/info fade by themselves.
+        // Toasts. The server-rendered flash toasts above and anything added at runtime
+        // (vehicle notifications arriving over the WebSocket) share one dismiss routine
+        // and one markup, so they look and behave the same. window.ovmsToast is the API.
+        //
+        // Two places (see the markup above): `center` for a message of the server's
+        // own — the default, an answer to what the person just did — and `corner` for
+        // a vehicle's notification, which arrives unasked and must not cover the page.
         (() => {
+            const containers = {
+                center: document.getElementById('ovms-flash'),
+                corner: document.getElementById('ovms-toasts')
+            };
             const TOAST_MS = 6000;
-            for (const toast of document.querySelectorAll('#ovms-toasts .ovms-toast')) {
+            const MAX_VISIBLE = 5;
+            // Must match the `flash_messages` tuple in the template above.
+            const KINDS = {
+                error:   { classes: 'text-red-300 bg-red-700/90 border-red-500/50', sticky: true },
+                success: { classes: 'text-green-300 bg-green-700/90 border-green-500/50', sticky: false },
+                info:    { classes: 'text-blue-300 bg-blue-700/90 border-blue-500/50', sticky: false },
+                warn:    { classes: 'text-amber-300 bg-amber-700/90 border-amber-500/50', sticky: false }
+            };
+            const dismissLabel = {{ _('Dismiss') | tojson | safe }};
+
+            function arm(toast, { sticky, timeoutMs }) {
                 const dismiss = () => {
                     toast.classList.add('opacity-0');
                     setTimeout(() => toast.remove(), 300);
                 };
                 toast.querySelector('.js-toast-close')?.addEventListener('click', dismiss);
-                if (!('toastSticky' in toast.dataset)) setTimeout(dismiss, TOAST_MS);
+                if (sticky !== true) setTimeout(dismiss, timeoutMs || TOAST_MS);
             }
+
+            // show({ kind, heading, text, sticky, timeoutMs, placement }) -> HTMLElement
+            // placement: 'center' (default; the server's own messages) or 'corner'
+            // (vehicle notifications). Text only: heading and text are set through
+            // textContent, never parsed as HTML — a vehicle module's notification is
+            // not ours to trust.
+            function show({ kind = 'info', heading = '', text = '', sticky, timeoutMs, placement = 'center' } = {}) {
+                const container = containers[placement] || containers.center;
+                const spec = KINDS[kind] || KINDS.info;
+                const toast = document.createElement('div');
+                toast.className = 'ovms-toast pointer-events-auto flex items-start gap-3 p-4 text-sm border rounded-lg shadow-xl backdrop-blur-sm transition-opacity duration-300 ' + spec.classes;
+                toast.setAttribute('role', 'alert');
+                toast.dataset.toastKind = kind;
+                const body = document.createElement('div');
+                body.className = 'flex-grow break-words whitespace-pre-line';
+                const head = document.createElement('span');
+                head.className = 'font-medium';
+                head.textContent = String(heading);
+                body.appendChild(head);
+                body.appendChild(document.createTextNode(heading ? ' ' + String(text) : String(text)));
+                const close = document.createElement('button');
+                close.type = 'button';
+                close.className = 'js-toast-close -mr-1 -mt-1 px-2 text-lg leading-none opacity-70 hover:opacity-100 transition-opacity';
+                close.setAttribute('aria-label', dismissLabel);
+                close.textContent = '×';
+                toast.appendChild(body);
+                toast.appendChild(close);
+                // Make room in this place: the oldest fading toast goes first, a sticky
+                // one (a form error the person has not read yet) only when nothing else
+                // is left.
+                while (container.children.length >= MAX_VISIBLE) {
+                    const victim = container.querySelector('.ovms-toast:not([data-toast-sticky])') || container.firstElementChild;
+                    victim.remove();
+                }
+                if (sticky === true || (sticky === undefined && spec.sticky)) toast.dataset.toastSticky = '';
+                container.appendChild(toast);
+                arm(toast, { sticky: sticky === undefined ? spec.sticky : Boolean(sticky), timeoutMs });
+                return toast;
+            }
+
+            for (const container of Object.values(containers)) {
+                for (const toast of container.querySelectorAll('.ovms-toast')) {
+                    arm(toast, { sticky: 'toastSticky' in toast.dataset });
+                }
+            }
+            window.ovmsToast = { show };
         })();
     </script>
+
+    <script nonce="{{ request.state.csp_nonce }}">
+        (() => {
+            const KEY = 'ovms-native-notifications';
+            const CLOSE_MS = 10000;
+            const VEHICLE_URL_TEMPLATE = {{ url_for('ui_vehicle_detail_page', vehicle_module_id='__VID__') | string | tojson | safe }};
+            const ICON_URL = {{ url_for('static', path='img/android-chrome-192x192.png') | string | tojson | safe }};
+            const LANG = {{ (user_locale or 'en') | tojson | safe }};
+            const labels = {
+                info: {{ _('Info') | tojson | safe }},
+                warn: {{ _('Warning') | tojson | safe }},
+                alert: {{ _('Alert') | tojson | safe }},
+                error: {{ _('Error') | tojson | safe }}
+            };
+            const supported = () => 'Notification' in window;
+            const flag = () => { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } };
+            const setFlag = (on) => { try { on ? localStorage.setItem(KEY, '1') : localStorage.removeItem(KEY); } catch (e) { /* storage unavailable */ } };
+
+            function state() {
+                if (!supported()) return 'unsupported';
+                if (Notification.permission === 'denied') return 'denied';
+                return (Notification.permission === 'granted' && flag()) ? 'enabled' : 'disabled';
+            }
+            function enable() {
+                if (!supported()) return Promise.resolve('unsupported');
+                return Promise.resolve(Notification.requestPermission()).then((permission) => {
+                    setFlag(permission === 'granted');
+                    return state();
+                }, () => state());
+            }
+            function disable() { setFlag(false); return state(); }
+
+            function show(payload) {
+                if (document.visibilityState === 'visible' || state() !== 'enabled') return;
+                const severity = String(payload.severity || 'info');
+                const sticky = severity === 'alert' || severity === 'error';
+                const heading = String(payload.vehicle_id || '') + ' · ' + (labels[severity] || labels.info)
+                    + (payload.subtype ? ' (' + String(payload.subtype) + ')' : '');
+                let n;
+                try {
+                    n = new Notification(heading, {
+                        body: String(payload.body || ''),
+                        tag: String(payload.id || ''),
+                        icon: ICON_URL,
+                        lang: LANG,
+                        requireInteraction: sticky
+                    });
+                } catch (e) { return; }
+                n.onclick = () => {
+                    window.focus();
+                    if (payload.vehicle_id) {
+                        location.href = VEHICLE_URL_TEMPLATE.replace('__VID__', encodeURIComponent(String(payload.vehicle_id)));
+                    }
+                    n.close();
+                };
+                if (sticky !== true) setTimeout(() => n.close(), CLOSE_MS);
+            }
+            window.ovmsNativeNotifications = { supported, state, enable, disable, show };
+        })();
+    </script>
+{% if current_user %}
+    <script nonce="{{ request.state.csp_nonce }}">
+        (() => {
+            const WS_PATH = {{ url_for('websocket_endpoint') | string | tojson | safe }};
+            const MAX_DELAY_MS = 30000;
+            const MAX_REFUSALS = 3;
+            const supported = typeof MessagePack !== 'undefined' && typeof WebSocket !== 'undefined';
+
+            const topics = new Map();      // topic -> Set(handler)
+            const statusHandlers = new Set();
+            let ws = null;
+            let timer = null;
+            let attempts = 0;
+            let refusals = 0;
+            let stopped = false;
+            let connected = false;
+
+            function setConnected(value) {
+                if (connected === value) return;
+                connected = value;
+                for (const handler of statusHandlers) {
+                    try { handler(connected); } catch (e) { console.error(e); }
+                }
+            }
+            function send(message) {
+                if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(message));
+            }
+            function deliver(topic, data) {
+                const handlers = topics.get(topic);
+                if (!handlers) return;
+                for (const handler of handlers) {
+                    try { handler(data); } catch (e) { console.error(e); }
+                }
+            }
+            function scheduleReconnect() {
+                if (stopped) return;
+                clearTimeout(timer);
+                const delay = Math.min(1000 * Math.pow(2, attempts), MAX_DELAY_MS);
+                attempts++;
+                timer = setTimeout(connect, delay);
+            }
+            function connect() {
+                if (!supported || stopped || !topics.size || (ws && ws.readyState <= WebSocket.OPEN)) return;
+                clearTimeout(timer);
+                const url = new URL(WS_PATH, (location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + location.host);
+                const socket = new WebSocket(url.toString());
+                socket.binaryType = 'arraybuffer';
+                ws = socket;
+                socket.onopen = () => {
+                    attempts = 0;
+                    for (const topic of topics.keys()) socket.send(JSON.stringify({ action: 'subscribe', topic }));
+                    setConnected(true);
+                };
+                socket.onmessage = (event) => {
+                    let data;
+                    try { data = MessagePack.decode(new Uint8Array(event.data)); } catch (e) { return; }
+                    if (!data || typeof data !== 'object' || typeof data.topic !== 'string') return;
+                    if (data.type === 'subscribe_rejected') {
+                        deliver(data.topic, data);
+                        topics.delete(data.topic);
+                        return;
+                    }
+                    deliver(data.topic, data);
+                };
+                socket.onclose = (event) => {
+                    if (ws === socket) ws = null;
+                    setConnected(false);
+                    refusals = event.code === 1008 ? refusals + 1 : 0;
+                    if (refusals >= MAX_REFUSALS) { stopped = true; checkSession(); return; }
+                    scheduleReconnect();
+                };
+            }
+            function checkSession() {
+                fetch(location.href, { method: 'GET', credentials: 'same-origin', cache: 'no-store', redirect: 'manual' })
+                    .then((response) => { if (response.type === 'opaqueredirect') location.reload(); })
+                    .catch(() => {});
+            }
+
+            function subscribe(topic, handler) {
+                if (typeof topic !== 'string' || !topic || typeof handler !== 'function') return () => {};
+                let handlers = topics.get(topic);
+                if (!handlers) {
+                    handlers = new Set();
+                    topics.set(topic, handlers);
+                    send({ action: 'subscribe', topic });
+                }
+                handlers.add(handler);
+                connect();
+                return () => {
+                    const set = topics.get(topic);
+                    if (!set) return;
+                    set.delete(handler);
+                    if (!set.size) {
+                        topics.delete(topic);
+                        send({ action: 'unsubscribe', topic });
+                    }
+                };
+            }
+            function onStatus(handler) {
+                if (typeof handler !== 'function') return () => {};
+                statusHandlers.add(handler);
+                try { handler(connected); } catch (e) { console.error(e); }
+                return () => statusHandlers.delete(handler);
+            }
+
+            window.addEventListener('pagehide', () => {
+                stopped = true;
+                clearTimeout(timer);
+                if (ws) { ws.onclose = null; ws.close(); ws = null; }
+                setConnected(false);
+            });
+            window.addEventListener('pageshow', (event) => {
+                if (event.persisted) { stopped = false; attempts = 0; connect(); }
+            });
+            // A machine back from sleep: the socket is gone and the backoff timer did
+            // not run while the tab was frozen. Same reasoning as the CSRF refresh.
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible' && !stopped && !ws) { attempts = 0; connect(); }
+            });
+
+            window.ovmsSocket = { subscribe, onStatus, get connected() { return connected; } };
+        })();
+    </script>
+
+    <script nonce="{{ request.state.csp_nonce }}">
+        (() => {
+            const NOTIFY_TOAST_MS = 10000;
+            const KIND_BY_SEVERITY = { info: 'info', warn: 'warn', alert: 'error', error: 'error' };
+            const labels = {
+                info: {{ _('Info') | tojson | safe }},
+                warn: {{ _('Warning') | tojson | safe }},
+                alert: {{ _('Alert') | tojson | safe }},
+                error: {{ _('Error') | tojson | safe }}
+            };
+            if (!window.ovmsSocket) return;
+
+            function render(payload) {
+                if (!payload || typeof payload !== 'object') return;
+                const severity = String(payload.severity || 'info');
+                const heading = String(payload.vehicle_id || '') + ' · ' + (labels[severity] || labels.info)
+                    + (payload.subtype ? ' (' + String(payload.subtype) + ')' : '') + ':';
+                window.ovmsToast.show({
+                    kind: KIND_BY_SEVERITY[severity] || 'info',
+                    heading,
+                    text: String(payload.body || payload.title || ''),
+                    timeoutMs: NOTIFY_TOAST_MS,
+                    placement: 'corner'
+                });
+                window.ovmsNativeNotifications.show(payload);
+            }
+
+            window.ovmsSocket.subscribe('user:me', (data) => {
+                if (data.type === 'notification') render(data.payload);
+            });
+        })();
+    </script>
+{% endif %}
 
     <script nonce="{{ request.state.csp_nonce }}">
         // A POST form answered with a redirect back to the same page reloads it at the

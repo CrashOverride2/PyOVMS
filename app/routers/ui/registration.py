@@ -12,7 +12,7 @@ from app import crud, notifications
 from app.models import api as models_api
 from app.models import db as models_db
 from app.config import settings
-from . import templates, get_common_template_vars, get_translator
+from . import templates, get_common_template_vars, get_translator, format_validation_error
 from app.dependencies import get_user_from_request_cookie, get_client_ip
 from app.security_manager import security_manager
 from app.services.disposable_email_service import (
@@ -23,6 +23,7 @@ from app.services.disposable_email_service import (
 from app.security_events import security_event_logger, SecurityEventType
 from app.csrf_protection import verify_csrf_token
 from app.utils.urls import external_url_for
+from app.utils.i18n_markers import N_
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Web UI - Registration"])
@@ -35,7 +36,7 @@ def ui_register_form_route(request: Request, current_user: Optional[models_db.Us
         return RedirectResponse(url=request.url_for('ui_dashboard'), status_code=status.HTTP_303_SEE_OTHER)
     
     common_vars = get_common_template_vars(request, current_user)
-    return templates.TemplateResponse(request, "register.html", {**common_vars, "page_title": "Register", "form_data": {}})
+    return templates.TemplateResponse(request, "register.html", {**common_vars, "page_title": N_("Register"), "form_data": {}})
 
 @router.post("/register", response_class=HTMLResponse, name="ui_register_submit")
 def ui_register_submit_route(
@@ -68,7 +69,7 @@ def ui_register_submit_route(
     
     if password != confirm_password:
         security_manager.record_failure(client_ip, 'login')
-        return templates.TemplateResponse(request, "register.html", {**common_vars, "page_title": "Register", "error_message": "Passwords do not match.", "form_data": form_data})
+        return templates.TemplateResponse(request, "register.html", {**common_vars, "page_title": N_("Register"), "error_message": _("Passwords do not match."), "form_data": form_data})
 
     _generic_success_response = templates.TemplateResponse(request, "register_success.html", {
         **common_vars,
@@ -85,18 +86,14 @@ def ui_register_submit_route(
 
     if not all([settings.EMAIL_HOST, settings.EMAIL_SENDER]):
         logger.error("User registration failed because email server is not configured in settings.")
-        return templates.TemplateResponse(request, "register.html", {**common_vars, "page_title": "Register", "error_message": "Cannot process registration: Email server is not configured.", "form_data": form_data})
+        return templates.TemplateResponse(request, "register.html", {**common_vars, "page_title": N_("Register"), "error_message": _("Cannot process registration: Email server is not configured."), "form_data": form_data})
 
     try:
         user_in = models_api.UserCreate(username=username, email=email, password=password, is_active=False)
     except ValidationError as e:
         security_manager.record_failure(client_ip, 'login')
-        error_detail = "Invalid input. Please check the form."
-        if e.errors():
-            first_error = e.errors()[0]
-            field = first_error['loc'][0] if first_error.get('loc') and len(first_error['loc']) > 0 else "Field"
-            error_detail = f"{str(field).capitalize()}: {first_error['msg']}"
-        return templates.TemplateResponse(request, "register.html", {**common_vars, "page_title": "Register", "error_message": error_detail, "form_data": form_data})
+        error_detail = format_validation_error(_, e)
+        return templates.TemplateResponse(request, "register.html", {**common_vars, "page_title": N_("Register"), "error_message": error_detail, "form_data": form_data})
 
     try:
         disposable_email_service.check_email(db, user_in.email)
@@ -109,10 +106,10 @@ def ui_register_submit_route(
             ip_address=client_ip,
             details={"email": user_in.email, "domain": user_in.email.split("@")[-1].lower()},
         )
-        return templates.TemplateResponse(request, "register.html", {**common_vars, "page_title": "Register", "error_message": _("Disposable email addresses are not allowed."), "form_data": form_data})
+        return templates.TemplateResponse(request, "register.html", {**common_vars, "page_title": N_("Register"), "error_message": _("Disposable email addresses are not allowed."), "form_data": form_data})
     except DisposableEmailListUnavailable as exc:
         logger.warning("Disposable email validation unavailable during registration: %s", exc)
-        return templates.TemplateResponse(request, "register.html", {**common_vars, "page_title": "Register", "error_message": "Unable to validate email domain right now. Please try again later.", "form_data": form_data})
+        return templates.TemplateResponse(request, "register.html", {**common_vars, "page_title": N_("Register"), "error_message": _("Unable to validate email domain right now. Please try again later."), "form_data": form_data})
 
     # Email collision — same generic response to avoid enumeration
     if crud.user.get_user_by_email(db, user_in.email):

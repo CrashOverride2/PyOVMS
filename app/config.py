@@ -78,6 +78,22 @@ class Settings(BaseSettings):
     NOTIFY_RATE_LIMIT_INTERVAL_SECONDS: float = 10.0
     NOTIFY_RATE_LIMIT_BURST: int = 4
 
+    # The live-data WebSocket (`vehicle:<id>` topics). The interval is how often the
+    # broadcaster looks at every watched vehicle; a topic is only sent when its
+    # payload changed, so a shorter interval costs queries, not bandwidth. The send
+    # timeout is how long one peer that has stopped reading may hold the tick before
+    # it is cut off — well under the 20 s protocol ping, which is what would otherwise
+    # end it.
+    WS_BROADCAST_INTERVAL_SECONDS: float = 2.0
+    WS_SEND_TIMEOUT_SECONDS: float = 5.0
+    # How many `vehicle:` subscribes one socket may have looked up in the database
+    # back-to-back, and how many per second after that. A subscribe past the budget
+    # is delayed, never refused: a dashboard sends one per card when it connects,
+    # so the burst is sized for a fleet page. Without a bound, subscribe and
+    # unsubscribe in a loop was one threadpool query per message.
+    WS_SUBSCRIBE_LOOKUP_BURST: int = 250
+    WS_SUBSCRIBE_LOOKUPS_PER_SECOND: float = 10.0
+
     FCM_CREDENTIALS_PATH: Optional[str] = None 
 
     APNS_AUTH_KEY_PATH: Optional[str] = None 
@@ -102,7 +118,7 @@ class Settings(BaseSettings):
     TCP_PORT: int = 6867
     TCP_SSL_PORT: int = 6870
     HTTP_PORT: int = 8000 
-    SERVER_VERSION: str = "2.4.2" 
+    SERVER_VERSION: str = "2.5.0" 
     SERVER_BASE_URL: str = "http://localhost:8000"
 
     SSL_CERT_FILE: Optional[str] = "cert.pem"

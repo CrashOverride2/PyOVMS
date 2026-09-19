@@ -8,8 +8,9 @@ from app.config import settings
 
 
 # Secrets that travel in a URL and would otherwise be written verbatim by
-# uvicorn.access: single-use WebSocket tickets (?ticket=), password-reset tokens
-# (/reset-password/<token>) and e-mail verification tokens (/verify/<token>).
+# uvicorn.access: password-reset tokens (/reset-password/<token>) and e-mail
+# verification tokens (/verify/<token>). The query-string names are generic on
+# purpose — `ticket` outlived the WebSocket ticket it was added for, and costs nothing.
 # A reset token is valid for an hour, so anyone who can read LOG_FILE — or an
 # admin watching the live log stream — could take over the account before the
 # legitimate user clicks the link.

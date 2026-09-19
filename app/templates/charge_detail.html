@@ -145,7 +145,11 @@ document.addEventListener('alpine:init', () => {
             const socData = points.map(p => ({ x: toMs(p.timestamp), y: (p.soc == null ? null : Number(p.soc)) }));
             const powerData = points.map(p => ({ x: toMs(p.timestamp), y: (p.power_kw == null ? null : Number(p.power_kw)) }));
             const hasTemp = points.some(p => p.battery_temp_c !== null && p.battery_temp_c !== undefined);
-            const tempData = hasTemp ? points.map(p => ({ x: toMs(p.timestamp), y: (p.battery_temp_c == null ? null : Number(p.battery_temp_c)) })) : [];
+            // The log holds Celsius; the profile's unit preference decides the axis.
+            const imperial = chargeDetailConfig.userPrefersImperial;
+            const toDisplayTemp = (c) => imperial ? c * 9 / 5 + 32 : c;
+            const tempUnit = imperial ? '°F' : '°C';
+            const tempData = hasTemp ? points.map(p => ({ x: toMs(p.timestamp), y: (p.battery_temp_c == null ? null : toDisplayTemp(Number(p.battery_temp_c))) })) : [];
 
             const datasets = [
                 {
@@ -162,7 +166,7 @@ document.addEventListener('alpine:init', () => {
 
             if (hasTemp) {
                 datasets.push({
-                    label: '{{ _("Battery (°C)") }}', yAxisID: 'yTemp',
+                    label: {{ _("Battery temperature") | tojson | safe }} + ' (' + tempUnit + ')', yAxisID: 'yTemp',
                     data: tempData, borderColor: '#ff00ff', backgroundColor: '#ff00ff40',
                     tension: 0.1, cubicInterpolationMode: 'monotone', borderWidth: 2, pointRadius: 1, spanGaps: true
                 });
@@ -226,7 +230,7 @@ document.addEventListener('alpine:init', () => {
                             type: 'linear',
                             position: 'right',
                             grid: { drawOnChartArea: false },
-                            ticks: { color: '#ff00ff', callback: v => v.toFixed(1) + '°C' },
+                            ticks: { color: '#ff00ff', callback: v => v.toFixed(1) + tempUnit },
                             display: hasTemp
                         }
                     },
@@ -269,7 +273,7 @@ document.addEventListener('alpine:init', () => {
                                         } else if (context.dataset.yAxisID === 'yPower') {
                                             label += value + ' kW';
                                         } else if (context.dataset.yAxisID === 'yTemp') {
-                                            label += value + '°C';
+                                            label += value + tempUnit;
                                         } else {
                                             label += value;
                                         }

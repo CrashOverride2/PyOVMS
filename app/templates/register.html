@@ -6,10 +6,10 @@
 <div class="max-w-md mx-auto bg-card-bg p-8 rounded-lg shadow-xl border border-neon-magenta/50 mt-12">
     <h1 class="text-3xl font-bold mb-8 text-center text-neon-magenta">{{ page_title }}</h1>
 
-    {% if error_message or request.query_params.get('error_message') %}
+    {% if error_message %}
     <div class="bg-red-700/70 border border-red-500/50 text-red-200 px-4 py-3 rounded relative mb-4" role="alert">
         <strong class="font-bold">{{ _('Error!') }}</strong>
-        <span class="block sm:inline">{{ error_message or request.query_params.get('error_message') }}</span>
+        <span class="block sm:inline">{{ error_message }}</span>
     </div>
     {% endif %}
 

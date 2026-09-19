@@ -250,18 +250,9 @@ document.addEventListener('alpine:init', () => {
             this.refreshUiState();
 
             try {
-                // Get WebSocket ticket
-                const response = await fetch("{{ url_for('api_get_ws_ticket') }}", { credentials: 'include' });
-                if (!response.ok) {
-                    throw new Error(`Failed to get ticket: ${response.status}`);
-                }
-                const ticketData = await response.json();
-
-                // Create WebSocket connection
                 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
                 const wsPath = "{{ url_for('websocket_logs_endpoint') }}";
                 const wsUrl = new URL(wsPath, `${wsProtocol}//${window.location.host}`);
-                wsUrl.searchParams.set('ticket', ticketData.app_ws_ticket);
 
                 this.ws = new WebSocket(wsUrl.toString());
 

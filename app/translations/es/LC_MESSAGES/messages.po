@@ -59,13 +59,13 @@ msgstr ""
 "entre 12 y 128 caracteres. Incluya mayúsculas, minúsculas, un dígito y un carácter "
 "especial (p. ej., !@#$%%^&*)."
 
-#: app/templates/index.html
+#: app/templates/_vehicle_overview.html app/templates/index.html
 msgid "12V Battery"
 msgstr "Batería de 12V"
 
-#: app/templates/_vehicle_overview.html
-msgid "12V Battery:"
-msgstr "Batería de 12V:"
+#: app/templates/vehicle_detail.html
+msgid "12V System"
+msgstr "Sistema de 12V"
 
 #: app/templates/profile.html app/templates/profile_webauthn_tab.html
 msgid "2FA"
@@ -216,7 +216,11 @@ msgstr "Añadir correo electrónico"
 msgid "Add New Profile"
 msgstr "Añadir nuevo perfil"
 
-#: app/templates/users_management.html
+#: app/routers/ui/autoprovision.py
+msgid "Add New Provisioning Profile"
+msgstr "Añadir nuevo perfil de aprovisionamiento"
+
+#: app/routers/ui/users.py app/templates/users_management.html
 msgid "Add New User"
 msgstr "Añadir nuevo usuario"
 
@@ -272,9 +276,10 @@ msgstr "Configuración adicional"
 msgid "Admin"
 msgstr "Administración"
 
-#: app/templates/admin_logs.html app/templates/autoprovision_management.html
-#: app/templates/blocked_ips.html app/templates/security_events_dashboard.html
-#: app/templates/totp_key_rotation.html app/templates/users_management.html
+#: app/routers/ui/admin.py app/templates/admin_logs.html
+#: app/templates/autoprovision_management.html app/templates/blocked_ips.html
+#: app/templates/security_events_dashboard.html app/templates/totp_key_rotation.html
+#: app/templates/users_management.html
 msgid "Admin Dashboard"
 msgstr "Panel de administración"
 
@@ -321,6 +326,10 @@ msgstr "Seguridad avanzada (modo paranoico)"
 #: app/templates/totp_key_rotation.html
 msgid "After successful rotation, update TOTP_ENCRYPTION_KEY in .env and restart."
 msgstr "Después de una rotación exitosa, actualice TOTP_ENCRYPTION_KEY en .env y reinicie."
+
+#: app/templates/base.html
+msgid "Alert"
+msgstr "Alerta"
 
 #: app/templates/vehicle_detail.html
 msgid "Alert:"
@@ -379,6 +388,10 @@ msgstr ""
 #: app/templates/totp_key_rotation.html
 msgid "Always test rotation in a development environment first."
 msgstr "Pruebe siempre la rotación primero en un entorno de desarrollo."
+
+#: app/templates/_vehicle_overview.html app/templates/index.html
+msgid "Ambient temperature"
+msgstr "Temperatura ambiente"
 
 #: app/templates/email/admin_ip_blocked.html app/templates/email/admin_ip_blocked.txt
 msgid "An IP address has been blocked due to repeated failed authentication attempts."
@@ -503,7 +516,8 @@ msgstr "Tipo de autenticación"
 msgid "Authentication failed"
 msgstr "Error de autenticación"
 
-#: app/templates/login_webauthn_2fa.html app/templates/webauthn_login.html
+#: app/routers/ui/webauthn.py app/templates/login_webauthn_2fa.html
+#: app/templates/webauthn_login.html
 msgid "Authentication failed. Please try again."
 msgstr "Error de autenticación. Inténtelo de nuevo."
 
@@ -539,6 +553,10 @@ msgstr "Eliminado automáticamente"
 msgid "Auto-Provision"
 msgstr "Aprovisionamiento automático"
 
+#: app/routers/ui/autoprovision.py
+msgid "Auto-Provisioning Management"
+msgstr "Gestión de aprovisionamiento automático"
+
 #: app/routers/ui/users.py
 #, python-format
 msgid "Auto-delete cancelled for user %(name)s."
@@ -548,6 +566,10 @@ msgstr "Eliminación automática cancelada para el usuario %(name)s."
 #, python-format
 msgid "Auto-delete cancelled for vehicle %(id)s."
 msgstr "Eliminación automática cancelada para el vehículo %(id)s."
+
+#: app/models/api.py
+msgid "Auto-provisioning key must be at least 12 characters long."
+msgstr "La clave de aprovisionamiento automático debe tener al menos 12 caracteres."
 
 #: app/templates/autoprovision_management.html
 msgid ""
@@ -665,10 +687,6 @@ msgstr "Copias de seguridad"
 msgid "Basic Auth"
 msgstr "Autenticación básica"
 
-#: app/templates/charge_detail.html
-msgid "Battery (°C)"
-msgstr "Batería (°C)"
-
 #: app/templates/_vehicle_cell_stats.html
 msgid "Battery Cell Temperatures"
 msgstr "Temperaturas de las celdas de la batería"
@@ -677,17 +695,26 @@ msgstr "Temperaturas de las celdas de la batería"
 msgid "Battery Cell Voltages"
 msgstr "Voltajes de las celdas de la batería"
 
-#: app/templates/_vehicle_overview.html
-msgid "Battery Current:"
-msgstr "Corriente de la batería:"
+#: app/templates/vehicle_detail.html
+msgid "Battery Cells"
+msgstr "Celdas de la batería"
 
 #: app/templates/_vehicle_overview.html
-msgid "Battery SOH:"
-msgstr "SOH de la batería:"
+msgid "Battery current"
+msgstr "Corriente de la batería"
+
+#: app/templates/_vehicle_overview.html app/templates/index.html
+msgid "Battery health"
+msgstr "Estado de la batería"
+
+#: app/templates/_vehicle_overview.html app/templates/charge_detail.html
+#: app/templates/index.html
+msgid "Battery temperature"
+msgstr "Temperatura de la batería"
 
 #: app/templates/_vehicle_overview.html
-msgid "Battery Voltage:"
-msgstr "Voltaje de la batería:"
+msgid "Battery voltage"
+msgstr "Voltaje de la batería"
 
 #: app/templates/_vehicle_notifications.html
 msgid "Bearer Token"
@@ -715,9 +742,17 @@ msgstr "Bloqueado el"
 msgid "Blocked IP Addresses"
 msgstr "Direcciones IP bloqueadas"
 
-#: app/templates/admin_dashboard.html app/templates/blocked_ips.html
+#: app/routers/ui/security_events.py app/templates/admin_dashboard.html
+#: app/templates/blocked_ips.html
 msgid "Blocked IPs"
 msgstr "IPs bloqueadas"
+
+#: app/templates/profile.html
+msgid "Blocked in the browser settings. Allow notifications for this site there to use them."
+msgstr ""
+"Bloqueado en la configuración del navegador. Permite allí las notificaciones para "
+"este sitio para usarlas.Bloqueado en la configuración del navegador. Permite allí las"
+" notificaciones para este sitio para usarlas."
 
 #: app/templates/blocked_ips.html
 msgid "Blocking…"
@@ -739,6 +774,10 @@ msgstr "Se requiere un área delimitada."
 #: app/templates/webauthn_register.html
 msgid "Browser Not Supported"
 msgstr "Navegador no compatible"
+
+#: app/templates/profile.html
+msgid "Browser notifications"
+msgstr "Notificaciones del navegador"
 
 #: app/templates/_vehicle_logs.html
 msgid "Build ID:"
@@ -771,6 +810,10 @@ msgstr "Falta el token CSRF en el envío del formulario."
 #: app/csrf_protection.py
 msgid "CSRF token missing from session. Please refresh the page."
 msgstr "Falta el token CSRF en la sesión. Actualice la página."
+
+#: app/templates/_vehicle_overview.html
+msgid "Cabin temperature"
+msgstr "Temperatura del habitáculo"
 
 #: app/templates/admin_dashboard.html
 msgid "Cached domains"
@@ -837,6 +880,10 @@ msgstr "No se puede eliminar la última cuenta de administrador que queda."
 msgid "Cannot delete the only admin account."
 msgstr "No se puede eliminar la única cuenta de administrador."
 
+#: app/routers/ui/registration.py
+msgid "Cannot process registration: Email server is not configured."
+msgstr "No se puede procesar el registro: el servidor de correo no está configurado."
+
 #: app/routers/ui/users.py
 msgid "Cannot remove the last remaining admin account."
 msgstr "No se puede quitar la última cuenta de administrador que queda."
@@ -853,17 +900,14 @@ msgstr "Estadísticas de celdas"
 msgid "Change Password"
 msgstr "Cambiar contraseña"
 
-#: app/templates/_vehicle_overview.html
-msgid "Charge Current:"
-msgstr "Corriente de carga:"
+#: app/routers/ui/vehicles.py
+#, python-format
+msgid "Charge Detail for %(id)s"
+msgstr "Detalle de carga de %(id)s"
 
 #: app/templates/charge_detail.html
 msgid "Charge Details"
 msgstr "Detalles de la carga"
-
-#: app/templates/_vehicle_overview.html
-msgid "Charge Mode:"
-msgstr "Modo de carga:"
 
 #: app/templates/charge_detail.html
 msgid "Charge Session"
@@ -877,27 +921,47 @@ msgstr "Sesiones de carga"
 msgid "Charge Start Location"
 msgstr "Ubicación de inicio de carga"
 
-#: app/templates/_vehicle_overview.html
-msgid "Charge State:"
-msgstr "Estado de carga:"
-
 #: app/templates/_charge_statistics.html
 msgid "Charge Statistics"
 msgstr "Estadísticas de carga"
+
+#: app/templates/_live_view_labels.html
+msgid "Charge complete"
+msgstr "Carga completa"
+
+#: app/templates/_vehicle_overview.html
+msgid "Charge current"
+msgstr "Corriente de carga"
+
+#: app/templates/_vehicle_overview.html
+msgid "Charge mode"
+msgstr "Modo de carga"
 
 #: app/templates/charge_detail.html
 msgid "Charge session deleted successfully."
 msgstr "Sesión de carga eliminada correctamente."
 
+#: app/templates/_vehicle_overview.html
+msgid "Charge state"
+msgstr "Estado de carga"
+
 #: app/templates/vehicle_detail.html
 msgid "Charges"
 msgstr "Cargas"
+
+#: app/templates/_live_view_labels.html app/templates/vehicle_detail.html
+msgid "Charging"
+msgstr "Cargando"
+
+#: app/templates/_live_view_labels.html
+msgid "Charging stopped"
+msgstr "Carga detenida"
 
 #: app/templates/charge_detail.html
 msgid "Chart is not available for export."
 msgstr "El gráfico no está disponible para exportar."
 
-#: app/templates/forgot_password_sent.html
+#: app/routers/ui/auth.py app/templates/forgot_password_sent.html
 msgid "Check Your Email"
 msgstr "Revise su correo electrónico"
 
@@ -979,7 +1043,7 @@ msgstr "Confirmar eliminación"
 msgid "Confirm New Password"
 msgstr "Confirmar nueva contraseña"
 
-#: app/templates/register.html app/templates/reset_password.html
+#: app/routers/ui/profile.py app/templates/register.html app/templates/reset_password.html
 msgid "Confirm Password"
 msgstr "Confirmar contraseña"
 
@@ -987,21 +1051,18 @@ msgstr "Confirmar contraseña"
 msgid "Confirm your password"
 msgstr "Confirme su contraseña"
 
-#: app/templates/vehicle_detail.html
-msgid "Connected"
-msgstr "Conectado"
-
-#: app/templates/admin_logs.html app/templates/vehicle_detail.html
+#: app/templates/admin_logs.html
 msgid "Connecting..."
 msgstr "Conectando..."
+
+#: app/templates/_vehicle_overview.html app/templates/index.html
+#: app/templates/vehicle_detail.html
+msgid "Connecting…"
+msgstr "Conectando…"
 
 #: app/templates/_vehicle_overview.html
 msgid "Connection"
 msgstr "Conexión"
-
-#: app/templates/vehicle_detail.html
-msgid "Connection lost"
-msgstr "Conexión perdida"
 
 #: app/templates/edit_vehicle.html
 msgid "Connectivity"
@@ -1085,6 +1146,10 @@ msgstr "Creado"
 #: app/templates/profile.html
 msgid "Created:"
 msgstr "Creada:"
+
+#: app/routers/ui/webauthn.py
+msgid "Credential not found"
+msgstr "Credencial no encontrada"
 
 #: app/templates/security_events_dashboard.html
 msgid "Critical"
@@ -1204,6 +1269,10 @@ msgid "Direct TCP connection. Classic OVMS protocol, works everywhere."
 msgstr "Conexión TCP directa. Protocolo OVMS clásico, funciona en todas partes."
 
 #: app/templates/profile.html
+msgid "Disable"
+msgstr "Desactivar"
+
+#: app/templates/profile.html
 msgid "Disable Authenticator App"
 msgstr "Desactivar aplicación de autenticación"
 
@@ -1211,17 +1280,13 @@ msgstr "Desactivar aplicación de autenticación"
 msgid "Disabled"
 msgstr "Desactivado"
 
+#: app/templates/profile.html
+msgid "Disabled."
+msgstr "Desactivado."
+
 #: app/templates/admin_logs.html
 msgid "Disconnect"
 msgstr "Desconectar"
-
-#: app/templates/vehicle_detail.html
-msgid "Disconnected. Reconnecting in "
-msgstr "Desconectado. Reconectando en "
-
-#: app/templates/vehicle_detail.html
-msgid "Disconnected: "
-msgstr "Desconectado: "
 
 #: app/templates/base.html
 msgid "Dismiss"
@@ -1271,6 +1336,10 @@ msgstr "¿No tiene una cuenta?"
 msgid "Donation"
 msgstr "Donación"
 
+#: app/templates/vehicle_detail.html
+msgid "Doors & Windows"
+msgstr "Puertas y ventanas"
+
 #: app/templates/profile_config_backups_tab.html
 msgid "Download"
 msgstr "Descargar"
@@ -1309,17 +1378,38 @@ msgstr "ERROR"
 msgid "Edit"
 msgstr "Editar"
 
+#: app/routers/ui/autoprovision.py
+#, python-format
+msgid "Edit Profile: %(key)s"
+msgstr "Editar perfil: %(key)s"
+
+#: app/routers/ui/users.py
+#, python-format
+msgid "Edit User: %(name)s"
+msgstr "Editar usuario: %(name)s"
+
 #: app/templates/vehicle_detail.html
 msgid "Edit Vehicle"
 msgstr "Editar vehículo"
 
-#: app/templates/edit_user.html app/templates/email/admin_lifecycle_account.html
+#: app/routers/ui/vehicles.py
+#, python-format
+msgid "Edit Vehicle: %(id)s"
+msgstr "Editar vehículo: %(id)s"
+
+#: app/templates/_vehicle_notifications.html app/templates/edit_user.html
+#: app/templates/email/admin_lifecycle_account.html
 #: app/templates/email/admin_lifecycle_account.txt
 #: app/templates/email/admin_new_user_notification.html
 #: app/templates/email/admin_new_user_notification.txt app/templates/profile.html
 #: app/templates/users_management.html
 msgid "Email"
 msgstr "Correo electrónico"
+
+#: app/routers/ui/users.py
+#, python-format
+msgid "Email '%(email)s' already registered."
+msgstr "El correo '%(email)s' ya está registrado."
 
 #: app/templates/_vehicle_notifications.html app/templates/forgot_password.html
 #: app/templates/register.html
@@ -1354,9 +1444,17 @@ msgstr "Activar seguimiento de viajes"
 msgid "Enable disposable email blocking"
 msgstr "Activar bloqueo de correo desechable"
 
+#: app/templates/profile.html
+msgid "Enable in this browser"
+msgstr "Activar en este navegador"
+
 #: app/templates/admin_dashboard.html
 msgid "Enabled"
 msgstr "Activado"
+
+#: app/templates/profile.html
+msgid "Enabled in this browser."
+msgstr "Activado en este navegador."
 
 #: app/templates/totp_key_rotation.html
 msgid "Encryption Key"
@@ -1391,6 +1489,10 @@ msgstr "Energía cargada:"
 msgid "Energy Used"
 msgstr "Energía utilizada"
 
+#: app/routers/ui/auth.py
+msgid "Enter 2FA Code"
+msgstr "Introducir código 2FA"
+
 #: app/templates/login_totp.html app/templates/profile_totp_setup.html
 msgid "Enter a 6-digit code"
 msgstr "Introduzca un código de 6 dígitos"
@@ -1424,8 +1526,12 @@ msgstr ""
 msgid "Enter your new password for account: %(username)s"
 msgstr "Introduzca su nueva contraseña para la cuenta: %(username)s"
 
-#: app/templates/admin_logs.html app/templates/security_events_dashboard.html
 #: app/templates/vehicle_detail.html
+msgid "Environment"
+msgstr "Entorno"
+
+#: app/templates/admin_logs.html app/templates/base.html
+#: app/templates/security_events_dashboard.html
 msgid "Error"
 msgstr "Error"
 
@@ -1441,9 +1547,7 @@ msgstr "Error al eliminar el viaje: "
 msgid "Error with 2FA setup. Please login again."
 msgstr "Error en la configuración de 2FA. Inicie sesión de nuevo."
 
-#: app/templates/base.html app/templates/forgot_password.html app/templates/login.html
-#: app/templates/login_totp.html app/templates/login_webauthn_2fa.html
-#: app/templates/register.html app/templates/reset_password.html
+#: app/templates/base.html app/templates/register.html app/templates/reset_password.html
 msgid "Error!"
 msgstr "¡Error!"
 
@@ -1460,8 +1564,8 @@ msgid "Errors:"
 msgstr "Errores:"
 
 #: app/templates/_vehicle_overview.html
-msgid "Est. Range:"
-msgstr "Autonomía est.:"
+msgid "Est. Range"
+msgstr "Autonomía est."
 
 #: app/templates/profile.html
 msgid "Expired"
@@ -1506,6 +1610,10 @@ msgstr "Exportar ubicación (GPX)"
 #: app/templates/charge_detail.html
 msgid "Export Location (KML)"
 msgstr "Exportar ubicación (KML)"
+
+#: app/templates/vehicle_detail.html
+msgid "Failed"
+msgstr "Error"
 
 #: app/templates/email/admin_ip_blocked.html app/templates/email/admin_ip_blocked.txt
 #: app/templates/security_events_dashboard.html
@@ -1560,6 +1668,10 @@ msgstr "Fallidos:"
 msgid "Favorite not found."
 msgstr "Favorito no encontrado."
 
+#: app/templates/_vehicle_metrics.html
+msgid "Filter metrics (e.g. v.b.c, temp, soc)"
+msgstr "Filtrar métricas (p. ej. v.b.c, temp, soc)"
+
 #: app/templates/base.html
 msgid "Firmware Repo"
 msgstr "Repositorio de firmware"
@@ -1576,7 +1688,7 @@ msgstr "Primero"
 msgid "For user:"
 msgstr "Para el usuario:"
 
-#: app/templates/forgot_password.html
+#: app/routers/ui/auth.py app/templates/forgot_password.html
 msgid "Forgot Password"
 msgstr "Olvidé mi contraseña"
 
@@ -1652,6 +1764,10 @@ msgstr "Claves de seguridad de hardware (YubiKey, Titan Key, etc.)"
 msgid "Health:"
 msgstr "Estado:"
 
+#: app/templates/_live_view_labels.html
+msgid "Heating battery"
+msgstr "Calentando la batería"
+
 #: app/templates/email/account_deletion_warning.html
 #: app/templates/email/account_deletion_warning.txt
 #: app/templates/email/admin_ip_blocked.html
@@ -1687,10 +1803,6 @@ msgstr ""
 "Registros históricos que el módulo del vehículo envía como notificaciones de datos "
 "(p. ej., registros de viajes y sesiones de carga). Los registros se entregan de forma"
 " fiable incluso durante cortes de LTE."
-
-#: app/templates/index.html
-msgid "ID"
-msgstr "ID"
 
 #: app/templates/admin_logs.html
 msgid "INFO"
@@ -1865,7 +1977,7 @@ msgstr "Sesiones de carga individuales"
 msgid "Individual Trips"
 msgstr "Viajes individuales"
 
-#: app/templates/security_events_dashboard.html
+#: app/templates/base.html app/templates/security_events_dashboard.html
 msgid "Info"
 msgstr "Información"
 
@@ -1905,13 +2017,17 @@ msgstr ""
 msgid "Invalid 2FA code. Please try again."
 msgstr "Código 2FA no válido. Inténtelo de nuevo."
 
-#: app/templates/reset_password_invalid.html
+#: app/routers/ui/auth.py app/templates/reset_password_invalid.html
 msgid "Invalid Reset Link"
 msgstr "Enlace de restablecimiento no válido"
 
 #: app/routers/ui/profile.py
 msgid "Invalid TOTP code. Please try again."
 msgstr "Código TOTP no válido. Inténtelo de nuevo."
+
+#: app/routers/ui/auth.py
+msgid "Invalid credentials. Please check your username and password."
+msgstr "Credenciales no válidas. Compruebe su nombre de usuario y contraseña."
 
 #: app/routers/ui/vehicles.py
 msgid "Invalid email address."
@@ -1921,9 +2037,21 @@ msgstr "Dirección de correo electrónico no válida."
 msgid "Invalid form submission"
 msgstr "Envío de formulario no válido"
 
+#: app/routers/ui/__init__.py
+msgid "Invalid input. Please check the form."
+msgstr "Entrada no válida. Revise el formulario."
+
 #: app/csrf_protection.py
 msgid "Invalid or expired CSRF token. Please try again."
 msgstr "Token CSRF no válido o caducado. Inténtelo de nuevo."
+
+#: app/routers/ui/webauthn.py
+msgid "Invalid or expired authentication session"
+msgstr "Sesión de autenticación no válida o caducada"
+
+#: app/routers/ui/webauthn.py
+msgid "Invalid or expired registration session"
+msgstr "Sesión de registro no válida o caducada"
 
 #: app/routers/ui/profile.py app/routers/ui/users.py
 msgid "Invalid timezone selected."
@@ -1933,7 +2061,7 @@ msgstr "Zona horaria seleccionada no válida."
 msgid "Invalid unit preference."
 msgstr "Preferencia de unidades no válida."
 
-#: app/routers/ui/vehicles.py
+#: app/routers/ui/__init__.py app/routers/ui/vehicles.py
 msgid "Invalid value"
 msgstr "Valor no válido"
 
@@ -1962,10 +2090,6 @@ msgstr ""
 #: app/templates/add_vehicle_wizard.html
 msgid "Keep these values handy!"
 msgstr "¡Tenga estos valores a mano!"
-
-#: app/templates/_vehicle_overview.html
-msgid "Key Metrics"
-msgstr "Métricas clave"
 
 #: app/templates/profile.html
 msgid "Key Name"
@@ -2013,7 +2137,7 @@ msgid "Last Month"
 msgstr "Último mes"
 
 #: app/templates/email/admin_lifecycle_vehicle.html
-#: app/templates/email/unused_vehicle_warning.html app/templates/index.html
+#: app/templates/email/unused_vehicle_warning.html
 msgid "Last Seen"
 msgstr "Última conexión"
 
@@ -2085,8 +2209,12 @@ msgid "Lifetime Totals"
 msgstr "Totales históricos"
 
 #: app/templates/_vehicle_overview.html
-msgid "Line Voltage:"
-msgstr "Voltaje de línea:"
+msgid "Line voltage"
+msgstr "Voltaje de línea"
+
+#: app/templates/index.html app/templates/vehicle_detail.html
+msgid "Live"
+msgstr "En vivo"
 
 #: app/templates/admin_dashboard.html
 msgid "Live Counts"
@@ -2136,6 +2264,10 @@ msgstr "Archivo local (manual)"
 msgid "Local list path"
 msgstr "Ruta de la lista local"
 
+#: app/templates/_live_view_labels.html
+msgid "Locked"
+msgstr "Bloqueado"
+
 #: app/templates/email/account_deletion_warning.html
 msgid "Log In to Keep My Account"
 msgstr "Iniciar sesión para conservar mi cuenta"
@@ -2148,7 +2280,7 @@ msgstr "Iniciar sesión para gestionar el vehículo"
 msgid "Log In to Register Vehicle"
 msgstr "Iniciar sesión para registrar el vehículo"
 
-#: app/templates/base.html app/templates/login.html
+#: app/routers/ui/auth.py app/templates/base.html app/templates/login.html
 msgid "Login"
 msgstr "Iniciar sesión"
 
@@ -2203,6 +2335,10 @@ msgstr "MQTT no está configurado en este servidor."
 #: app/templates/add_vehicle_wizard.html
 msgid "MQTT-based. More efficient, real-time metrics."
 msgstr "Basado en MQTT. Más eficiente, métricas en tiempo real."
+
+#: app/templates/vehicle_detail.html
+msgid "Main Battery"
+msgstr "Batería principal"
 
 #: app/templates/totp_key_rotation.html
 msgid "Manage TOTP encryption key rotation without requiring users to re-setup 2FA"
@@ -2285,6 +2421,10 @@ msgstr "Mín:"
 msgid "Minimum 12 characters"
 msgstr "Mínimo 12 caracteres"
 
+#: app/templates/vehicle_detail.html
+msgid "Miscellaneous"
+msgstr "Varios"
+
 #: app/templates/add_vehicle_wizard.html app/templates/edit_vehicle.html
 msgid "Module CLI Helper"
 msgstr "Asistente CLI del módulo"
@@ -2313,6 +2453,10 @@ msgstr "Mensual"
 msgid "More secure than passwords - resistant to phishing"
 msgstr "Más seguro que las contraseñas: resistente al phishing"
 
+#: app/templates/_vehicle_overview.html
+msgid "Motor temperature"
+msgstr "Temperatura del motor"
+
 #: app/templates/edit_user.html
 msgid "Must be"
 msgstr "Debe tener"
@@ -2326,7 +2470,7 @@ msgstr ""
 "Debe tener entre 12 y 128 caracteres. Incluya mayúsculas, minúsculas, un dígito y un "
 "carácter especial (p. ej., !@#$%%^&*)."
 
-#: app/templates/base.html
+#: app/routers/ui/profile.py app/templates/base.html
 msgid "My Profile"
 msgstr "Mi perfil"
 
@@ -2334,13 +2478,25 @@ msgstr "Mi perfil"
 msgid "My Security Key"
 msgstr "Mi clave de seguridad"
 
-#: app/templates/_vehicle_overview.html app/templates/index.html
+#: app/templates/_live_view_labels.html app/templates/_vehicle_overview.html
 msgid "N/A"
 msgstr "N/D"
 
 #: app/templates/_vehicle_notifications.html
 msgid "NTFY Topic"
 msgstr "Tema de NTFY"
+
+#: app/models/api.py
+msgid "NTFY server URL must not target localhost"
+msgstr "La URL del servidor NTFY no debe apuntar a localhost"
+
+#: app/models/api.py
+msgid "NTFY server URL must use a globally routable address"
+msgstr "La URL del servidor NTFY debe usar una dirección accesible públicamente"
+
+#: app/models/api.py
+msgid "NTFY server URL must use http:// or https://"
+msgstr "La URL del servidor NTFY debe empezar por http:// o https://"
 
 #: app/templates/admin_dashboard.html
 msgid "Name"
@@ -2359,8 +2515,8 @@ msgstr "Error de red"
 msgid "Network error: "
 msgstr "Error de red: "
 
-#: app/templates/admin_dashboard.html app/templates/index.html app/templates/profile.html
-#: app/templates/users_management.html
+#: app/templates/_live_view_labels.html app/templates/admin_dashboard.html
+#: app/templates/index.html app/templates/profile.html app/templates/users_management.html
 msgid "Never"
 msgstr "Nunca"
 
@@ -2406,10 +2562,14 @@ msgstr "Más recientes"
 msgid "Next"
 msgstr "Siguiente"
 
-#: app/templates/_vehicle_overview.html app/templates/profile.html
-#: app/templates/users_management.html
+#: app/templates/profile.html app/templates/users_management.html
+#: app/templates/vehicle_detail.html
 msgid "No"
 msgstr "No"
+
+#: app/routers/ui/webauthn.py
+msgid "No 2FA WebAuthn credentials registered"
+msgstr "No hay llaves de seguridad WebAuthn registradas para 2FA"
 
 #: app/templates/blocked_ips.html
 msgid "No IPs are currently blocked."
@@ -2465,9 +2625,17 @@ msgstr ""
 "Aún no hay registros históricos almacenados. En la mayoría de los vehículos hay que "
 "activar primero los registros en el módulo, p. ej.:"
 
+#: app/templates/_vehicle_metrics.html
+msgid "No metric matches the filter."
+msgstr "Ninguna métrica coincide con el filtro."
+
 #: app/templates/_vehicle_notifications.html
 msgid "No notifications configured."
 msgstr "No hay notificaciones configuradas."
+
+#: app/routers/ui/webauthn.py
+msgid "No pending 2FA session"
+msgstr "No hay ninguna sesión 2FA pendiente"
 
 #: app/templates/vehicle_datalogs.html
 msgid "No records of this type found."
@@ -2510,6 +2678,14 @@ msgid "Not Configured"
 msgstr "No configurado"
 
 #: app/routers/ui/vehicles.py
+msgid "Not authorized to access this vehicle's data logs."
+msgstr "No está autorizado a acceder a los registros de datos de este vehículo."
+
+#: app/routers/ui/vehicles.py
+msgid "Not authorized to access this vehicle's logs."
+msgstr "No está autorizado a acceder a los registros de este vehículo."
+
+#: app/routers/ui/vehicles.py
 msgid "Not authorized to delete this vehicle."
 msgstr "No tiene autorización para eliminar este vehículo."
 
@@ -2532,6 +2708,10 @@ msgstr "Aún no obtenido"
 #: app/templates/error.html
 msgid "Not permitted"
 msgstr "No permitido"
+
+#: app/templates/profile.html
+msgid "Not supported by this browser."
+msgstr "No compatible con este navegador."
 
 #: app/templates/edit_vehicle.html
 msgid "Note: The trailing slash (/) is required!"
@@ -2585,6 +2765,11 @@ msgstr "Alerta de seguridad OVMS: dirección IP bloqueada"
 msgid "OVMS Security Alert: IP Blocked"
 msgstr "Alerta de seguridad OVMS: dirección IP bloqueada"
 
+#: app/templates/_vehicle_overview.html app/templates/index.html
+msgid "Odometer"
+msgstr "Odómetro"
+
+#: app/templates/_live_view_labels.html app/templates/_vehicle_overview.html
 #: app/templates/admin_dashboard.html app/templates/index.html
 msgid "Offline"
 msgstr "Desconectado"
@@ -2597,6 +2782,7 @@ msgstr "Más antiguos"
 msgid "One domain per line. These always bypass the blocklist."
 msgstr "Un dominio por línea. Estos siempre omiten la lista de bloqueo."
 
+#: app/templates/_live_view_labels.html app/templates/_vehicle_overview.html
 #: app/templates/admin_dashboard.html app/templates/index.html
 msgid "Online"
 msgstr "En línea"
@@ -2663,7 +2849,7 @@ msgstr "Resumen"
 
 #: app/templates/admin_dashboard.html app/templates/autoprovision_management.html
 #: app/templates/edit_vehicle.html app/templates/email/admin_lifecycle_vehicle.html
-#: app/templates/email/admin_lifecycle_vehicle.txt app/templates/index.html
+#: app/templates/email/admin_lifecycle_vehicle.txt
 msgid "Owner"
 msgstr "Propietario"
 
@@ -2699,9 +2885,23 @@ msgstr "Inicio de sesión con contraseña"
 msgid "Password Reset Request"
 msgstr "Solicitud de restablecimiento de contraseña"
 
-#: app/templates/reset_password_success.html
+#: app/routers/ui/auth.py app/templates/reset_password_success.html
 msgid "Password Reset Successful"
 msgstr "Restablecimiento de contraseña exitoso"
+
+#: app/routers/ui/auth.py
+msgid "Password login is disabled. Please use passwordless login with your security key."
+msgstr ""
+"El inicio de sesión con contraseña está desactivado. Use el inicio de sesión sin "
+"contraseña con su llave de seguridad."
+
+#: app/models/api.py
+msgid ""
+"Password must be between 12 and 128 characters long and include at least one "
+"uppercase letter, one lowercase letter, one digit, and one special character."
+msgstr ""
+"La contraseña debe tener entre 12 y 128 caracteres e incluir al menos una mayúscula, "
+"una minúscula, un dígito y un carácter especial."
 
 #: app/routers/ui/profile.py
 msgid "Password updated successfully."
@@ -2718,6 +2918,10 @@ msgstr "Sin contraseña"
 #: app/templates/webauthn_register.html
 msgid "Passwordless Login"
 msgstr "Inicio de sesión sin contraseña"
+
+#: app/routers/ui/auth.py app/routers/ui/registration.py
+msgid "Passwords do not match."
+msgstr "Las contraseñas no coinciden."
 
 #: app/templates/admin_dashboard.html
 msgid "Path to a newline-separated domain list on this server."
@@ -2743,6 +2947,14 @@ msgstr "Autenticadores de plataforma (Touch ID, Face ID, Windows Hello)"
 msgid "Please confirm"
 msgstr "Confirme, por favor"
 
+#: app/routers/ui/webauthn.py
+msgid "Please confirm your password before registering a security key."
+msgstr "Confirme su contraseña antes de registrar una llave de seguridad."
+
+#: app/routers/ui/webauthn.py
+msgid "Please confirm your password before removing a security key."
+msgstr "Confirme su contraseña antes de eliminar una llave de seguridad."
+
 #: app/templates/webauthn_register.html
 msgid "Please enter a name for your security key"
 msgstr "Introduzca un nombre para su clave de seguridad"
@@ -2760,8 +2972,12 @@ msgstr ""
 "cuenta."
 
 #: app/templates/_vehicle_overview.html
-msgid "Position:"
-msgstr "Posición:"
+msgid "Position"
+msgstr "Posición"
+
+#: app/templates/vehicle_detail.html
+msgid "Position (GPS)"
+msgstr "Posición (GPS)"
 
 #: app/templates/charge_detail.html
 msgid "Power (kW)"
@@ -2775,12 +2991,16 @@ msgstr "Preferir V2 (TCP)"
 msgid "Prefer V3 (MQTT)"
 msgstr "Preferir V3 (MQTT)"
 
+#: app/templates/_live_view_labels.html
+msgid "Preparing to charge"
+msgstr "Preparando la carga"
+
 #: app/templates/_charge_list.html app/templates/_trip_list.html
 #: app/templates/_trip_search_heatmap.html
 msgid "Previous"
 msgstr "Anterior"
 
-#: app/templates/base.html app/templates/privacy_policy.html
+#: app/routers/ui/main.py app/templates/base.html app/templates/privacy_policy.html
 msgid "Privacy Policy"
 msgstr "Política de privacidad"
 
@@ -2819,6 +3039,11 @@ msgstr "Clave de aprovisionamiento"
 msgid "Provisioning Key (Shared Secret)"
 msgstr "Clave de aprovisionamiento (secreto compartido)"
 
+#: app/routers/ui/autoprovision.py
+#, python-format
+msgid "Provisioning key '%(key)s' already exists."
+msgstr "La clave de aprovisionamiento '%(key)s' ya existe."
+
 #: app/routers/ui/vehicles.py
 msgid "Push subscription removed."
 msgstr "Suscripción push eliminada."
@@ -2851,6 +3076,10 @@ msgstr "PyOVMS Control"
 msgid "PyOVMS Control Server"
 msgstr "Servidor de control PyOVMS"
 
+#: app/routers/ui/dashboard.py
+msgid "PyOVMS Dashboard"
+msgstr "Panel de PyOVMS"
+
 #: app/templates/_vehicle_notifications.html
 msgid "Query Param Name"
 msgstr "Nombre del parámetro de consulta"
@@ -2871,7 +3100,7 @@ msgstr "Radio (metros)"
 msgid "ReDoc"
 msgstr "ReDoc"
 
-#: app/templates/vehicle_detail.html
+#: app/templates/_vehicle_overview.html
 msgid "Real-time Status:"
 msgstr "Estado en tiempo real:"
 
@@ -2898,6 +3127,10 @@ msgstr "Acciones recomendadas"
 #: app/templates/profile_webauthn_tab.html
 msgid "Recommended: Register at least 2 keys for backup access"
 msgstr "Recomendado: registre al menos 2 claves para acceso de respaldo"
+
+#: app/templates/index.html app/templates/vehicle_detail.html
+msgid "Reconnecting…"
+msgstr "Reconectando…"
 
 #: app/templates/vehicle_datalogs.html
 msgid "Record #"
@@ -2931,7 +3164,7 @@ msgstr "Actualizar"
 msgid "Refresh interval (hours)"
 msgstr "Intervalo de actualización (horas)"
 
-#: app/templates/base.html app/templates/register.html
+#: app/routers/ui/registration.py app/templates/base.html app/templates/register.html
 msgid "Register"
 msgstr "Registrarse"
 
@@ -2939,7 +3172,7 @@ msgstr "Registrarse"
 msgid "Register Again"
 msgstr "Registrarse de nuevo"
 
-#: app/templates/webauthn_register.html
+#: app/routers/ui/webauthn.py app/templates/webauthn_register.html
 msgid "Register Security Key"
 msgstr "Registrar clave de seguridad"
 
@@ -2964,9 +3197,13 @@ msgstr "Registro exitoso"
 msgid "Registration Time"
 msgstr "Hora de registro"
 
-#: app/templates/webauthn_register.html
+#: app/routers/ui/webauthn.py app/templates/webauthn_register.html
 msgid "Registration failed. Please try again."
 msgstr "Error en el registro. Inténtelo de nuevo."
+
+#: app/routers/ui/webauthn.py
+msgid "Registration was started for a different credential type. Please start over."
+msgstr "El registro se inició para otro tipo de credencial. Vuelva a empezar."
 
 #: app/templates/error.html
 msgid "Reload page"
@@ -3016,7 +3253,11 @@ msgstr "Solicitar nuevo enlace de restablecimiento"
 msgid "Request could not be completed"
 msgstr "No se pudo completar la solicitud"
 
-#: app/templates/reset_password_invalid.html
+#: app/templates/blocked_ips.html
+msgid "Request failed"
+msgstr "La solicitud ha fallado"
+
+#: app/routers/ui/auth.py app/templates/reset_password_invalid.html
 msgid "Reset Link Expired"
 msgstr "Enlace de restablecimiento caducado"
 
@@ -3080,7 +3321,7 @@ msgstr "Error en la rotación"
 msgid "Running Task:"
 msgstr "Tarea en ejecución:"
 
-#: app/templates/_charge_list.html app/templates/index.html
+#: app/templates/_charge_list.html
 msgid "SOC"
 msgstr "SOC"
 
@@ -3095,10 +3336,6 @@ msgstr "SOC ganado"
 #: app/templates/_trip_list.html app/templates/trip_detail.html
 msgid "SOC Used"
 msgstr "SOC utilizado"
-
-#: app/templates/_vehicle_overview.html
-msgid "SOC:"
-msgstr "SOC:"
 
 #: app/templates/vehicle_detail.html
 msgid "Saturday"
@@ -3152,6 +3389,10 @@ msgstr "Alerta de seguridad"
 msgid "Security Dashboard"
 msgstr "Panel de seguridad"
 
+#: app/routers/ui/security_events.py
+msgid "Security Events Dashboard"
+msgstr "Panel de eventos de seguridad"
+
 #: app/templates/webauthn_register.html
 msgid "Security Key Name"
 msgstr "Nombre de la clave de seguridad"
@@ -3204,9 +3445,17 @@ msgstr "Enviar instrucciones de restablecimiento"
 msgid "Sensor"
 msgstr "Sensor"
 
+#: app/templates/vehicle_detail.html
+msgid "Server / System"
+msgstr "Servidor / Sistema"
+
 #: app/templates/admin_dashboard.html
 msgid "Server Info Box Settings"
 msgstr "Configuración del cuadro de información del servidor"
+
+#: app/routers/ui/admin.py
+msgid "Server Logs"
+msgstr "Registros del servidor"
 
 #: app/templates/add_vehicle_wizard.html
 msgid "Server Password"
@@ -3237,6 +3486,10 @@ msgid "Server password is too long (max 64 characters)"
 msgstr "La contraseña del servidor es demasiado larga (máx. 64 caracteres)"
 
 #: app/templates/vehicle_detail.html
+msgid "Service"
+msgstr "Mantenimiento"
+
+#: app/templates/vehicle_detail.html
 msgid "Service unavailable. Server sent an unexpected response (Status: "
 msgstr "Servicio no disponible. El servidor envió una respuesta inesperada (Estado: "
 
@@ -3244,7 +3497,7 @@ msgstr "Servicio no disponible. El servidor envió una respuesta inesperada (Est
 msgid "Session expired. Please login again."
 msgstr "La sesión ha caducado. Inicie sesión de nuevo."
 
-#: app/templates/reset_password.html
+#: app/routers/ui/auth.py app/templates/reset_password.html
 msgid "Set New Password"
 msgstr "Establecer nueva contraseña"
 
@@ -3261,6 +3514,15 @@ msgstr "Establezca en 0 para desactivar las actualizaciones programadas (solo ma
 msgid "Settings saved, but refresh failed: %(error)s"
 msgstr "Configuración guardada, pero la actualización falló: %(error)s"
 
+#: app/routers/ui/admin.py
+#, python-format
+msgid "Settings saved. Remote list refreshed (%(count)s domains loaded)."
+msgstr "Configuración guardada. Lista remota actualizada (%(count)s dominios cargados)."
+
+#: app/routers/ui/profile.py
+msgid "Setup Authenticator App (TOTP)"
+msgstr "Configurar aplicación de autenticación (TOTP)"
+
 #: app/templates/totp_key_rotation.html
 msgid "Setup Required"
 msgstr "Configuración necesaria"
@@ -3272,6 +3534,21 @@ msgstr "Viaje más corto"
 #: app/templates/_trip_search_heatmap.html
 msgid "Show Heatmap"
 msgstr "Mostrar mapa de calor"
+
+#: app/templates/vehicle_detail.html
+msgid "Show fewer"
+msgstr "Mostrar menos"
+
+#: app/templates/profile.html
+msgid ""
+"Show vehicle notifications as system notifications while this site is open in a "
+"background tab. Vehicle notifications always appear as a message in the page; this "
+"setting applies to this browser only."
+msgstr ""
+"Mostrar las notificaciones del vehículo como notificaciones del sistema mientras este"
+" sitio esté abierto en una pestaña en segundo plano. Las notificaciones del vehículo "
+"siempre aparecen como un mensaje en la página; este ajuste solo se aplica a este "
+"navegador."
 
 #: app/templates/profile_webauthn_tab.html
 msgid "Sign count:"
@@ -3437,7 +3714,7 @@ msgstr "Fuente del sistema"
 msgid "TOTP Enabled:"
 msgstr "TOTP activado:"
 
-#: app/templates/admin_dashboard.html
+#: app/routers/ui/totp_rotation.py app/templates/admin_dashboard.html
 msgid "TOTP Key Rotation"
 msgstr "Rotación de claves TOTP"
 
@@ -3565,6 +3842,11 @@ msgstr ""
 "Los campos resaltados en azul contienen sus valores. Después de guardar, active "
 "también \"Start server V3\" en la configuración de inicio automático (ver más abajo)."
 
+#: app/routers/ui/profile.py
+#, python-format
+msgid "The email '%(email)s' is already registered."
+msgstr "El correo '%(email)s' ya está registrado."
+
 #: app/templates/error.html
 msgid "The form was submitted with missing or unexpected fields."
 msgstr "El formulario se envió con campos ausentes o inesperados."
@@ -3602,6 +3884,10 @@ msgid ""
 "The verification link is invalid, has expired, or the account has already been "
 "activated."
 msgstr "El enlace de verificación no es válido, ha caducado o la cuenta ya ha sido activada."
+
+#: app/models/api.py
+msgid "This API key name is reserved for internal use. Please choose another name."
+msgstr "Este nombre de clave API está reservado para uso interno. Elija otro nombre."
 
 #: app/templates/confirm_password.html
 msgid ""
@@ -3687,6 +3973,10 @@ msgstr "Zona horaria"
 msgid "Tire Pressure & Temperature (TPMS)"
 msgstr "Presión y temperatura de neumáticos (TPMS)"
 
+#: app/templates/vehicle_detail.html
+msgid "Tires"
+msgstr "Neumáticos"
+
 #: app/templates/edit_vehicle.html
 #, python-format
 msgid "To confirm, please type <strong>%(id)s</strong> into the box below."
@@ -3727,6 +4017,10 @@ msgstr "Demasiados intentos. Inténtelo más tarde."
 #: app/routers/ui/auth.py
 msgid "Too many failed attempts. Please try again later."
 msgstr "Demasiados intentos fallidos. Inténtelo de nuevo más tarde."
+
+#: app/templates/_live_view_labels.html
+msgid "Top-off charging"
+msgstr "Carga de mantenimiento"
 
 #: app/templates/profile.html
 msgid "Topic Access:"
@@ -3788,6 +4082,15 @@ msgstr "Vehículos totales"
 msgid "Total users:"
 msgstr "Usuarios totales:"
 
+#: app/templates/_vehicle_overview.html
+msgid "Trip"
+msgstr "Parcial"
+
+#: app/routers/ui/vehicles.py
+#, python-format
+msgid "Trip Detail for %(id)s"
+msgstr "Detalle del viaje de %(id)s"
+
 #: app/templates/trip_detail.html
 msgid "Trip Details"
 msgstr "Detalles del viaje"
@@ -3842,6 +4145,10 @@ msgstr "Viajes"
 msgid "Tuesday"
 msgstr "Martes"
 
+#: app/routers/ui/webauthn.py
+msgid "Two-Factor Authentication"
+msgstr "Autenticación de dos factores"
+
 #: app/templates/profile.html app/templates/webauthn_register.html
 msgid "Two-Factor Authentication (2FA)"
 msgstr "Autenticación de dos factores (2FA)"
@@ -3873,7 +4180,7 @@ msgstr "Escriba DELETE aquí"
 msgid "Type DELETE to confirm"
 msgstr "Escriba DELETE para confirmar"
 
-#: app/routers/ui/users.py
+#: app/routers/ui/registration.py app/routers/ui/users.py
 msgid "Unable to validate email domain right now. Please try again later."
 msgstr ""
 "No se puede validar el dominio de correo en este momento. Inténtelo de nuevo más "
@@ -3892,13 +4199,41 @@ msgstr "¿Desbloquear %(ip)s?"
 msgid "Unblocks At"
 msgstr "Se desbloquea el"
 
+#: app/models/api.py
+msgid "UnifiedPush endpoint must not target localhost"
+msgstr "El endpoint de UnifiedPush no debe apuntar a localhost"
+
+#: app/models/api.py
+msgid "UnifiedPush endpoint must use a globally routable address"
+msgstr "El endpoint de UnifiedPush debe usar una dirección accesible públicamente"
+
+#: app/models/api.py
+msgid "UnifiedPush endpoint must use https://"
+msgstr "El endpoint de UnifiedPush debe usar https://"
+
 #: app/templates/edit_user.html
 msgid "Unique username"
 msgstr "Nombre de usuario único"
 
+#: app/routers/ui/webauthn.py
+msgid "Unknown credential or not configured for 2FA"
+msgstr "Credencial desconocida o no configurada para 2FA"
+
+#: app/routers/ui/webauthn.py
+msgid "Unknown credential or not configured for passwordless login"
+msgstr "Credencial desconocida o no configurada para el inicio de sesión sin contraseña"
+
 #: app/templates/profile_config_backups_tab.html
 msgid "Unknown device"
 msgstr "Dispositivo desconocido"
+
+#: app/templates/vehicle_detail.html
+msgid "Unknown error"
+msgstr "Error desconocido"
+
+#: app/templates/_live_view_labels.html
+msgid "Unlocked"
+msgstr "Desbloqueado"
 
 #: app/templates/profile_webauthn_tab.html
 msgid "Unnamed Security Key"
@@ -3982,9 +4317,13 @@ msgstr "Usuario '%(name)s' eliminado correctamente."
 msgid "User '%(name)s' updated successfully."
 msgstr "Usuario '%(name)s' actualizado correctamente."
 
-#: app/templates/edit_user.html
+#: app/routers/ui/users.py app/templates/edit_user.html
 msgid "User Management"
 msgstr "Gestión de usuarios"
+
+#: app/routers/ui/webauthn.py
+msgid "User account is inactive"
+msgstr "La cuenta de usuario está inactiva"
 
 #: app/routers/ui/users.py
 msgid "User not found."
@@ -4007,6 +4346,19 @@ msgstr "Usuario:"
 #: app/templates/users_management.html
 msgid "Username"
 msgstr "Nombre de usuario"
+
+#: app/routers/ui/users.py
+#, python-format
+msgid "Username '%(name)s' already exists."
+msgstr "El nombre de usuario '%(name)s' ya existe."
+
+#: app/models/api.py
+msgid ""
+"Username must only contain letters, numbers, underscores, and hyphens (no spaces or "
+"special characters)"
+msgstr ""
+"El nombre de usuario solo puede contener letras, números, guiones bajos y guiones "
+"(sin espacios ni caracteres especiales)"
 
 #: app/templates/profile.html
 msgid "Username:"
@@ -4042,10 +4394,6 @@ msgstr "V2 (TCP)"
 msgid "V2 (TCP) & V3 (MQTT)"
 msgstr "V2 (TCP) y V3 (MQTT)"
 
-#: app/templates/_vehicle_overview.html
-msgid "V2 (TCP) Online:"
-msgstr "V2 (TCP) en línea:"
-
 #: app/templates/add_vehicle_wizard.html
 msgid "V2 + V3 simultaneously. Best coverage and redundancy."
 msgstr "V2 + V3 simultáneamente. Mejor cobertura y redundancia."
@@ -4074,10 +4422,6 @@ msgstr "V3 (MQTT en vivo)"
 msgid "V3 (MQTT)"
 msgstr "V3 (MQTT)"
 
-#: app/templates/_vehicle_overview.html
-msgid "V3 (MQTT) Online:"
-msgstr "V3 (MQTT) en línea:"
-
 #: app/templates/_vehicle_metrics.html
 msgid "V3 Metrics (from MQTT)"
 msgstr "Métricas V3 (desde MQTT)"
@@ -4102,6 +4446,10 @@ msgstr "Configuración CLI del servidor V3"
 msgid "V3/MQTT Configuration Details"
 msgstr "Detalles de configuración V3/MQTT"
 
+#: app/templates/vehicle_detail.html
+msgid "Vehicle"
+msgstr "Vehículo"
+
 #: app/routers/ui/vehicles.py
 #, python-format
 msgid "Vehicle '%(id)s' added successfully."
@@ -4111,6 +4459,11 @@ msgstr "Vehículo '%(id)s' añadido correctamente."
 #, python-format
 msgid "Vehicle '%(id)s' deleted successfully."
 msgstr "Vehículo '%(id)s' eliminado correctamente."
+
+#: app/routers/ui/vehicles.py
+#, python-format
+msgid "Vehicle '%(id)s' not found."
+msgstr "Vehículo '%(id)s' no encontrado."
 
 #: app/routers/ui/vehicles.py
 #, python-format
@@ -4133,6 +4486,11 @@ msgstr "Vehículo eliminado automáticamente"
 msgid "Vehicle Data Logs"
 msgstr "Registros de datos del vehículo"
 
+#: app/routers/ui/vehicles.py
+#, python-format
+msgid "Vehicle Detail: %(id)s"
+msgstr "Detalle del vehículo: %(id)s"
+
 #: app/templates/admin_dashboard.html app/templates/email/admin_lifecycle_vehicle.html
 #: app/templates/email/admin_lifecycle_vehicle.txt
 #: app/templates/email/unused_vehicle_warning.html
@@ -4143,8 +4501,17 @@ msgid "Vehicle ID"
 msgstr "ID del vehículo"
 
 #: app/routers/ui/vehicles.py
+#, python-format
+msgid "Vehicle ID '%(id)s' already exists."
+msgstr "El ID de vehículo '%(id)s' ya existe."
+
+#: app/routers/ui/vehicles.py
 msgid "Vehicle ID cannot be changed after creation."
 msgstr "El ID del vehículo no se puede cambiar después de su creación."
+
+#: app/models/api.py
+msgid "Vehicle ID must only contain letters, numbers, and hyphens"
+msgstr "El ID de vehículo solo puede contener letras, números y guiones"
 
 #: app/routers/ui/vehicles.py
 msgid "Vehicle ID must only contain letters, numbers, and hyphens."
@@ -4173,6 +4540,10 @@ msgstr "Propietario del vehículo"
 msgid "Vehicle Removed"
 msgstr "Vehículo eliminado"
 
+#: app/templates/vehicle_detail.html
+msgid "Vehicle Specific"
+msgstr "Específico del vehículo"
+
 #: app/templates/email/unused_vehicle_warning.txt
 #: app/templates/email/vehicle_auto_deleted.txt
 msgid "Vehicle name"
@@ -4186,9 +4557,17 @@ msgstr "No se encontró el vehículo que se va a eliminar."
 msgid "Vehicle not found for update (unexpected)."
 msgstr "No se encontró el vehículo que se va a actualizar (inesperado)."
 
+#: app/routers/ui/vehicles.py
+msgid "Vehicle not found or not authorized."
+msgstr "Vehículo no encontrado o no autorizado."
+
 #: app/routers/ui/admin.py app/routers/ui/vehicles.py
 msgid "Vehicle not found."
 msgstr "Vehículo no encontrado."
+
+#: app/templates/_vehicle_overview.html app/templates/index.html
+msgid "Vehicle switched on"
+msgstr "Vehículo encendido"
 
 #: app/routers/ui/vehicles.py
 msgid "Vehicle to update not found."
@@ -4248,7 +4627,11 @@ msgstr "ADVERTENCIA"
 msgid "Wait for the block to expire"
 msgstr "Esperar a que expire el bloqueo"
 
-#: app/templates/security_events_dashboard.html
+#: app/templates/_live_view_labels.html
+msgid "Waiting for charge timer"
+msgstr "Esperando al temporizador de carga"
+
+#: app/templates/base.html app/templates/security_events_dashboard.html
 msgid "Warning"
 msgstr "Advertencia"
 
@@ -4295,6 +4678,10 @@ msgstr ""
 "Hemos enviado un enlace de activación de cuenta a <strong>%(email)s</strong>. Haga "
 "clic en el enlace del correo para completar su registro."
 
+#: app/routers/ui/webauthn.py
+msgid "WebAuthn Login"
+msgstr "Inicio de sesión con WebAuthn"
+
 #: app/templates/vehicle_detail.html
 msgid "Wednesday"
 msgstr "Miércoles"
@@ -4321,8 +4708,8 @@ msgstr ""
 msgid "Which protocol will your OVMS module use to connect to this server?"
 msgstr "¿Qué protocolo usará su módulo OVMS para conectarse a este servidor?"
 
-#: app/templates/_vehicle_overview.html app/templates/profile.html
-#: app/templates/users_management.html
+#: app/templates/profile.html app/templates/users_management.html
+#: app/templates/vehicle_detail.html
 msgid "Yes"
 msgstr "Sí"
 
@@ -4530,13 +4917,51 @@ msgstr "para cada uno de sus vehículos."
 msgid "from search point"
 msgstr "desde el punto de búsqueda"
 
+#: app/routers/ui/__init__.py
+msgid "is not a valid email address"
+msgstr "no es una dirección de correo válida"
+
+#: app/routers/ui/__init__.py
+msgid "is required"
+msgstr "es obligatorio"
+
+#: app/templates/_live_view_labels.html
+msgid "just now"
+msgstr "ahora mismo"
+
 #: app/templates/admin_logs.html
 msgid "lines"
 msgstr "líneas"
 
+#: app/templates/vehicle_detail.html
+msgid "max"
+msgstr "máx"
+
+#: app/templates/vehicle_detail.html
+msgid "metrics"
+msgstr "métricas"
+
+#: app/templates/vehicle_detail.html
+msgid "min"
+msgstr "mín"
+
 #: app/templates/email/admin_ip_blocked.html app/templates/email/admin_ip_blocked.txt
 msgid "minutes"
 msgstr "minutos"
+
+#: app/routers/ui/__init__.py
+#, python-format
+msgid "must be at least %(n)d characters long"
+msgstr "debe tener al menos %(n)d caracteres"
+
+#: app/routers/ui/__init__.py
+#, python-format
+msgid "must be at most %(n)d characters long"
+msgstr "debe tener como máximo %(n)d caracteres"
+
+#: app/models/api.py
+msgid "must not contain control characters"
+msgstr "no debe contener caracteres de control"
 
 #: app/routers/ui/vehicles.py
 msgid "ntfy topic added."
@@ -4584,8 +5009,35 @@ msgstr "vehículo(s) pendiente(s) de eliminación automática"
 msgid "your@email.com"
 msgstr "su@correo.com"
 
+#~ msgid "12V Battery:"
+#~ msgstr "Batería de 12V:"
+
 #~ msgid "As an admin, you must assign this vehicle to a user."
 #~ msgstr "Como administrador, debe asignar este vehículo a un usuario."
+
+#~ msgid "Battery (°C)"
+#~ msgstr "Batería (°C)"
+
+#~ msgid "Battery SOH:"
+#~ msgstr "SOH de la batería:"
+
+#~ msgid "Connected"
+#~ msgstr "Conectado"
+
+#~ msgid "Connection lost"
+#~ msgstr "Conexión perdida"
+
+#~ msgid "Disconnected. Reconnecting in "
+#~ msgstr "Desconectado. Reconectando en "
+
+#~ msgid "Disconnected: "
+#~ msgstr "Desconectado: "
+
+#~ msgid "ID"
+#~ msgstr "ID"
+
+#~ msgid "Key Metrics"
+#~ msgstr "Métricas clave"
 
 #~ msgid "No Users Available"
 #~ msgstr "No hay usuarios disponibles"
@@ -4599,6 +5051,9 @@ msgstr "su@correo.com"
 #~ msgid "Required for new vehicle"
 #~ msgstr "Obligatorio para un nuevo vehículo"
 
+#~ msgid "SOC:"
+#~ msgstr "SOC:"
+
 #~ msgid "The danger zone is available after the vehicle has been created."
 #~ msgstr "La zona de peligro está disponible después de crear el vehículo."
 
@@ -4610,6 +5065,12 @@ msgstr "su@correo.com"
 
 #~ msgid "User Information"
 #~ msgstr "Información del usuario"
+
+#~ msgid "V2 (TCP) Online:"
+#~ msgstr "V2 (TCP) en línea:"
+
+#~ msgid "V3 (MQTT) Online:"
+#~ msgstr "V3 (MQTT) en línea:"
 
 #~ msgid "create a user"
 #~ msgstr "cree un usuario"

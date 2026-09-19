@@ -160,3 +160,44 @@ def test_a_failed_broadcast_reaps_the_dead_subscriber():
         assert manager.subscriptions == {}
 
     asyncio.run(scenario())
+
+
+def test_a_peer_that_stops_reading_is_cut_off_and_does_not_hold_the_others(monkeypatch):
+    """
+    `send_bytes` to a peer with a full TCP window waits until the protocol ping gives
+    up on it (tens of seconds), and the broadcaster awaits the whole gather: one such
+    client stalled the live data of every other subscriber for that long. The send
+    is bounded, and a timeout reaps the client like a failed send would.
+    """
+    from app.config import settings
+    monkeypatch.setattr(settings, "WS_SEND_TIMEOUT_SECONDS", 0.05)
+
+    async def scenario():
+        manager = WebSocketConnectionManager()
+
+        class StuckWebSocket(FakeWebSocket):
+            async def send_bytes(self, data: bytes):
+                await asyncio.sleep(10)
+
+        class LiveWebSocket(FakeWebSocket):
+            sent = 0
+
+            async def send_bytes(self, data: bytes):
+                LiveWebSocket.sent += 1
+
+        stuck, live = StuckWebSocket(), LiveWebSocket()
+        await manager.connect(stuck, "user_stuck")
+        await manager.connect(live, "user_live")
+        await manager.subscribe("user_stuck", "vehicle:ZOE90")
+        await manager.subscribe("user_live", "vehicle:ZOE90")
+
+        started = asyncio.get_running_loop().time()
+        await manager.broadcast_to_topic("vehicle:ZOE90", {"topic": "vehicle:ZOE90", "payload": {}})
+        elapsed = asyncio.get_running_loop().time() - started
+
+        assert elapsed < 2
+        assert LiveWebSocket.sent == 1
+        assert "user_stuck" not in manager.active_connections
+        assert manager.subscriptions == {"vehicle:ZOE90": {"user_live"}}
+
+    asyncio.run(scenario())

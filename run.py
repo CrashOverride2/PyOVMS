@@ -35,5 +35,9 @@ if __name__ == "__main__":
         proxy_headers=True,
         forwarded_allow_ips=settings.FORWARDED_ALLOW_IPS,
         server_header=False,
+        # The largest frame a client of ours sends is a subscribe of a few dozen
+        # bytes; uvicorn's default admits 16 MiB, which is parsed as JSON on the
+        # event loop. Inbound only — the live payloads and log lines go out unbounded.
+        ws_max_size=16 * 1024,
         workers=1
     )

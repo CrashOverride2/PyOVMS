@@ -1,0 +1,23 @@
+{#- The labels window.ovmsLiveView needs (static/js/vehicle_live_view.js), as one JS
+    object literal. Included inside a <script> by every page that derives a vehicle's
+    view from its live payload — the dashboard and the vehicle page — so the two
+    never drift apart. -#}
+{
+    online: {{ _('Online') | tojson | safe }},
+    offline: {{ _('Offline') | tojson | safe }},
+    never: {{ _('Never') | tojson | safe }},
+    na: {{ _('N/A') | tojson | safe }},
+    justNow: {{ _('just now') | tojson | safe }},
+    locked: {{ _('Locked') | tojson | safe }},
+    unlocked: {{ _('Unlocked') | tojson | safe }},
+    toFull: '100%',
+    chargeStates: {
+        charging: {{ _('Charging') | tojson | safe }},
+        topoff: {{ _('Top-off charging') | tojson | safe }},
+        done: {{ _('Charge complete') | tojson | safe }},
+        stopped: {{ _('Charging stopped') | tojson | safe }},
+        prepare: {{ _('Preparing to charge') | tojson | safe }},
+        heating: {{ _('Heating battery') | tojson | safe }},
+        timerwait: {{ _('Waiting for charge timer') | tojson | safe }}
+    }
+}

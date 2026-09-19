@@ -22,6 +22,7 @@ from app.notifications.outbound import close_all_sessions
 from app.notifications.ratelimit import rate_limiter
 from app.notifications.retry import MAX_SEND_ATTEMPTS, backoff_delay, is_transient
 from app.notifications.scheduler import DelayedRetryScheduler
+from app.notifications.web import notify_owner_browser
 from app.utils.crypto import decrypt_data
 
 logger = logging.getLogger(__name__)
@@ -588,6 +589,7 @@ def dispatch_notification_to_vehicle(
         push_data_payload = {**(fcm_data_payload or {}), "timestamp": notification_timestamp}
 
         vehicle_id_fk = vehicle_db.id
+        owner_id = vehicle_db.owner_id
         targets = build_dispatch_plan(
             db, vehicle_db,
             icon_title=icon_title,
@@ -605,6 +607,22 @@ def dispatch_notification_to_vehicle(
         # Closed before a single byte goes out: nothing below needs the session, and
         # holding one across the network I/O is what starved the connection pool.
         db.close()
+
+    # The owner's open browser tabs, if any. Placed here on purpose: after the rate
+    # limiter and the protocol preference (a protocol=both vehicle would otherwise toast
+    # twice per event), after the session is closed, and *before* the no-targets return
+    # — a vehicle with no push channel configured is exactly the one whose owner is
+    # watching the web UI. Non-blocking: it hands a coroutine to the loop and returns.
+    notify_owner_browser(
+        owner_id,
+        vehicle_id=vehicle_id,
+        title=title,
+        body=message_plain,
+        alert_type_char=alert_type_char,
+        source_protocol=source_protocol,
+        fcm_data_payload=fcm_data_payload,
+        timestamp=notification_timestamp,
+    )
 
     if not targets:
         logger.debug(f"No notification targets configured for {vehicle_id}.")

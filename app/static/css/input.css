@@ -66,3 +66,27 @@
         overflow-wrap: anywhere;
     }
 }
+
+@layer components {
+    /* Dashboard state-of-charge bar while charging: a light band travelling along the
+       fill, on top of whatever gradient the card chose. Motion is the only thing that
+       says "now" on a card whose numbers change every few minutes. */
+    .ovms-charging {
+        position: relative;
+        overflow: hidden;
+    }
+    .ovms-charging::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.45) 50%, rgba(255, 255, 255, 0) 100%);
+        transform: translateX(-100%);
+        animation: ovms-charging-sweep 2.2s ease-in-out infinite;
+    }
+    @keyframes ovms-charging-sweep {
+        to { transform: translateX(100%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .ovms-charging::after { animation: none; }
+    }
+}

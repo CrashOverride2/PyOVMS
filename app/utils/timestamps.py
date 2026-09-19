@@ -30,6 +30,19 @@ def as_utc(value: Optional[datetime.datetime]) -> Optional[datetime.datetime]:
     return value.astimezone(datetime.timezone.utc)
 
 
+def as_utc_iso(value: Optional[datetime.datetime]) -> Optional[str]:
+    """`as_utc()` as the `...Z` string a page hands to `new Date()`.
+
+    `isoformat() + "Z"` looked right on SQLite, where the column reads back naive; on
+    PostgreSQL the same column is tz-aware and the result was `...+00:00Z`, which
+    `Date.parse` rejects — every "last seen" on the dashboard read "Never" there.
+    """
+    utc = as_utc(value)
+    if utc is None:
+        return None
+    return utc.isoformat().replace("+00:00", "Z")
+
+
 # The API's datetime type. Use this in a response model, never a bare
 # `datetime.datetime`.
 #

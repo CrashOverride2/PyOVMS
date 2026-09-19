@@ -164,9 +164,31 @@ def test_a_freed_username_and_address_can_be_registered_again(db):
     assert crud.user.get_user_by_email(db, "typo@example.com") is None
 
 
-def test_hourly_housekeeping_runs_the_purge():
+def test_hourly_housekeeping_runs_the_purge(db):
+    """The hourly loop hands one pass to the threadpool; the pass runs the purge."""
     source = textwrap.dedent(inspect.getsource(lifespan.periodic_housekeeping))
-    assert "purge_expired_registrations" in source
+    assert "_run_housekeeping_pass" in source
+
+    _make_user(db, "hourly", active=False, token_expires_at=_days_ago(2))
+    lifespan._run_housekeeping_pass(db)
+    assert "hourly" not in _usernames(db)
+
+
+def test_a_failing_housekeeping_step_does_not_stop_the_others(db, monkeypatch):
+    """
+    Each step of the pass is its own try. The history purge failing — a locked
+    file, a dropped connection — must not cost the unverified-account purge, and
+    the session must be rolled back in between or every later step fails with
+    PendingRollbackError.
+    """
+    def boom(*args, **kwargs):
+        raise RuntimeError("database is locked")
+
+    monkeypatch.setattr(crud.historical_data, "delete_old_historical_data", boom)
+    _make_user(db, "survivor", active=False, token_expires_at=_days_ago(2))
+
+    lifespan._run_housekeeping_pass(db)  # must not raise
+    assert "survivor" not in _usernames(db)
 
 
 # ---------------------------------------------------------------------------
@@ -222,7 +244,7 @@ def test_v2_last_seen_write_clears_the_deletion_mark(db):
 def test_a_returned_vehicle_is_warned_again_before_its_next_deletion(db):
     """The point of clearing the mark: the second silence gets its own warning."""
     owner = _make_user(db, "owner")
-    vehicle = _make_vehicle(db, owner, "V2CAR", last_seen_tcp=_days_ago(400), reminder=_days_ago(10))
+    _make_vehicle(db, owner, "V2CAR", last_seen_tcp=_days_ago(400), reminder=_days_ago(10))
 
     crud.vehicle.update_vehicle_last_seen_tcp(db, "V2CAR", timestamp=_days_ago(366))
 

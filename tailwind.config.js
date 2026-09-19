@@ -2,6 +2,9 @@
 module.exports = {
   content: [
     "./app/templates/**/*.html",
+    // Our own scripts that hand class names to Alpine (vehicle_live_view.js: the
+    // bar gradients, the pill colours). Vendored libraries are excluded on purpose.
+    "./app/static/js/vehicle_live_view.js",
   ],
   darkMode: 'class',
   theme: {

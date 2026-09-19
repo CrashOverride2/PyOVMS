@@ -12,10 +12,11 @@ except ImportError:
 
 from app.utils.safe_markdown import render_safe_markdown
 from app.database import get_db
-from app.connection_manager import manager
 from app.models import db as models_db
 from . import templates, get_common_template_vars, get_translator
+from app.utils.i18n_markers import N_
 from app.dependencies import require_current_user_from_cookie_fully_authenticated
+from app.utils.vehicle_live_payload import build_vehicle_live_payload
 from app import crud
 
 router = APIRouter(tags=["Web UI - Dashboard"])
@@ -35,8 +36,15 @@ def ui_dashboard(
         return RedirectResponse(url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus(_("Admins do not have a vehicle dashboard."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     common_vars = get_common_template_vars(request, current_user)
-    vehicle_infos = manager.get_all_vehicle_infos(db, current_user)
-    
+    # One list, parsed once. The card's numbers all come from the live payload — the
+    # same one the `vehicle:<id>` socket pushes, embedded per card so the first render
+    # and every later update are one code path in the page — and the template reads
+    # only name, ids and last-seen from the row itself. `get_all_vehicle_infos()` would
+    # parse every vehicle's stored messages a second time for fields the page does
+    # not use. Unbounded by design: it is the account's own vehicles.
+    vehicles = crud.vehicle.get_all_vehicles(db, owner_id=current_user.id, limit=10_000)
+    live_payloads = {vehicle.vehicle_id: build_vehicle_live_payload(vehicle) for vehicle in vehicles}
+
     info_box_settings = crud.system_setting.get_info_box_settings(db)
     info_box_html = ""
     if info_box_settings["enabled"] and info_box_settings["content"] and markdown:
@@ -44,8 +52,9 @@ def ui_dashboard(
 
     return templates.TemplateResponse(request, "index.html", {
         **common_vars,
-        "vehicles": vehicle_infos,
-        "page_title": "PyOVMS Dashboard",
+        "vehicles": vehicles,
+        "live_payloads": live_payloads,
+        "page_title": N_("PyOVMS Dashboard"),
         "info_box_settings": info_box_settings,
         "info_box_html": info_box_html,
     })

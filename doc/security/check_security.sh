@@ -487,11 +487,11 @@ else
     warn "RemoveServerHeaderMiddleware not found in main.py – consider hiding Server header"
 fi
 
-# WebSocket one-time ticket auth
-if grep -rn --include="*.py" "ws_ticket\|ws_auth_ticket" app/ 2>/dev/null | grep -qv '#'; then
-    ok "WebSocket auth: one-time ticket mechanism found"
+# WebSocket auth: session cookie plus Origin check (cross-site WebSocket hijacking)
+if grep -q "origin_is_ours" app/routers/ws.py 2>/dev/null && grep -q "decode_jwt_and_get_user" app/routers/ws.py 2>/dev/null; then
+    ok "WebSocket auth: session cookie with Origin check found"
 else
-    warn "WebSocket ticket auth pattern not found – verify WS connections require auth"
+    warn "WebSocket cookie/Origin auth pattern not found – verify WS connections require auth"
 fi
 
 # X-Forwarded-For trusted proxy enforcement

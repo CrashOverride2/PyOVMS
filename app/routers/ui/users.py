@@ -12,7 +12,7 @@ from app.database import get_db
 from app import crud
 from app.models import api as models_api
 from app.models import db as models_db
-from . import templates, get_common_template_vars, get_translator
+from . import templates, get_common_template_vars, get_translator, format_validation_error
 from app.dependencies import require_admin_user_from_cookie, get_client_ip
 from app.csrf_protection import verify_csrf_token
 from app.services.disposable_email_service import (
@@ -25,6 +25,7 @@ from app.services.vehicle_service import (
     KartoDeletionFailed,
     trigger_karto_deletion_for_user_vehicles,
 )
+from app.utils.i18n_markers import N_
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -45,7 +46,7 @@ def ui_manage_users_route(
         "lifecycle_warn_ids": lifecycle_warn_ids,
         "lifecycle_delete_ids": lifecycle_delete_ids,
         "user_vehicle_counts": user_vehicle_counts,
-        "page_title": "User Management"
+        "page_title": N_("User Management")
     })
 
 @router.get("/add", response_class=HTMLResponse, name="ui_add_user_form")
@@ -58,7 +59,7 @@ def ui_add_user_form_route(
         **common_vars,
         "user_to_edit": None,
         "all_timezones": sorted(available_timezones()),
-        "page_title": "Add New User",
+        "page_title": N_("Add New User"),
         "form_action_url": request.url_for('ui_add_user_submit')
     })
 
@@ -93,10 +94,10 @@ def ui_add_user_submit_route(
     # run *before* UserCreate validates the form, so `username` and `email` are still
     # raw request input here and would otherwise land unescaped in the query string.
     if crud.user.get_user_by_username(db, username):
-        msg = quote_plus(f"Username '{username}' already exists.")
+        msg = quote_plus(_("Username '%(name)s' already exists.") % {"name": username})
         return RedirectResponse(url=f"{redirect_url_on_error}?error_message={msg}", status_code=status.HTTP_303_SEE_OTHER)
     if email and crud.user.get_user_by_email(db, email):
-        msg = quote_plus(f"Email '{email}' already registered.")
+        msg = quote_plus(_("Email '%(email)s' already registered.") % {"email": email})
         return RedirectResponse(url=f"{redirect_url_on_error}?error_message={msg}", status_code=status.HTTP_303_SEE_OTHER)
 
     try:
@@ -105,7 +106,7 @@ def ui_add_user_submit_route(
             is_admin=is_admin, is_active=is_active, timezone=timezone
         )
     except ValidationError as e:
-        error_detail = f"{e.errors()[0]['loc'][0].capitalize()}: {e.errors()[0]['msg']}"
+        error_detail = format_validation_error(_, e)
         return RedirectResponse(url=f"{redirect_url_on_error}?error_message={quote_plus(str(error_detail))}", status_code=status.HTTP_303_SEE_OTHER)
 
     try:
@@ -159,7 +160,7 @@ def ui_edit_user_form_route(
         **common_vars,
         "user_to_edit": user_to_edit,
         "all_timezones": sorted(available_timezones()),
-        "page_title": f"Edit User: {user_to_edit.username}",
+        "page_title": _("Edit User: %(name)s") % {"name": user_to_edit.username},
         "form_action_url": request.url_for('ui_edit_user_submit', user_id=user_id)
     })
 
@@ -198,10 +199,10 @@ def ui_edit_user_submit_route(
     # Raw form input at this point — UserUpdate has not validated it yet. Same reason
     # the add-user route above escapes the whole message.
     if username != user_db.username and crud.user.get_user_by_username(db, username):
-        msg = quote_plus(f"Username '{username}' already exists.")
+        msg = quote_plus(_("Username '%(name)s' already exists.") % {"name": username})
         return RedirectResponse(url=f"{redirect_url_on_error}?error_message={msg}", status_code=status.HTTP_303_SEE_OTHER)
     if email and email != user_db.email and crud.user.get_user_by_email(db, email):
-        msg = quote_plus(f"Email '{email}' already registered.")
+        msg = quote_plus(_("Email '%(email)s' already registered.") % {"email": email})
         return RedirectResponse(url=f"{redirect_url_on_error}?error_message={msg}", status_code=status.HTTP_303_SEE_OTHER)
 
     # The invariant first — see the same check in routers/api/users.py for why it goes
@@ -219,7 +220,7 @@ def ui_edit_user_submit_route(
     try:
         user_in = models_api.UserUpdate(**update_payload)
     except ValidationError as e:
-        error_detail = f"{e.errors()[0]['loc'][0].capitalize()}: {e.errors()[0]['msg']}"
+        error_detail = format_validation_error(_, e)
         return RedirectResponse(url=f"{redirect_url_on_error}?error_message={quote_plus(str(error_detail))}", status_code=status.HTTP_303_SEE_OTHER)
 
     if user_in.email and user_in.email != user_db.email:

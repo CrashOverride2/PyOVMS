@@ -17,6 +17,16 @@
         </label>
     </div>
 
+    <div class="mb-4 flex flex-wrap items-center gap-3">
+        <label class="relative grow max-w-md">
+            <svg class="w-4 h-4 text-text-secondary absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+            <input type="search" :value="metricsFilter" @input="handleMetricsFilterInput" autocomplete="off" spellcheck="false"
+                   placeholder="{{ _('Filter metrics (e.g. v.b.c, temp, soc)') }}"
+                   class="w-full pl-9 pr-3 py-2 text-sm font-mono bg-input-bg border border-border-color text-text-primary rounded-md focus:border-neon-blue focus:ring-1 focus:ring-neon-blue placeholder:text-text-secondary/60">
+        </label>
+        <span x-text="metricsUi.countText" class="text-xs text-text-secondary tabular-nums whitespace-nowrap"></span>
+    </div>
+
     <div x-show="metricsUi.showV2" x-transition>
         <h3 class="text-lg font-semibold text-neon-yellow mb-2">{{ _('V2 Metrics (from Cache)') }}</h3>
         <div x-show="metricsUi.hasV2Groups" class="space-y-3">
@@ -28,10 +38,24 @@
                     <div class="p-3 border-t border-border-color">
                         <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-sm font-mono">
                             <template x-for="item in group.items" :key="item.id">
-                                <div class="flex flex-wrap justify-between border-b border-border-color/20 py-1">
-                                    <dt class="text-text-secondary" :title="item.title" x-text="item.label"></dt>
-                                    <dd class="text-text-primary font-semibold pl-2 break-anywhere max-w-full"
-                                        x-text="item.valueText"></dd>
+                                <div :class="item.rowClass" class="border-b border-border-color/20 py-1">
+                                    <div x-show="item.isScalar" class="flex flex-wrap justify-between gap-x-2">
+                                        <dt class="text-text-secondary" :title="item.title" x-text="item.label"></dt>
+                                        <dd class="text-text-primary font-semibold break-anywhere max-w-full" x-text="item.valueText"></dd>
+                                    </div>
+                                    <div x-show="item.isList" x-cloak>
+                                        <div class="flex flex-wrap items-baseline justify-between gap-x-3">
+                                            <dt class="text-text-secondary" :title="item.title" x-text="item.label"></dt>
+                                            <span x-text="item.statsText" class="text-xs text-text-secondary tabular-nums"></span>
+                                        </div>
+                                        <dd class="mt-1 flex flex-wrap gap-1">
+                                            <template x-for="chip in item.chips" :key="chip.id">
+                                                <span :title="chip.title" x-text="chip.text" class="px-1.5 py-0.5 rounded bg-dark-bg/70 border border-border-color/40 text-text-primary text-xs tabular-nums"></span>
+                                            </template>
+                                            <button x-show="item.showToggle" type="button" :data-item-id="item.id" x-text="item.toggleText"
+                                                    class="js-metric-list-toggle px-1.5 py-0.5 rounded border border-neon-blue/50 text-neon-blue text-xs hover:bg-neon-blue hover:text-dark-bg transition-colors"></button>
+                                        </dd>
+                                    </div>
                                 </div>
                             </template>
                         </dl>
@@ -40,7 +64,8 @@
             </template>
         </div>
         <div x-show="metricsUi.noV2Groups">
-            <p class="text-text-secondary">{{ _('No V2 metrics data available.') }}</p>
+            <p x-show="metricsUi.v2Filtered" class="text-text-secondary" x-cloak>{{ _('No metric matches the filter.') }}</p>
+            <p x-show="metricsUi.v2Empty" class="text-text-secondary">{{ _('No V2 metrics data available.') }}</p>
         </div>
     </div>
 
@@ -55,11 +80,24 @@
                     <div class="p-3 border-t border-border-color">
                         <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-sm font-mono">
                             <template x-for="item in group.items" :key="item.id">
-                                <div class="flex flex-wrap justify-between border-b border-border-color/20 py-1">
-                                    <dt class="text-text-secondary" :title="item.title" x-text="item.key"></dt>
-                                    <dd class="text-text-primary font-semibold pl-2 break-anywhere max-w-full"
-                                        x-text="item.valueText">
-                                    </dd>
+                                <div :class="item.rowClass" class="border-b border-border-color/20 py-1">
+                                    <div x-show="item.isScalar" class="flex flex-wrap justify-between gap-x-2">
+                                        <dt class="text-text-secondary" :title="item.title" x-text="item.label"></dt>
+                                        <dd class="text-text-primary font-semibold break-anywhere max-w-full" x-text="item.valueText"></dd>
+                                    </div>
+                                    <div x-show="item.isList" x-cloak>
+                                        <div class="flex flex-wrap items-baseline justify-between gap-x-3">
+                                            <dt class="text-text-secondary" :title="item.title" x-text="item.label"></dt>
+                                            <span x-text="item.statsText" class="text-xs text-text-secondary tabular-nums"></span>
+                                        </div>
+                                        <dd class="mt-1 flex flex-wrap gap-1">
+                                            <template x-for="chip in item.chips" :key="chip.id">
+                                                <span :title="chip.title" x-text="chip.text" class="px-1.5 py-0.5 rounded bg-dark-bg/70 border border-border-color/40 text-text-primary text-xs tabular-nums"></span>
+                                            </template>
+                                            <button x-show="item.showToggle" type="button" :data-item-id="item.id" x-text="item.toggleText"
+                                                    class="js-metric-list-toggle px-1.5 py-0.5 rounded border border-neon-blue/50 text-neon-blue text-xs hover:bg-neon-blue hover:text-dark-bg transition-colors"></button>
+                                        </dd>
+                                    </div>
                                 </div>
                             </template>
                         </dl>
@@ -68,8 +106,8 @@
             </template>
         </div>
         <div x-show="metricsUi.noV3Groups">
-            <p class="text-text-secondary">{{ _('No V3 metrics data available. Is the vehicle online via MQTT?')
-                }}</p>
+            <p x-show="metricsUi.v3Filtered" class="text-text-secondary" x-cloak>{{ _('No metric matches the filter.') }}</p>
+            <p x-show="metricsUi.v3Empty" class="text-text-secondary">{{ _('No V3 metrics data available. Is the vehicle online via MQTT?') }}</p>
         </div>
     </div>
 </div>

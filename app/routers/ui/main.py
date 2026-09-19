@@ -28,6 +28,7 @@ from .security_events import router as security_events_ui_router
 from .command_favorites import router as command_favorites_ui_router
 from .wellknown import router as wellknown_ui_router
 from app.utils.csrf_dependency import csrf_protect
+from app.utils.i18n_markers import N_
 
 router = APIRouter(tags=["Web UI Main"], dependencies=[Depends(csrf_protect)])
 
@@ -61,7 +62,7 @@ def ui_privacy_policy(
     except Exception as e:
         policy_html = f"<h1>Error</h1><p>An error occurred: {e}</p>"
 
-    return templates.TemplateResponse(request, "privacy_policy.html", {**common_vars, "page_title": "Privacy Policy", "policy_html": policy_html})
+    return templates.TemplateResponse(request, "privacy_policy.html", {**common_vars, "page_title": N_("Privacy Policy"), "policy_html": policy_html})
 
 router.include_router(dashboard_ui_router)
 router.include_router(auth_ui_router)

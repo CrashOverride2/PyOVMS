@@ -226,7 +226,7 @@ document.addEventListener('alpine:init', () => {
                 });
                 if (!resp.ok && resp.status !== 204) {
                     const err = await resp.json().catch(() => ({}));
-                    throw new Error(err.detail || 'Request failed');
+                    throw new Error(err.detail || {{ _('Request failed') | tojson | safe }});
                 }
                 this.showMessage(`IP ${ip} unblocked.`, 'success');
                 await this.load();

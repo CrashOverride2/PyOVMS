@@ -20,7 +20,7 @@ import re
 import pytest
 from fastapi.testclient import TestClient
 
-from app import crud, security
+from app import security
 from app.crud import command_favorite as crud_favorite
 from app.database import Base, SessionLocal, engine, get_db
 from app.main import app

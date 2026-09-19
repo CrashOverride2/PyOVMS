@@ -148,6 +148,53 @@ def get_translator(request: Request) -> Callable[[str], str]:
     return translations.gettext if translations else (lambda text: text)
 
 
+# pydantic prefixes the message of a validator that raised ValueError with its own
+# error type; the type is for machines and the prefix is English on every page.
+_PYDANTIC_MSG_PREFIXES = ("Value error, ", "Assertion failed, ")
+
+
+def format_validation_error(gettext: Callable[[str], str], exc: Exception) -> str:
+    """
+    One line for the flash message of a form whose pydantic model refused it.
+
+    `exc` is a pydantic ValidationError; the first error names the field and the
+    reason. The reason is translated through `gettext` — it matches a catalogue entry
+    when the validator marked its message with N_ (see app/utils/i18n_markers.py) —
+    and the field name is humanised, not translated: it is the form's own field id.
+
+    `errors()` is a *list*; two routes indexed it as a dict and turned every
+    validation failure into a 500. Every UI route goes through this now.
+    """
+    errors = getattr(exc, "errors", list)() or []
+    if not errors:
+        return gettext("Invalid input. Please check the form.")
+    first = errors[0]
+    loc = first.get("loc") or ()
+    field = str(loc[0]) if loc else ""
+    msg = str(first.get("msg") or "")
+    ctx = first.get("ctx") or {}
+    kind = str(first.get("type") or "")
+    # pydantic's own constraint messages are English and not ours to extract; the
+    # ones a form can trip are rendered from a template of our own instead.
+    if kind == "string_too_short" and "min_length" in ctx:
+        msg = gettext("must be at least %(n)d characters long") % {"n": ctx["min_length"]}
+    elif kind == "string_too_long" and "max_length" in ctx:
+        msg = gettext("must be at most %(n)d characters long") % {"n": ctx["max_length"]}
+    elif kind == "missing":
+        msg = gettext("is required")
+    elif msg.startswith("value is not a valid email address"):
+        msg = gettext("is not a valid email address")
+    else:
+        for prefix in _PYDANTIC_MSG_PREFIXES:
+            if msg.startswith(prefix):
+                msg = msg[len(prefix):]
+                break
+        msg = gettext(msg) if msg else gettext("Invalid value")
+    if not field:
+        return msg
+    return f"{field.replace('_', ' ').capitalize()}: {msg}"
+
+
 def get_common_template_vars(request: Request, current_user: Optional[models_db.User]) -> dict:
     # Install the appropriate translation for this request
     # Uses locale determined by BabelMiddleware from browser's Accept-Language header

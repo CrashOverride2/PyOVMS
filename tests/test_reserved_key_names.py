@@ -1,9 +1,8 @@
 """
 User input can never claim a server-managed API key name.
 
-Three prefixes carry behaviour: `ws-ticket-` and `temp-karto-delete-` are exempt from
-the per-user quota and hidden from the profile page, and `device-` opts a key into the
-sliding expiry. All of that used to be derived from the name alone, which meant a user
+Two prefixes carry behaviour: `temp-karto-delete-` is exempt from the per-user quota
+and hidden from the profile page, and `device-` opts a key into the sliding expiry. All of that used to be derived from the name alone, which meant a user
 who named their key "temp-karto-delete-x" inherited the behaviour (finding N-3).
 
 The guard exists in two layers — a Pydantic validator on the JSON API and a check in
@@ -124,7 +123,7 @@ def test_the_profile_form_refuses_a_reserved_prefix(client, db, logged_in, prefi
 
 
 @pytest.mark.parametrize("name", [
-    "WS-TICKET-mine",        # case must not matter
+    "TEMP-KARTO-DELETE-mine",  # case must not matter
     "  device-mine",         # nor leading whitespace
     "\ttemp-karto-delete-x",
 ])
@@ -141,7 +140,7 @@ def test_the_profile_form_is_not_fooled_by_casing_or_padding(client, db, logged_
 
 def test_an_ordinary_name_still_works_through_the_form(client, db, logged_in):
     """The guard must not block legitimate names — including near-misses."""
-    for name in ("my laptop", "device", "ws-ticket"):
+    for name in ("my laptop", "device", "temp-karto"):
         response = client.post(
             "/profile/apikeys/create",
             data={"key_name": name, "expires_in_days": "", "csrf_token": _csrf(client)},
@@ -173,7 +172,7 @@ def test_the_json_api_refuses_a_reserved_prefix(client, db, logged_in, prefix):
 
 def test_server_issued_names_are_still_possible(db):
     """
-    The guard blocks user input, not the server. If this breaks, WebSocket tickets and
+    The guard blocks user input, not the server. If this breaks, Karto deletion and
     device provisioning stop working — so it is asserted alongside the refusals.
     """
     user = models_db.User(
@@ -184,14 +183,14 @@ def test_server_issued_names_are_still_possible(db):
     db.commit()
     db.refresh(user)
 
-    ticket, _ = crud.apikey.create_api_key(
-        db, user_id=user.id, name="ws-ticket-bob-1",
+    internal, _ = crud.apikey.create_api_key(
+        db, user_id=user.id, name="temp-karto-delete-bob-1",
         purpose=crud.apikey.KeyPurpose.INTERNAL)
     device, _ = crud.apikey.create_api_key(
         db, user_id=user.id, name="device-ios-1",
         purpose=crud.apikey.KeyPurpose.DEVICE)
 
-    assert ticket.name.startswith("ws-ticket-")
+    assert internal.name.startswith("temp-karto-delete-")
     assert device.name.startswith(DEVICE_KEY_NAME_PREFIX)
 
 

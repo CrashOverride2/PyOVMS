@@ -99,6 +99,8 @@ SERVER_BASE_URL="https://your.domain.com"
 FORWARDED_ALLOW_IPS="127.0.0.1"
 ```
 
+`SERVER_BASE_URL` must be the origin your users type into the browser. Besides links in e-mails, it is what the WebSocket Origin check falls back to: the live-data and notification sockets are authenticated by the session cookie, and PyOVMS refuses a handshake whose `Origin` matches neither the `Host` header the proxy forwards nor this URL. Both supplied configs forward the browser's `Host` unchanged (nginx: `proxy_set_header Host $http_host` — `$host` would strip a non-standard port, and `https://your.domain.com:8443` then never matches its own `Origin`), so with them the check passes either way — but a proxy that rewrites `Host` to the upstream address (nginx's default without that line) makes this setting the only thing that keeps sockets working; include the port if there is one. A refused handshake is logged as a warning naming the rejected origin.
+
 ```bash
 sudo systemctl restart pyovms
 ```

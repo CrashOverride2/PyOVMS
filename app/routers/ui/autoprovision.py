@@ -7,7 +7,8 @@ from pydantic import ValidationError
 from app.database import get_db
 from app import crud
 from app.models import api as models_api, db as models_db
-from . import templates, get_common_template_vars, get_translator
+from . import templates, get_common_template_vars, get_translator, format_validation_error
+from app.utils.i18n_markers import N_
 from app.dependencies import require_admin_user_from_cookie
 from app.csrf_protection import verify_csrf_token
 from app.utils.crypto import decrypt_data
@@ -25,7 +26,7 @@ def ui_manage_autoprovision_profiles_route(
     return templates.TemplateResponse(request, "autoprovision_management.html", {
         **common_vars,
         "profiles": profiles,
-        "page_title": "Auto-Provisioning Management"
+        "page_title": N_("Auto-Provisioning Management")
     })
 
 @router.get("/add", response_class=HTMLResponse, name="ui_add_autoprovision_profile_form")
@@ -37,7 +38,7 @@ def ui_add_autoprovision_profile_form_route(
     return templates.TemplateResponse(request, "edit_autoprovision_profile.html", {
         **common_vars,
         "profile_to_edit": None,
-        "page_title": "Add New Provisioning Profile",
+        "page_title": N_("Add New Provisioning Profile"),
         "form_action_url": request.url_for('ui_add_autoprovision_profile_submit')
     })
 
@@ -64,7 +65,7 @@ def ui_add_autoprovision_profile_submit_route(
         return RedirectResponse(url=f"{redirect_url_on_error}?error_message={quote_plus(_(str(e.detail)))}", status_code=status.HTTP_303_SEE_OTHER)
     if crud.autoprovision.get_auto_provision_profile(db, ap_key):
         # Raw form input: AutoProvisionProfileCreate validates ap_key below, not here.
-        msg = quote_plus(f"Provisioning key '{ap_key}' already exists.")
+        msg = quote_plus(_("Provisioning key '%(key)s' already exists.") % {"key": ap_key})
         return RedirectResponse(url=f"{redirect_url_on_error}?error_message={msg}", status_code=status.HTTP_303_SEE_OTHER)
 
     try:
@@ -77,7 +78,7 @@ def ui_add_autoprovision_profile_submit_route(
             is_active=is_active
         )
     except ValidationError as e:
-        error_detail = f"{e.errors()['loc'].capitalize()}: {e.errors()['msg']}"
+        error_detail = format_validation_error(_, e)
         return RedirectResponse(url=f"{redirect_url_on_error}?error_message={quote_plus(str(error_detail))}", status_code=status.HTTP_303_SEE_OTHER)
 
     crud.autoprovision.create_auto_provision_profile(db, profile_in, owner_id=current_admin.id)
@@ -108,7 +109,7 @@ def ui_edit_autoprovision_profile_form_route(
         "profile_to_edit": profile_to_edit,
         "server_pw_display": server_pw_display,
         "module_pw_display": module_pw_display,
-        "page_title": f"Edit Profile: {profile_to_edit.ap_key}",
+        "page_title": _("Edit Profile: %(key)s") % {"key": profile_to_edit.ap_key},
         "form_action_url": request.url_for('ui_edit_autoprovision_profile_submit', profile_id=profile_id)
     })
 
@@ -140,7 +141,7 @@ def ui_edit_autoprovision_profile_submit_route(
 
     if ap_key != profile_db.ap_key and crud.autoprovision.get_auto_provision_profile(db, ap_key):
         # Raw form input, same as the add route above.
-        msg = quote_plus(f"Provisioning key '{ap_key}' already exists.")
+        msg = quote_plus(_("Provisioning key '%(key)s' already exists.") % {"key": ap_key})
         return RedirectResponse(url=f"{redirect_url_on_error}?error_message={msg}", status_code=status.HTTP_303_SEE_OTHER)
     
     try:
@@ -153,7 +154,7 @@ def ui_edit_autoprovision_profile_submit_route(
             is_active=is_active
         )
     except ValidationError as e:
-        error_detail = f"{e.errors()['loc'].capitalize()}: {e.errors()['msg']}"
+        error_detail = format_validation_error(_, e)
         return RedirectResponse(url=f"{redirect_url_on_error}?error_message={quote_plus(str(error_detail))}", status_code=status.HTTP_303_SEE_OTHER)
         
     crud.autoprovision.update_auto_provision_profile(db, profile_db, profile_in)

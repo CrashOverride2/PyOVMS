@@ -9,8 +9,31 @@ from app.models import api as models_api
 from app import security
 from app.config import settings
 from app.services.mqtt_sync_worker import mqtt_sync_worker
+from app.websocket_manager import manager as websocket_manager, vehicle_topic
 
 logger = logging.getLogger(__name__)
+
+
+def _end_browser_sessions(user_id: int, vehicle_ids=()) -> None:
+    """
+    Close the account's open WebSockets in this worker — and withdraw the topics of
+    the vehicles named, when they go with the account.
+
+    A socket is authenticated once, at its handshake, and never reads the cookie
+    again. So everything below that ends every *page* session of an account — the
+    token_version bump on a password change or reset and on a change to the second
+    factor, an admin deactivating the account or revoking its admin rights, the
+    deletion of the account — left that account's open tabs streaming live data and
+    notifications, and an admin's log stream running, until the token's own expiry.
+    A password reset is what someone does *after* losing control of the account, and
+    the attacker's tab was the one that stayed open. Same shape as the broker resync
+    in update_user(): a revocation that does not reach the in-memory state is not
+    one. Fire-and-forget on the event loop, a no-op without one (tests, shutdown);
+    called after the commit, so a reconnect sees the new state and is refused.
+    """
+    websocket_manager.disconnect_user_threadsafe(user_id)
+    for vehicle_id in vehicle_ids:
+        websocket_manager.drop_topic_threadsafe(vehicle_topic(vehicle_id))
 
 def get_user_by_id(db: Session, user_id: int) -> Optional[models_db.User]:
     return db.query(models_db.User).filter(models_db.User.id == user_id).first()
@@ -87,11 +110,13 @@ def increment_token_version(db: Session, user: models_db.User) -> None:
     user.token_version = (user.token_version or 0) + 1
     user.updated_at = datetime.datetime.now(datetime.timezone.utc)
     db.commit()
+    _end_browser_sessions(user.id)
 
 def update_user(db: Session, user_db: models_db.User, user_in: models_api.UserUpdate) -> models_db.User:
     update_data = user_in.model_dump(exclude_unset=True)
     old_username = user_db.username
     old_is_active = user_db.is_active
+    old_is_admin = user_db.is_admin
     password_changed = bool(update_data.get("password"))
 
     if password_changed:
@@ -106,6 +131,14 @@ def update_user(db: Session, user_db: models_db.User, user_in: models_api.UserUp
     user_db.updated_at = datetime.datetime.now(datetime.timezone.utc)
     db.commit()
     db.refresh(user_db)
+
+    # The token_version bump above ends every page session; a deactivation or the
+    # loss of admin rights would be refused at the next page request too. The open
+    # sockets learn of none of these on their own — see _end_browser_sessions().
+    deactivated = old_is_active and not user_db.is_active
+    demoted = old_is_admin and not user_db.is_admin
+    if password_changed or deactivated or demoted:
+        _end_browser_sessions(user_db.id)
 
     # A changed password revokes the provisioned device keys, exactly as a reset does.
     #
@@ -188,6 +221,9 @@ def delete_user(db: Session, user_id: int) -> Optional[models_db.User]:
         for vehicle_id in owned_vehicle_ids:
             mqtt_sync_worker.mark_vehicle_dirty(vehicle_id)
         mqtt_sync_worker.mark_acl_dirty()
+        # The account's own sockets, and the topics of its vehicles on anyone's
+        # socket (an admin's dashboard, say) — the ids are free again from here on.
+        _end_browser_sessions(user_id, owned_vehicle_ids)
     return db_user
 
 # --- Email Verification ---
@@ -271,6 +307,7 @@ def enable_totp_for_user(db: Session, user: models_db.User, totp_secret: str) ->
     user.updated_at = datetime.datetime.now(datetime.timezone.utc)
     db.commit()
     db.refresh(user)
+    _end_browser_sessions(user.id)
     return user
 
 def disable_totp_for_user(db: Session, user: models_db.User) -> models_db.User:
@@ -282,6 +319,7 @@ def disable_totp_for_user(db: Session, user: models_db.User) -> models_db.User:
     user.updated_at = datetime.datetime.now(datetime.timezone.utc)
     db.commit()
     db.refresh(user)
+    _end_browser_sessions(user.id)
     return user
 
 def get_decrypted_totp_secret_for_user(user: models_db.User) -> Optional[str]:
@@ -361,6 +399,7 @@ def reset_user_password(db: Session, user: models_db.User, new_password: str) ->
     user.updated_at = datetime.datetime.now(datetime.timezone.utc)
     db.commit()
     db.refresh(user)
+    _end_browser_sessions(user.id)
 
     from app.crud import apikey as crud_apikey
 

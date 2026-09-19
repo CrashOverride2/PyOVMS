@@ -18,7 +18,7 @@
             <span class="inline-flex items-center justify-center min-w-[7rem] px-3 py-1 rounded-full text-sm font-medium bg-purple-900/50 text-purple-400 border border-purple-500/30">ntfy</span>
             <span class="text-text-secondary font-mono text-xs">{{ sub.ntfy_server_url or 'https://ntfy.sh' }}/{{ sub.endpoint }}</span>
             {% elif sub.push_type == 'email' %}
-            <span class="inline-flex items-center justify-center min-w-[7rem] px-3 py-1 rounded-full text-sm font-medium bg-yellow-900/50 text-yellow-400 border border-yellow-500/30">E-Mail</span>
+            <span class="inline-flex items-center justify-center min-w-[7rem] px-3 py-1 rounded-full text-sm font-medium bg-yellow-900/50 text-yellow-400 border border-yellow-500/30">{{ _('Email') }}</span>
             <span class="text-text-secondary">{{ sub.endpoint }}</span>
             {% endif %}
             {% if sub.push_type in ('fcm', 'apns', 'up') and sub.device_id != 'legacy' %}

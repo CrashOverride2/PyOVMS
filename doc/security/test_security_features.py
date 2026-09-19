@@ -551,24 +551,20 @@ def test_jwt_token_version(base: str, username: str, password: str):
         r.warn("Could not log in – skipping JWT token version test")
         return
 
-    # Confirm the session is valid by requesting a WS ticket (cookie-auth endpoint).
+    # Confirm the session is valid by requesting a cookie-auth JSON endpoint.
     # NOTE: With FORCE_SECURE_COOKIES=True, the JWT cookie has the __Host- prefix and
     # the Secure flag, so it is NOT sent over plain HTTP by the requests library.
     # This is correct security behavior — test over HTTPS in production.
     try:
-        resp = s.get(url(base, "/api/v1/ws-ticket"), allow_redirects=False, timeout=10)
-        if resp.status_code == 200:
-            ct = resp.headers.get("content-type", "")
-            if ct.startswith("application/json") and "app_ws_ticket" in resp.json():
-                r.ok("Authenticated session can obtain WS ticket")
-            else:
-                r.info("WS ticket returned 200 with HTML – __Host- cookie not sent over HTTP (expected with FORCE_SECURE_COOKIES=True)")
+        resp = s.get(url(base, "/api/v1/users/me"), allow_redirects=False, timeout=10)
+        if resp.status_code == 200 and resp.headers.get("content-type", "").startswith("application/json"):
+            r.ok("Authenticated session is accepted by the API")
         elif resp.status_code in (302, 303, 307, 308):
-            r.info("WS ticket endpoint redirected to login over HTTP – expected: __Host- JWT cookie requires HTTPS to be sent")
+            r.info("Session endpoint redirected to login over HTTP – expected: __Host- JWT cookie requires HTTPS to be sent")
         else:
-            r.warn(f"WS ticket endpoint returned {resp.status_code}")
+            r.warn(f"Session endpoint returned {resp.status_code}")
     except requests.exceptions.RequestException as e:
-        r.warn(f"WS ticket request failed: {e}")
+        r.warn(f"Session request failed: {e}")
 
     # Token version invalidation is enforced in security.py – verified via static analysis
     r.info("Token version invalidation is verified in code (token_version in security.py).")
@@ -577,55 +573,42 @@ def test_jwt_token_version(base: str, username: str, password: str):
 
 
 def test_websocket_auth(base: str, username: str, password: str):
-    """WebSocket connections require a valid one-time auth ticket."""
+    """WebSocket handshakes are authenticated by the session cookie and pinned to our Origin."""
     r.section("8. WebSocket Authentication")
 
-    # The WS endpoint requires a ticket obtained via GET /api/v1/ws-ticket
-    # Test that the ticket endpoint requires authentication
-    try:
-        resp = requests.get(url(base, "/api/v1/ws-ticket"), timeout=10, allow_redirects=False)
-        if resp.status_code == 401:
-            r.ok("GET /api/v1/ws-ticket → 401 without auth (correct)")
-        elif resp.status_code == 403:
-            r.ok("GET /api/v1/ws-ticket → 403 without auth (correct)")
-        elif resp.status_code in (302, 303, 307, 308):
-            loc = resp.headers.get("location", "")
-            if "login" in loc or "auth" in loc:
-                r.ok(f"GET /api/v1/ws-ticket → redirect to login ({resp.status_code}) – protected (correct)")
-            else:
-                r.warn(f"GET /api/v1/ws-ticket → {resp.status_code} redirect to {loc[:60]}")
-        elif resp.status_code == 404:
-            r.warn("GET /api/v1/ws-ticket → 404 – check WS ticket endpoint path")
-        elif resp.status_code == 200:
-            ct = resp.headers.get("content-type", "")
-            if ct.startswith("application/json"):
-                data = resp.json()
-                if "ticket" in data or "app_ws_ticket" in data:
-                    r.fail("WS auth ticket issued without any authentication!")
-                else:
-                    r.warn("WS ticket endpoint returned JSON 200 without auth – inspect response")
-            else:
-                r.warn(f"WS ticket endpoint returned 200 with non-JSON content ({ct}) – may be an unguarded redirect")
-        else:
-            r.warn(f"WS ticket endpoint returned {resp.status_code}")
-    except requests.exceptions.RequestException as e:
-        r.warn(f"WS ticket endpoint request failed: {e}")
+    ws_headers = {"Connection": "Upgrade", "Upgrade": "websocket",
+                  "Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
+                  "Sec-WebSocket-Version": "13"}
 
-    # Test that the WS upgrade without a ticket is rejected
-    # We use HTTP to test the upgrade path (a plain GET to /ws should be rejected)
-    try:
-        resp = requests.get(url(base, "/ws"), timeout=5,
-                            headers={"Connection": "Upgrade", "Upgrade": "websocket",
-                                     "Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
-                                     "Sec-WebSocket-Version": "13"})
-        if resp.status_code in (401, 403, 400, 426):
-            r.ok(f"WebSocket upgrade without ticket → {resp.status_code} (rejected)")
-        elif resp.status_code == 101:
-            r.fail("WebSocket upgrade accepted without auth ticket!")
+    def upgrade(session, extra, label):
+        try:
+            resp = session.get(url(base, "/ws"), timeout=5, headers={**ws_headers, **extra},
+                               allow_redirects=False)
+        except requests.exceptions.RequestException as e:
+            # The server accepts the upgrade and then closes with 1008; `requests`
+            # cannot speak the protocol, so a dropped connection is the expected shape.
+            r.info(f"WS upgrade {label}: connection closed by server ({type(e).__name__}) – rejected")
+            return
+        if resp.status_code == 101:
+            r.fail(f"WebSocket upgrade {label} was accepted!")
+        elif resp.status_code in (400, 401, 403, 426):
+            r.ok(f"WebSocket upgrade {label} → {resp.status_code} (rejected)")
         else:
-            r.warn(f"WebSocket upgrade without ticket → {resp.status_code}")
-    except requests.exceptions.RequestException as e:
-        r.info(f"WS upgrade test: {e} (may be expected if server closes the connection)")
+            r.warn(f"WebSocket upgrade {label} → {resp.status_code}")
+
+    origin = base.rstrip("/")
+    # No cookie at all: nothing to authenticate with.
+    upgrade(requests, {"Origin": origin}, "without a session")
+
+    s = _login_session(base, username, password)
+    if s is None:
+        r.warn("Could not log in – skipping the Origin check")
+        return
+    # A valid cookie from a foreign page: cross-site WebSocket hijacking. The browser
+    # would attach the cookie (SameSite=Lax stops it); the server's Origin check is
+    # the second lock.
+    upgrade(s, {"Origin": "https://evil.example"}, "with a session but a foreign Origin")
+    upgrade(s, {}, "with a session but no Origin")
 
 
 def test_ssrf_validation(base: str, username: str, password: str):

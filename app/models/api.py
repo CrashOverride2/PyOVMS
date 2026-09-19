@@ -6,6 +6,7 @@ import unicodedata
 from urllib.parse import urlparse
 
 from app.utils.email_validation import validate_optional_email_address
+from app.utils.i18n_markers import N_
 from app.utils.timestamps import UtcDatetime
 
 
@@ -15,14 +16,14 @@ def _validate_push_endpoint_url(v: Optional[str]) -> Optional[str]:
         return v
     parsed = urlparse(v)
     if parsed.scheme != 'https':
-        raise ValueError('UnifiedPush endpoint must use https://')
+        raise ValueError(N_('UnifiedPush endpoint must use https://'))
     host = (parsed.hostname or '').lower()
     if not host or host == 'localhost':
-        raise ValueError('UnifiedPush endpoint must not target localhost')
+        raise ValueError(N_('UnifiedPush endpoint must not target localhost'))
     try:
         addr = ipaddress.ip_address(host)
         if not addr.is_global:
-            raise ValueError('UnifiedPush endpoint must use a globally routable address')
+            raise ValueError(N_('UnifiedPush endpoint must use a globally routable address'))
     except ValueError as exc:
         if 'UnifiedPush' in str(exc):
             raise
@@ -35,14 +36,14 @@ def _validate_ntfy_server_url(v: Optional[str]) -> Optional[str]:
         return v
     parsed = urlparse(v)
     if parsed.scheme not in ('http', 'https'):
-        raise ValueError('NTFY server URL must use http:// or https://')
+        raise ValueError(N_('NTFY server URL must use http:// or https://'))
     host = (parsed.hostname or '').lower()
     if not host or host == 'localhost':
-        raise ValueError('NTFY server URL must not target localhost')
+        raise ValueError(N_('NTFY server URL must not target localhost'))
     try:
         addr = ipaddress.ip_address(host)
         if not addr.is_global:
-            raise ValueError('NTFY server URL must use a globally routable address')
+            raise ValueError(N_('NTFY server URL must use a globally routable address'))
     except ValueError as exc:
         if 'NTFY server' in str(exc):
             raise
@@ -50,7 +51,9 @@ def _validate_ntfy_server_url(v: Optional[str]) -> Optional[str]:
     return v
 
 PASSWORD_REGEX = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?~`])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?~`]{12,128}$"
-PASSWORD_ERROR_MESSAGE = (
+# Marked with N_ so the UI routes can translate it at the point of display; the API
+# hands it out in English, which is correct there.
+PASSWORD_ERROR_MESSAGE = N_(
     "Password must be between 12 and 128 characters long and include at least one uppercase letter, "
     "one lowercase letter, one digit, and one special character."
 )
@@ -72,7 +75,7 @@ class UserBase(BaseModel):
     def validate_username(cls, v: str) -> str:
         """Validate username contains only alphanumeric characters, underscore, and hyphen (no spaces or special characters)."""
         if not re.fullmatch(r'[a-zA-Z0-9_-]+', v):
-            raise ValueError('Username must only contain letters, numbers, underscores, and hyphens (no spaces or special characters)')
+            raise ValueError(N_('Username must only contain letters, numbers, underscores, and hyphens (no spaces or special characters)'))
         return v
 
 class UserCreate(UserBase):
@@ -98,7 +101,7 @@ class UserUpdate(BaseModel):
     def validate_username(cls, v: Optional[str]) -> Optional[str]:
         """Validate username contains only alphanumeric characters, underscore, and hyphen (no spaces or special characters)."""
         if v is not None and not re.fullmatch(r'[a-zA-Z0-9_-]+', v):
-            raise ValueError('Username must only contain letters, numbers, underscores, and hyphens (no spaces or special characters)')
+            raise ValueError(N_('Username must only contain letters, numbers, underscores, and hyphens (no spaces or special characters)'))
         return v
 
     @field_validator('password', mode='before')
@@ -225,7 +228,7 @@ class VehicleCreate(BaseModel):
             raise ValueError('Vehicle ID must be a string')
         v_upper = v.upper()
         if not re.fullmatch(r"[A-Z0-9-]+", v_upper):
-            raise ValueError('Vehicle ID must only contain letters, numbers, and hyphens')
+            raise ValueError(N_('Vehicle ID must only contain letters, numbers, and hyphens'))
         return v_upper
 
     @field_validator('unified_push_endpoint')
@@ -282,7 +285,7 @@ class VehicleUpdate(BaseModel):
                 raise ValueError('Vehicle ID must be a string')
             v_upper = v.upper()
             if not re.fullmatch(r"[A-Z0-9-]+", v_upper):
-                raise ValueError('Vehicle ID must only contain letters, numbers, and hyphens')
+                raise ValueError(N_('Vehicle ID must only contain letters, numbers, and hyphens'))
             return v_upper
         return v
 
@@ -329,7 +332,7 @@ def _reject_control_characters(v: str) -> str:
     Cc covers C0, DEL and C1 together; Cf is deliberately allowed, because the ZWJ
     that joins an emoji sequence is one, and a label may be an emoji."""
     if any(unicodedata.category(ch) in ('Cc', 'Zl', 'Zp') for ch in v):
-        raise ValueError('must not contain control characters')
+        raise ValueError(N_('must not contain control characters'))
     return v
 
 class CommandFavoriteCreate(BaseModel):
@@ -400,7 +403,7 @@ class AutoProvisionProfileCreate(AutoProvisionProfileBase):
             return v
         key = v.strip()
         if len(key) < 12:
-            raise ValueError("Auto-provisioning key must be at least 12 characters long.")
+            raise ValueError(N_("Auto-provisioning key must be at least 12 characters long."))
         return key
 
 class AutoProvisionProfileInfo(AutoProvisionProfileBase):
@@ -427,7 +430,7 @@ class ApiKeyCreate(BaseModel):
         from app.crud.apikey import is_reserved_key_name
 
         if is_reserved_key_name(v):
-            raise ValueError('This API key name is reserved for internal use. Please choose another name.')
+            raise ValueError(N_('This API key name is reserved for internal use. Please choose another name.'))
         return v
 
 class ApiKeyInfo(BaseModel):
@@ -451,11 +454,6 @@ class TOTPSetupInfo(BaseModel):
 
 class TOTPEnableRequest(BaseModel):
     totp_code: str = Field(..., min_length=6, max_length=6, description="The 6-digit code from the authenticator app.")
-
-class WsTicketResponse(BaseModel):
-    app_ws_ticket: str
-    mqtt_username: Optional[str] = None
-    mqtt_password: Optional[str] = None
 
 # --- Metrics Models ---
 class AvailableMetricsResponse(BaseModel):

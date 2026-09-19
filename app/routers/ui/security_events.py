@@ -8,6 +8,7 @@ from app.database import get_db
 from app.dependencies import require_admin_user_from_cookie
 from app.models.db import User
 from app.routers.ui import get_common_template_vars, templates
+from app.utils.i18n_markers import N_
 
 router = APIRouter()
 
@@ -20,7 +21,7 @@ def ui_blocked_ips(
 ):
     """Display the blocked IPs management page."""
     context = get_common_template_vars(request, current_admin)
-    context.update({"page_title": "Blocked IPs"})
+    context.update({"page_title": N_("Blocked IPs")})
     return templates.TemplateResponse(request, "blocked_ips.html", context)
 
 
@@ -33,7 +34,7 @@ def ui_security_events_dashboard(
     """Display security events dashboard."""
     context = get_common_template_vars(request, current_admin)
     context.update({
-        "page_title": "Security Events Dashboard"
+        "page_title": N_("Security Events Dashboard")
     })
 
     return templates.TemplateResponse(request, "security_events_dashboard.html", context)

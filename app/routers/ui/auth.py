@@ -12,6 +12,7 @@ from app.config import settings
 from . import templates, get_common_template_vars, get_translator
 from app.dependencies import get_user_from_request_cookie, get_client_ip
 from app.security_manager import security_manager
+from app.websocket_manager import manager as websocket_manager
 from app.csrf_protection import (
     get_csrf_token,
     verify_csrf_token,
@@ -21,6 +22,7 @@ from app.csrf_protection import (
 )
 from app.utils.step_up import mark_reauthenticated
 from app.utils.urls import external_url_for
+from app.utils.i18n_markers import N_
 from app.utils.two_factor import (
     SecondFactor,
     password_login_is_disabled,
@@ -42,7 +44,7 @@ def ui_login_form_route(request: Request, current_user: Optional[models_db.User]
 
     common_vars = get_common_template_vars(request, current_user)
     csrf_token = get_csrf_token(request)
-    return templates.TemplateResponse(request, "login.html", {**common_vars, "page_title": "Login", "csrf_token": csrf_token})
+    return templates.TemplateResponse(request, "login.html", {**common_vars, "page_title": N_("Login"), "csrf_token": csrf_token})
 
 @router.post("/login", response_class=RedirectResponse, name="ui_login_submit")
 def ui_login_submit_route(
@@ -71,7 +73,7 @@ def ui_login_submit_route(
     login_form_url = str(request.url_for('ui_login_form'))
 
     # Generic error message to prevent username enumeration
-    generic_error = "Invalid credentials. Please check your username and password."
+    generic_error = _("Invalid credentials. Please check your username and password.")
 
     # Check per-username rate limit before any DB lookup (distributed brute-force detection)
     if security_manager.is_username_blocked(username):
@@ -117,7 +119,7 @@ def ui_login_submit_route(
 
     # If passwordless WebAuthn is enabled but no 2FA is set, password login should be disabled
     if password_login_is_disabled(db, user):
-        error_message = "Password login is disabled. Please use passwordless login with your security key."
+        error_message = _("Password login is disabled. Please use passwordless login with your security key.")
         logger.warning(f"Password login attempt blocked for user {username} - passwordless-only account")
         return RedirectResponse(url=f"{login_form_url}?error_message={quote_plus(str(error_message))}", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -204,7 +206,7 @@ def ui_login_totp_form_route(
 
     return templates.TemplateResponse(request, "login_totp.html", {
         **common_vars, 
-        "page_title": "Enter 2FA Code",
+        "page_title": N_("Enter 2FA Code"),
         "username_for_totp": username_for_display
     })
 
@@ -415,6 +417,10 @@ def ui_logout_route(
             )
         except Exception as e:
             logger.warning(f"Security event logging failed (LOGOUT): {e}")
+        # The account's live-data and log sockets, in this worker. They were
+        # authenticated at their handshake and would otherwise outlive the session:
+        # a second tab of this browser kept showing live data after the logout.
+        websocket_manager.disconnect_user_threadsafe(current_user.id)
 
     redirect_response = RedirectResponse(url=str(request.url_for('ui_login_form')), status_code=status.HTTP_303_SEE_OTHER)
 
@@ -477,7 +483,7 @@ def ui_forgot_password_form_route(
     csrf_token = get_csrf_token(request)
     return templates.TemplateResponse(request, "forgot_password.html", {
         **common_vars,
-        "page_title": "Forgot Password",
+        "page_title": N_("Forgot Password"),
         "csrf_token": csrf_token
     })
 
@@ -510,7 +516,7 @@ def ui_forgot_password_submit_route(
         common_vars = get_common_template_vars(request, None)
         return templates.TemplateResponse(request, "forgot_password_sent.html", {
             **common_vars,
-            "page_title": "Check Your Email"
+            "page_title": N_("Check Your Email")
         })
 
     # The enumeration-safe message is rendered by forgot_password_sent.html, which this
@@ -596,7 +602,7 @@ def ui_forgot_password_submit_route(
     common_vars = get_common_template_vars(request, None)
     return templates.TemplateResponse(request, "forgot_password_sent.html", {
         **common_vars,
-        "page_title": "Check Your Email"
+        "page_title": N_("Check Your Email")
     })
 
 
@@ -641,7 +647,7 @@ def ui_reset_password_form_route(
         common_vars = get_common_template_vars(request, None)
         return templates.TemplateResponse(request, "reset_password_invalid.html", {
             **common_vars,
-            "page_title": "Invalid Reset Link",
+            "page_title": N_("Invalid Reset Link"),
             "error_reason": "invalid"
         })
 
@@ -650,7 +656,7 @@ def ui_reset_password_form_route(
         common_vars = get_common_template_vars(request, None)
         return templates.TemplateResponse(request, "reset_password_invalid.html", {
             **common_vars,
-            "page_title": "Reset Link Expired",
+            "page_title": N_("Reset Link Expired"),
             "error_reason": "expired"
         })
 
@@ -658,7 +664,7 @@ def ui_reset_password_form_route(
     csrf_token = get_csrf_token(request)
     return templates.TemplateResponse(request, "reset_password.html", {
         **common_vars,
-        "page_title": "Set New Password",
+        "page_title": N_("Set New Password"),
         "csrf_token": csrf_token,
         "token": token,
         "username": user.username
@@ -693,7 +699,7 @@ def ui_reset_password_submit_route(
         common_vars = get_common_template_vars(request, None)
         return templates.TemplateResponse(request, "reset_password_invalid.html", {
             **common_vars,
-            "page_title": "Invalid Reset Link",
+            "page_title": N_("Invalid Reset Link"),
             "error_reason": "invalid"
         })
 
@@ -702,7 +708,7 @@ def ui_reset_password_submit_route(
         common_vars = get_common_template_vars(request, None)
         return templates.TemplateResponse(request, "reset_password_invalid.html", {
             **common_vars,
-            "page_title": "Reset Link Expired",
+            "page_title": N_("Reset Link Expired"),
             "error_reason": "expired"
         })
 
@@ -712,11 +718,11 @@ def ui_reset_password_submit_route(
         new_csrf_token = get_csrf_token(request)
         return templates.TemplateResponse(request, "reset_password.html", {
             **common_vars,
-            "page_title": "Set New Password",
+            "page_title": N_("Set New Password"),
             "csrf_token": new_csrf_token,
             "token": token,
             "username": user.username,
-            "error_message": "Passwords do not match."
+            "error_message": N_("Passwords do not match.")
         })
 
     # Validate password strength and policy consistency with API registration
@@ -727,7 +733,7 @@ def ui_reset_password_submit_route(
         new_csrf_token = get_csrf_token(request)
         return templates.TemplateResponse(request, "reset_password.html", {
             **common_vars,
-            "page_title": "Set New Password",
+            "page_title": N_("Set New Password"),
             "csrf_token": new_csrf_token,
             "token": token,
             "username": user.username,
@@ -756,5 +762,5 @@ def ui_reset_password_submit_route(
     common_vars = get_common_template_vars(request, None)
     return templates.TemplateResponse(request, "reset_password_success.html", {
         **common_vars,
-        "page_title": "Password Reset Successful"
+        "page_title": N_("Password Reset Successful")
     })

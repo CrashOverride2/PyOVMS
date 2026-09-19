@@ -20,6 +20,7 @@ from app.connection_manager import manager
 from app import crud
 from app.models import db as models_db
 from . import templates, get_common_template_vars, get_translator
+from app.utils.i18n_markers import N_
 from app.dependencies import require_admin_user_from_cookie
 from app.services.mqtt_auth_manager import mqtt_manager as mqtt_auth_manager
 from app.services.disposable_email_service import (
@@ -88,7 +89,7 @@ def ui_admin_dashboard(
 
     return templates.TemplateResponse(request, "admin_dashboard.html", {
         **common_vars,
-        "page_title": "Admin Dashboard",
+        "page_title": N_("Admin Dashboard"),
         "system_stats": system_stats,
         "live_counts": live_counts,
         "all_vehicles": all_db_vehicles,
@@ -112,7 +113,7 @@ def ui_admin_logs_route(
 
     return templates.TemplateResponse(request, "admin_logs.html", {
         **common_vars,
-        "page_title": "Server Logs",
+        "page_title": N_("Server Logs"),
     })
 
 @router.post("/infobox", response_class=RedirectResponse, name="ui_admin_update_infobox")
@@ -221,7 +222,7 @@ def ui_admin_update_disposable_email_settings_route(
     if refresh_requested and enable_disposable_email_filter and disposable_email_source == "remote":
         try:
             count = disposable_email_service.refresh_remote_now(db)
-            message = f"Settings saved. Remote list refreshed ({count} domains loaded)."
+            message = _("Settings saved. Remote list refreshed (%(count)s domains loaded).") % {"count": count}
             return RedirectResponse(
                 url=f"{request.url_for('ui_admin_dashboard')}?success_message={quote_plus(str(message))}",
                 status_code=status.HTTP_303_SEE_OTHER

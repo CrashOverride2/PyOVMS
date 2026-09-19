@@ -28,18 +28,14 @@ def _hash_api_key(api_key: str) -> str:
 # trustworthy as a server-side marker afterwards.
 DEVICE_KEY_NAME_PREFIX = "device-"
 
-# The one-shot credential the browser exchanges for a WebSocket connection. Named
-# rather than spelled out at each site: three places used the literal string, and the
-# WebSocket handler consumes (deletes) whatever key it is handed, so "is this actually
-# a ticket?" has to be answerable from one definition.
-WS_TICKET_NAME_PREFIX = "ws-ticket-"
-
 # Keys the server creates for its own plumbing. The user never asked for them, cannot
 # act on them and they disappear on their own, so they are hidden from the profile
 # page and excluded from the quota. A device key is deliberately NOT in this list:
 # it represents a phone the user set up, and being able to see and revoke it is the
-# point.
-INTERNAL_KEY_NAME_PREFIXES = (WS_TICKET_NAME_PREFIX, "temp-karto-delete-")
+# point. `ws-ticket-` used to be here too — the one-shot key a page exchanged for a
+# WebSocket; the socket is authenticated by the session cookie now, and the migration
+# that retired the ticket deleted the rows.
+INTERNAL_KEY_NAME_PREFIXES = ("temp-karto-delete-",)
 
 RESERVED_KEY_NAME_PREFIXES = INTERNAL_KEY_NAME_PREFIXES + (DEVICE_KEY_NAME_PREFIX,)
 
@@ -58,20 +54,8 @@ def is_reserved_key_name(name: str) -> bool:
 
 
 def is_internal_key_name(name: Optional[str]) -> bool:
-    """True for server plumbing keys (WebSocket tickets, Karto deletion keys)."""
+    """True for server plumbing keys (the Karto deletion key)."""
     return bool(name) and name.startswith(INTERNAL_KEY_NAME_PREFIXES)
-
-
-def is_websocket_ticket_name(name: Optional[str]) -> bool:
-    """
-    True for the single-use credential issued by /api/v1/ws-ticket.
-
-    The WebSocket handler deletes the key it authenticates with, so it must be able to
-    tell a ticket from a real key. Without that check a user who passed their regular
-    API key — or their phone's device key, which is also the MQTT
-    password — destroyed it by connecting once.
-    """
-    return bool(name) and name.startswith(WS_TICKET_NAME_PREFIX)
 
 
 def is_device_key(api_key: models_db.ApiKey) -> bool:
@@ -120,13 +104,11 @@ def create_api_key(
     if purpose == KeyPurpose.USER and is_reserved_key_name(name):
         raise ValueError("This API key name is reserved for internal use. Please choose another name.")
 
-    is_websocket_ticket = purpose == KeyPurpose.INTERNAL and is_websocket_ticket_name(name)
     if purpose != KeyPurpose.INTERNAL:
         # Exclude the server's own plumbing from the count. The exemption used to be
-        # one-sided: creating a WebSocket ticket skipped the check, but the ticket
-        # still occupied a slot afterwards. Tickets are only deleted when the socket
-        # actually connects, so a page opened and abandoned leaves one behind for up
-        # to an hour — and the user's quota for real keys shrank in the meantime.
+        # one-sided: creating an internal key skipped the check, but the key still
+        # occupied a slot afterwards, and the user's quota for real keys shrank while
+        # it lived.
         active_key_count = db.query(models_db.ApiKey).filter(
             models_db.ApiKey.user_id == user_id,
             models_db.ApiKey.is_active == True,
@@ -157,7 +139,7 @@ def create_api_key(
     db.commit()
     db.refresh(db_api_key)
 
-    if mqtt_manager.is_enabled() and not is_websocket_ticket:
+    if mqtt_manager.is_enabled():
         mqtt_manager.add_api_key_user(db_api_key.key_prefix, plain_key)
         mqtt_manager.regenerate_acl_file(db)
 
@@ -173,11 +155,8 @@ def get_api_keys_for_user(
     """
     Keys belonging to a user, newest first.
 
-    Server plumbing is hidden by default. WebSocket tickets are created every time the
-    live-log or vehicle-detail page opens a socket and are only removed once that
-    socket connects, so an abandoned page left rows like
-    "ws-ticket-alice-1738454400.12" sitting in the user's key list until hourly
-    housekeeping swept them. Nothing useful can be done with them from that page.
+    Server plumbing is hidden by default: nothing useful can be done with the Karto
+    deletion key from that page, and it disappears on its own.
 
     Device keys stay visible on purpose: each one is a phone the user set up, and
     seeing and revoking them is exactly what that list is for.
@@ -244,12 +223,10 @@ def delete_api_key_by_id_and_user(db: Session, api_key_id: int, user_id: int) ->
     api_key_db = get_api_key_by_id_and_user(db, api_key_id, user_id)
     if api_key_db:
         key_prefix_to_remove = api_key_db.key_prefix
-        key_name = api_key_db.name
         db.delete(api_key_db)
         db.commit()
 
-        is_websocket_ticket = is_websocket_ticket_name(key_name)
-        if mqtt_manager.is_enabled() and not is_websocket_ticket:
+        if mqtt_manager.is_enabled():
             mqtt_manager.remove_api_key_user(key_prefix_to_remove)
             mqtt_manager.regenerate_acl_file(db)
         return api_key_db

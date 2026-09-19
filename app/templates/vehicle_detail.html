@@ -210,14 +210,35 @@
 
 {% block scripts %}
 {{ super() }}
+<script src="{{ url_for('static', path='/js/vehicle_live_view.js') }}"></script>
 <script nonce="{{ request.state.csp_nonce }}">
     const vehicleDetailTranslations = {
-        ws_connecting: {{ _("Connecting...") | tojson | safe }},
-        ws_connected: {{ _("Connected") | tojson | safe }},
-        ws_error: {{ _("Error") | tojson | safe }},
-        ws_disconnected: {{ _("Disconnected: ") | tojson | safe }},
-        ws_conn_lost: {{ _("Connection lost") | tojson | safe }},
-        ws_reconnecting: {{ _("Disconnected. Reconnecting in ") | tojson | safe }},
+        metrics: {
+            metrics: {{ _('metrics') | tojson | safe }},
+            min: {{ _('min') | tojson | safe }},
+            max: {{ _('max') | tojson | safe }},
+            showFewer: {{ _('Show fewer') | tojson | safe }},
+            yes: {{ _('Yes') | tojson | safe }},
+            no: {{ _('No') | tojson | safe }},
+            // The V3 groups are keyed by their English name in Python and in
+            // _create_user_friendly_v3_metric_groups below (the key is also the
+            // element id); this is the one place the label the user sees is chosen.
+            groupLabels: {
+                'Battery Cells': {{ _('Battery Cells') | tojson | safe }},
+                '12V System': {{ _('12V System') | tojson | safe }},
+                'Charging': {{ _('Charging') | tojson | safe }},
+                'Main Battery': {{ _('Main Battery') | tojson | safe }},
+                'Environment': {{ _('Environment') | tojson | safe }},
+                'Position (GPS)': {{ _('Position (GPS)') | tojson | safe }},
+                'Doors & Windows': {{ _('Doors & Windows') | tojson | safe }},
+                'Tires': {{ _('Tires') | tojson | safe }},
+                'Service': {{ _('Service') | tojson | safe }},
+                'Vehicle': {{ _('Vehicle') | tojson | safe }},
+                'Vehicle Specific': {{ _('Vehicle Specific') | tojson | safe }},
+                'Server / System': {{ _('Server / System') | tojson | safe }},
+                'Miscellaneous': {{ _('Miscellaneous') | tojson | safe }}
+            }
+        },
         labels: {
             alert: {{ _('Alert:') | tojson | safe }},
             health: {{ _('Health:') | tojson | safe }},
@@ -238,6 +259,8 @@
             v3_offline: {{ _('V3 Offline/Not Connected') | tojson | safe }}
         },
         errors: {
+            failed: {{ _('Failed') | tojson | safe }},
+            unknown: {{ _('Unknown error') | tojson | safe }},
             failed_to_load_data: {{ _('Failed to load data (Status: ') | tojson | safe }},
             service_unavailable: {{ _('Service unavailable. Server sent an unexpected response (Status: ') | tojson | safe }}
         },
@@ -257,13 +280,29 @@
         hasV2Online: {{ is_v2_online | lower }},
         hasV3Metrics: {{ (v3_metrics_grouped | length > 0) | lower }},
         userPrefersImperial: {{ user_prefers_imperial | lower }},
+        // What window.ovmsLiveView derives the overview from — the same labels the
+        // dashboard card uses.
+        liveView: {
+            lang: {{ (user_locale or 'en') | tojson | safe }},
+            imperial: {{ user_prefers_imperial | lower }},
+            labels: {% include '_live_view_labels.html' %}
+        },
+        liveStatus: {
+            connecting: {{ _('Connecting…') | tojson | safe }},
+            live: {{ _('Live') | tojson | safe }},
+            reconnecting: {{ _('Reconnecting…') | tojson | safe }}
+        },
         // Labels and commands are user text; |tojson is what keeps them inside this string.
         commandFavorites: {{ command_favorites | tojson | safe }},
         maxCommandFavorites: {{ max_command_favorites | tojson | safe }},
         favoritesUrl: {{ url_for('ui_create_command_favorite') | string | tojson | safe }}
     };
     const KM_TO_MI = 0.621371;
-    const MI_TO_KM = 1.60934;
+    // Chips a list metric shows before "+n" expands it.
+    const METRIC_LIST_PREVIEW = 16;
+    // The overview tab's view of the live payload: one derivation, shared with the
+    // dashboard card (static/js/vehicle_live_view.js).
+    const liveView = window.ovmsLiveView.create(vehicleDetailConfig.liveView);
     // Per browser, not per vehicle: the same terminal panel is on every vehicle page.
     const TERMINAL_OUTPUT_HEIGHT_KEY = 'terminal-output-height';
 
@@ -1457,7 +1496,8 @@ function createTripsState() {
         Alpine.data('vehicleDetailPageData', () => ({
             t: vehicleDetailTranslations,
             userTimezone: vehicleDetailConfig.userTimezone,
-            ws: null, wsStatus: vehicleDetailTranslations.ws_connecting, reconnectAttempts: 0, reconnectTimer: null,
+            liveOff: null, liveStatusOff: null, _overviewAgeTimer: null,
+            liveText: vehicleDetailConfig.liveStatus.connecting, liveDotClass: 'bg-gray-500',
             map: null, marker: null, activeTab: 'overview', liveData: initialLiveData,
             tabClasses: {
                 overview: '',
@@ -1493,20 +1533,8 @@ function createTripsState() {
                 v3Online: false,
                 v3Offline: true
             },
-            overviewMetrics: {
-                socText: 'N/A',
-                socClass: 'text-red-400',
-                estimatedRangeText: 'N/A',
-                vehicle12vText: 'N/A',
-                batteryVoltageText: 'N/A',
-                batteryCurrentText: 'N/A',
-                batterySohText: 'N/A',
-                lineVoltageText: 'N/A',
-                chargeCurrentText: 'N/A',
-                chargeStateText: 'N/A',
-                chargeModeText: 'N/A',
-                positionText: 'N/A'
-            },
+            // Every field the overview tab binds, precomputed (see _vehicle_overview.html).
+            overview: liveView.derive(initialLiveData),
             tpmsWheelCards: [],
             tripDeletePreview: {
                 startTimeText: 'N/A',
@@ -1547,11 +1575,19 @@ function createTripsState() {
                 showV3: false,
                 hasV2Groups: false,
                 noV2Groups: true,
+                v2Filtered: false,
+                v2Empty: true,
                 hasV3Groups: false,
                 noV3Groups: true,
+                v3Filtered: false,
+                v3Empty: true,
+                countText: '',
                 v2Groups: [],
                 v3Groups: []
             },
+            metricsFilter: '',
+            // item id -> true while its chip list is shown in full
+            expandedMetricLists: {},
             cellStatsView: {
                 hasVoltages: false,
                 hasTemperatures: false,
@@ -1559,8 +1595,8 @@ function createTripsState() {
                 voltageMinText: '0.000 V',
                 voltageMaxText: '0.000 V',
                 voltageCountText: '0',
-                temperatureMinText: '0.0 °C',
-                temperatureMaxText: '0.0 °C',
+                temperatureMinText: liveView.temperature(0),
+                temperatureMaxText: liveView.temperature(0),
                 temperatureCountText: '0',
                 voltageCells: [],
                 temperatureSensors: []
@@ -1593,7 +1629,6 @@ function createTripsState() {
                     });
                 });
 
-                this.wsStatus = this.t.ws_connecting;
                 this.selectedTerminalProtocol = vehicleDetailConfig.preferV3Terminal ? "v3" : (vehicleDetailConfig.hasV2Online ? "v2" : "v3");
                 this.metricsSource = vehicleDetailConfig.hasV3Metrics ? "v3" : "v2";
                 this.updateDerivedAvailability();
@@ -1700,6 +1735,16 @@ function createTripsState() {
                 this.$watch("metricsSource", () => {
                     this.refreshMetricsUi();
                 });
+                // The "show all" button of a list metric. Delegated: the CSP build
+                // cannot hand an argument to a handler, and the rows are re-rendered
+                // on every refresh.
+                this.$root.addEventListener('click', (event) => {
+                    const button = event.target.closest('.js-metric-list-toggle');
+                    if (!button) return;
+                    const id = button.dataset.itemId;
+                    if (this.expandedMetricLists[id]) delete this.expandedMetricLists[id]; else this.expandedMetricLists[id] = true;
+                    this.refreshMetricsUi();
+                });
 
                 if (this.activeTab === "trips") {
                     this.statsState.init(vehicleDetailConfig.vehicleId, this.userTimezone);
@@ -1772,26 +1817,7 @@ function createTripsState() {
                 this.protocolView.v3Online = v3Online;
                 this.protocolView.v3Offline = !v3Online;
 
-                const socRaw = this.liveData?.soc;
-                const socNum = Number.parseInt(socRaw, 10);
-                let socClass = 'text-red-400';
-                if (!Number.isNaN(socNum)) {
-                    if (socNum >= 70) socClass = 'text-green-400';
-                    else if (socNum >= 30) socClass = 'text-yellow-400';
-                }
-
-                this.overviewMetrics.socText = this.formatMetricValue('soc', '%', 0, false);
-                this.overviewMetrics.socClass = socClass;
-                this.overviewMetrics.estimatedRangeText = this.formatMetricDistance(this.liveData?.estimated_range);
-                this.overviewMetrics.vehicle12vText = this.formatMetricValue('vehicle_12v', ' V', 2, false);
-                this.overviewMetrics.batteryVoltageText = this.formatMetricValue('battery_voltage', ' V', 2, false);
-                this.overviewMetrics.batteryCurrentText = this.formatMetricValue('battery_current', ' A', 2, false);
-                this.overviewMetrics.batterySohText = this.formatMetricValue('battery_soh', ' %', 1, false);
-                this.overviewMetrics.lineVoltageText = this.formatMetricValue('line_voltage', ' V', 1, false);
-                this.overviewMetrics.chargeCurrentText = this.formatMetricValue('charge_current', ' A', 1, false);
-                this.overviewMetrics.chargeStateText = this.formatMetricValue('charge_state_text', '', null, true);
-                this.overviewMetrics.chargeModeText = this.formatMetricValue('charge_mode_text', '', null, true);
-                this.overviewMetrics.positionText = this.getPositionTextDisplay();
+                this.overview = liveView.derive(this.liveData);
 
                 const wheels = this.liveData?.tpms_data?.wheels || [];
                 this.tpmsWheelCards = wheels.map((tyre) => {
@@ -1811,8 +1837,8 @@ function createTripsState() {
                         name: tyre.name,
                         pressureBarStyle: { width: `${pressureWidth}%` },
                         pressureBarClass: this.getTyrePressureBarColor(pressure),
-                        pressureText: pressure !== null ? `${Number(pressure).toFixed(2)} bar` : 'P: N/A',
-                        temperatureText: temp !== null ? `${Number(temp).toFixed(1)}°C` : 'T: N/A',
+                        pressureText: liveView.pressure(pressure) ?? 'P: N/A',
+                        temperatureText: liveView.temperature(temp) ?? 'T: N/A',
                         showHealth: health !== null && typeof health !== 'undefined',
                         healthText: `${this.t.labels.health} ${health}%`,
                         showAlert: alertLevel !== null && alertLevel > 0,
@@ -1991,45 +2017,91 @@ function createTripsState() {
                     cssClass: `${colorClass} whitespace-pre-wrap${spacingClass}`
                 });
             },
+            handleMetricsFilterInput(event) {
+                this.metricsFilter = event.target.value;
+                this.refreshMetricsUi();
+            },
+            // One row of the metrics tab. A value of four or more comma-separated parts
+            // is a list (cell voltages, per-cell deviations, alerts): its own full-width
+            // row with count, min, max and mean when numeric, and the parts as chips —
+            // the first few until expanded. As text, 96 cell voltages were one wrapped
+            // blob that pushed the neighbouring column's rows around.
+            buildMetricItem(id, key, label, value) {
+                const t = vehicleDetailTranslations.metrics;
+                const raw = value === true ? t.yes : (value === false ? t.no : String(value ?? ''));
+                const parts = raw.includes(',') ? raw.split(',').map((x) => x.trim()) : [];
+                const isList = parts.length >= 4;
+                const item = { id, title: key, label, isScalar: !isList, isList, rowClass: isList ? 'md:col-span-2' : '',
+                               valueText: raw, statsText: '', chips: [], showToggle: false, toggleText: '' };
+                if (!isList) return item;
+                const numbers = parts.map(Number);
+                if (numbers.every((n) => Number.isFinite(n))) {
+                    const min = Math.min(...numbers), max = Math.max(...numbers);
+                    const mean = numbers.reduce((a, b) => a + b, 0) / numbers.length;
+                    const digits = Math.min(5, Math.max(...parts.map((x) => (x.split('.')[1] || '').length)));
+                    item.statsText = `${parts.length} · ${t.min} ${min.toFixed(digits)} · ${t.max} ${max.toFixed(digits)} · Ø ${mean.toFixed(digits)}`;
+                } else {
+                    item.statsText = String(parts.length);
+                }
+                const expanded = !!this.expandedMetricLists[id];
+                const shown = expanded ? parts : parts.slice(0, METRIC_LIST_PREVIEW);
+                item.chips = shown.map((text, i) => ({ id: `${id}-${i}`, text, title: `#${i + 1}` }));
+                item.showToggle = parts.length > METRIC_LIST_PREVIEW;
+                item.toggleText = expanded ? t.showFewer : `+${parts.length - shown.length}`;
+                return item;
+            },
             refreshMetricsUi() {
                 const protocol = vehicleDetailConfig.vehicleProtocol;
                 this.metricsUi.showSourceSwitcher = protocol === 'both';
                 this.metricsUi.showV2 = this.metricsSource === 'v2' || protocol === 'v2';
                 this.metricsUi.showV3 = this.metricsSource === 'v3' || protocol === 'v3';
 
-                const v2Entries = Object.entries(this.v2_metrics_grouped || {}).sort((a, b) => a[0].localeCompare(b[0]));
-                this.metricsUi.v2Groups = v2Entries.map(([groupName, items]) => {
-                    const itemEntries = Object.entries(items || {}).sort((a, b) => a[0].localeCompare(b[0]));
-                    return {
-                        id: `v2-${groupName}`,
-                        label: groupName,
-                        items: itemEntries.map(([key, value]) => ({
-                            id: `v2-${groupName}-${key}`,
-                            title: key,
-                            label: this.humanizeKey(key),
-                            valueText: value === true ? 'Yes' : (value === false ? 'No' : String(value))
-                        }))
-                    };
-                });
-                this.metricsUi.hasV2Groups = this.metricsUi.v2Groups.length > 0;
-                this.metricsUi.noV2Groups = !this.metricsUi.hasV2Groups;
+                // Key or group name (as shown, so the translated one), case-insensitive; a
+                // group with no match is dropped.
+                const needle = this.metricsFilter.trim().toLowerCase();
+                const matches = (groupLabel, key) => needle === '' || key.toLowerCase().includes(needle) || groupLabel.toLowerCase().includes(needle);
 
-                const v3Entries = Object.entries(this.v3_metrics_grouped || {}).sort((a, b) => a[0].localeCompare(b[0]));
-                this.metricsUi.v3Groups = v3Entries.map(([groupName, metrics]) => {
-                    const metricEntries = Object.entries(metrics || {}).sort((a, b) => a[0].localeCompare(b[0]));
-                    return {
-                        id: `v3-${groupName}`,
-                        label: groupName,
-                        items: metricEntries.map(([key, value]) => ({
-                            id: `v3-${groupName}-${key}`,
-                            title: key,
-                            key,
-                            valueText: String(value)
-                        }))
-                    };
-                });
-                this.metricsUi.hasV3Groups = this.metricsUi.v3Groups.length > 0;
+                // groups: the ones with a match; total/shown: metrics of this source
+                const build = (source, grouped, labelOf, groupLabelOf) => {
+                    const groups = [];
+                    let total = 0, shown = 0;
+                    for (const [groupName, items] of Object.entries(grouped || {}).sort((a, b) => a[0].localeCompare(b[0]))) {
+                        const entries = Object.entries(items || {}).sort((a, b) => a[0].localeCompare(b[0]));
+                        total += entries.length;
+                        const groupLabel = groupLabelOf(groupName);
+                        const kept = entries.filter(([key]) => matches(groupLabel, key));
+                        if (!kept.length) continue;
+                        shown += kept.length;
+                        groups.push({
+                            id: `${source}-${groupName}`,
+                            label: groupLabel,
+                            items: kept.map(([key, value]) => this.buildMetricItem(`${source}-${groupName}-${key}`, key, labelOf(key), value))
+                        });
+                    }
+                    return { groups, total, shown };
+                };
+
+                const t = vehicleDetailTranslations.metrics;
+                const v2 = build('v2', this.v2_metrics_grouped, (key) => this.humanizeKey(key), (name) => this.humanizeKey(name));
+                this.metricsUi.v2Groups = v2.groups;
+                this.metricsUi.hasV2Groups = v2.groups.length > 0;
+                this.metricsUi.noV2Groups = !this.metricsUi.hasV2Groups;
+                this.metricsUi.v2Filtered = this.metricsUi.noV2Groups && v2.total > 0;
+                this.metricsUi.v2Empty = this.metricsUi.noV2Groups && v2.total === 0;
+
+                const v3 = build('v3', this.v3_metrics_grouped, (key) => key, (name) => t.groupLabels[name] || name);
+                this.metricsUi.v3Groups = v3.groups;
+                this.metricsUi.hasV3Groups = v3.groups.length > 0;
                 this.metricsUi.noV3Groups = !this.metricsUi.hasV3Groups;
+                this.metricsUi.v3Filtered = this.metricsUi.noV3Groups && v3.total > 0;
+                this.metricsUi.v3Empty = this.metricsUi.noV3Groups && v3.total === 0;
+
+                // Counted over the source(s) on screen.
+                const onScreen = [this.metricsUi.showV2 ? v2 : null, this.metricsUi.showV3 ? v3 : null].filter(Boolean);
+                const total = onScreen.reduce((n, r) => n + r.total, 0);
+                const shown = onScreen.reduce((n, r) => n + r.shown, 0);
+                const word = vehicleDetailTranslations.metrics.metrics;
+                this.metricsUi.countText = needle === '' ? `${total} ${word}` : `${shown} / ${total} ${word}`;
             },
             refreshCellStatsView() {
                 const v3Metrics = this.liveData?.v3_metrics || {};
@@ -2068,34 +2140,23 @@ function createTripsState() {
                 if (hasTemperatures) {
                     const min = Math.min(...temps);
                     const max = Math.max(...temps);
-                    this.cellStatsView.temperatureMinText = `${min.toFixed(1)} °C`;
-                    this.cellStatsView.temperatureMaxText = `${max.toFixed(1)} °C`;
+                    this.cellStatsView.temperatureMinText = liveView.temperature(min);
+                    this.cellStatsView.temperatureMaxText = liveView.temperature(max);
                     this.cellStatsView.temperatureCountText = String(temps.length);
                     this.cellStatsView.temperatureSensors = temps.map((value, idx) => ({
                         id: `t-${idx + 1}`,
                         label: `{{ _('Sensor') }} ${idx + 1}`,
-                        valueText: `${value.toFixed(1)} °C`,
+                        valueText: liveView.temperature(value),
                         barStyle: { width: `${this.getBarPercentage(value, 0, 60)}%` },
                         barClass: this.getCellTempBarColor(value)
                     }));
                 } else {
-                    this.cellStatsView.temperatureMinText = '0.0 °C';
-                    this.cellStatsView.temperatureMaxText = '0.0 °C';
+                    this.cellStatsView.temperatureMinText = liveView.temperature(0);
+                    this.cellStatsView.temperatureMaxText = liveView.temperature(0);
                     this.cellStatsView.temperatureCountText = '0';
                     this.cellStatsView.temperatureSensors = [];
                 }
             },
-            formatMetricValue(key, unit = '', precision = null, isString = false) {
-                const value = this.liveData?.[key];
-                if (value === undefined || value === null) return 'N/A';
-                let displayValue = String(value);
-                if (!isString && precision !== null) {
-                    const num = Number.parseFloat(value);
-                    if (!Number.isNaN(num)) displayValue = num.toFixed(precision);
-                }
-                return displayValue + unit;
-            },
-
             deepMerge(target, source) {
                 const output = { ...target };
                 if (this.isObject(target) && this.isObject(source)) {
@@ -2113,15 +2174,6 @@ function createTripsState() {
                 return output;
             },
             isObject(item) { return (item && typeof item === 'object' && !Array.isArray(item)); },
-
-            updateWsStatusFooter(status) {
-                const container = document.getElementById('ws-status-container');
-                if (!container) return;
-                let colorClass = 'text-yellow-400';
-                if (status === this.t.ws_connected) { colorClass = 'text-green-400'; }
-                else if (status.startsWith(this.t.ws_disconnected.trim()) || status.startsWith(this.t.ws_error)) { colorClass = 'text-red-400'; }
-                container.innerHTML = {{ _('Real-time Status:') | tojson | safe }} + ` <span class="font-bold ${colorClass}">${status}</span>`;
-            },
 
             isTerminalProtocolOnline() {
                 if (this.selectedTerminalProtocol === 'v2') return this.liveData.isV2Online;
@@ -2149,63 +2201,36 @@ function createTripsState() {
 
             setPrompt(vehicleId) { this.promptText = `${vehicleId}$ `; },
             disconnect() {
-                clearTimeout(this.reconnectTimer);
-                if (this.ws) { this.ws.onclose = null; this.ws.close(); this.ws = null; }
+                if (this.liveOff) { this.liveOff(); this.liveOff = null; }
+                if (this.liveStatusOff) { this.liveStatusOff(); this.liveStatusOff = null; }
+                clearInterval(this._overviewAgeTimer);
+                this._overviewAgeTimer = null;
             },
-            async connect(vehicleId) {
+            connect(vehicleId) {
+                // Live data over the tab's one socket (window.ovmsSocket in base.html),
+                // which also carries this page's notification toasts. Reconnects,
+                // backoff and the refusal rule live there.
                 this.disconnect();
-                this.wsStatus = this.t.ws_connecting;
-                try {
-                    const response = await fetch("{{ url_for('api_get_ws_ticket') }}", { credentials: 'include' });
-                    if (!response.ok) throw new Error(`Ticket Error: ${response.status} ${response.statusText}`);
-                    const ticketData = await response.json();
-
-                    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                    const wsPath = "{{ url_for('websocket_endpoint') }}";
-                    const wsUrl = new URL(wsPath, `${wsProtocol}//${window.location.host}`);
-                    wsUrl.searchParams.set('ticket', ticketData.app_ws_ticket);
-
-                    this.ws = new WebSocket(wsUrl.toString());
-                    this.ws.binaryType = 'arraybuffer';
-
-                    this.ws.onopen = () => {
-                        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                            this.wsStatus = this.t.ws_connected;
-                            this.reconnectAttempts = 0;
-                            this.ws.send(JSON.stringify({ action: 'subscribe', topic: `vehicle:${vehicleId}` }));
-                        } else {
-                            console.warn("WebSocket was closed before 'onopen' could send subscription.");
-                        }
-                    };
-                    this.ws.onmessage = (event) => {
-                        try {
-                            const data = MessagePack.decode(new Uint8Array(event.data));
-                            if (data.type === 'ping') { return; }
-                            if (data && data.topic === `vehicle:${vehicleId}` && data.type === 'update') {
-                                this.handleDataUpdate(data.payload);
-                            }
-                        } catch (e) { console.error("Error decoding WebSocket message:", e); }
-                    };
-                    this.ws.onerror = (event) => { console.error("WebSocket error:", event); this.wsStatus = this.t.ws_error; };
-                    
-                    this.ws.onclose = (event) => {
-                        this.wsStatus = this.t.ws_disconnected + (event.reason || this.t.ws_conn_lost);
+                if (!window.ovmsSocket) return;
+                this.liveOff = window.ovmsSocket.subscribe(`vehicle:${vehicleId}`, (data) => {
+                    if (data.type === 'update') this.handleDataUpdate(data.payload);
+                });
+                // The socket dropping means the online state is unknown; the server-
+                // rendered state stands until then (the first call reports the initial
+                // state, which may still be "connecting"). The overview's "Real-time
+                // Status" line shows the same state as the dashboard's indicator.
+                let first = true;
+                this.liveStatusOff = window.ovmsSocket.onStatus((connected) => {
+                    if (first) { first = false; if (!connected) return; }
+                    this.liveText = connected ? vehicleDetailConfig.liveStatus.live : vehicleDetailConfig.liveStatus.reconnecting;
+                    this.liveDotClass = connected ? 'bg-green-400 animate-pulse' : 'bg-gray-500';
+                    if (!connected) {
                         this.liveData.isV2Online = false; this.liveData.isV3Online = false;
-                        this.handleReconnect(vehicleId);
-                    };
-
-                } catch (error) {
-                    console.error("Connection setup failed:", error);
-                    this.wsStatus = this.t.ws_error + ': ' + error.message;
-                    this.handleReconnect(vehicleId);
-                }
-            },
-            handleReconnect(vehicleId) {
-                if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-                const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
-                this.reconnectAttempts++;
-                this.wsStatus = this.t.ws_reconnecting + Math.round(delay / 1000) + 's...';
-                this.reconnectTimer = setTimeout(() => this.connect(vehicleId), delay);
+                        this.refreshOverviewDerived();
+                    }
+                });
+                // "3 minutes ago" ages even while nothing arrives.
+                this._overviewAgeTimer = setInterval(() => this.refreshOverviewDerived(), 30000);
             },
             handleDataUpdate(payload) {
                 this.liveData = this.deepMerge(this.liveData, payload);
@@ -2360,25 +2385,6 @@ function createTripsState() {
                 if (!isString && precision !== null) { const num = parseFloat(value); if (!isNaN(num)) displayValue = num.toFixed(precision); }
                 return displayValue + unit;
             },
-            getPositionTextDisplay() {
-                const latVal = this.liveData.lat, lonVal = this.liveData.lon;
-                if (latVal === null || lonVal === null) return 'N/A';
-                try { return `${parseFloat(latVal).toFixed(3)}, ${parseFloat(lonVal).toFixed(3)}`; } catch (e) { return 'Invalid Coords'; }
-            },
-            getUnitSuffix() { return vehicleDetailConfig.userPrefersImperial ? ' mi' : ' km'; },
-            normalizeToKm(value, vehicleUnits) {
-                const v = parseFloat(value);
-                if (isNaN(v)) return null;
-                const u = String(vehicleUnits || '').toUpperCase();
-                return (u !== '' && u !== 'N/A' && u !== 'K') ? v * MI_TO_KM : v;
-            },
-            formatMetricDistance(rawValue) {
-                const u = String(this.liveData?.units || '').toUpperCase();
-                const km = this.normalizeToKm(rawValue, u);
-                if (km === null) return 'N/A';
-                if (vehicleDetailConfig.userPrefersImperial) return `${(km * KM_TO_MI).toFixed(0)} mi`;
-                return `${km.toFixed(0)} km`;
-            },
             getBarPercentage(v, min, range) { if (v === null || isNaN(v) || range <= 0) return 0; return Math.max(0, Math.min(100, ((v - min) / range) * 100)); },
             getTyrePressureBarColor(p) { if (p === null || isNaN(p)) return 'bg-gray-500'; if (p < 1.8 || p > 3.0) return 'bg-red-500'; if (p < 2.0 || p > 2.8) return 'bg-yellow-500'; return 'bg-green-500'; },
             getCellVoltageBarColor(v, min, max) { if (v === null || isNaN(v)) return 'bg-gray-500'; const range = max - min; if (range === 0) return 'bg-green-500'; const deviation = Math.abs(v - ((max + min) / 2)); const percentage = (deviation / (range / 2)) * 100; if (percentage > 75) return 'bg-red-500'; if (percentage > 50) return 'bg-yellow-500'; return 'bg-green-500'; },
@@ -2411,7 +2417,7 @@ function createTripsState() {
                     });
                     const result = await response.json();
                     this.rememberCsrfToken(result);
-                    let responseText = `Failed: ${result.response_data || result.error_message || 'Unknown error'}`;
+                    let responseText = `${vehicleDetailTranslations.errors.failed}: ${result.response_data || result.error_message || result.detail || vehicleDetailTranslations.errors.unknown}`;
                     if (response.ok && result.success) {
                         if (this.selectedTerminalProtocol === 'v2' && result.response_data) {
                             const parts = result.response_data.split(',');

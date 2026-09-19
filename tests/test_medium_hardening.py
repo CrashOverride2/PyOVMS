@@ -666,11 +666,17 @@ def test_changing_the_second_factor_invalidates_other_sessions():
 def test_the_acting_session_survives_a_2fa_change():
     """
     ...but the user must not be logged out by their own security action, or the
-    feature reads as broken and people stop using it.
+    feature reads as broken and people stop using it. The same goes for a password
+    change on the profile page: update_user() bumps token_version there too, and
+    without the re-issue the redirect to the success message was the login page.
     """
     from app.routers.ui import profile
 
-    for fn in (profile.ui_totp_enable_submit_route, profile.ui_totp_disable_submit_route):
+    for fn in (
+        profile.ui_totp_enable_submit_route,
+        profile.ui_totp_disable_submit_route,
+        profile.ui_change_password_submit_route,
+    ):
         assert "_reissue_session_cookie" in _code_only(fn), (
             f"{fn.__name__} bumps token_version without re-issuing the caller's cookie"
         )

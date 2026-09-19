@@ -342,12 +342,12 @@ def test_device_name_cannot_impersonate_an_internal_key(client, db):
     """
     _make_user(db)
 
-    response = _post(client, device_name="ws-ticket-mallory")
+    response = _post(client, device_name="temp-karto-delete-mallory")
 
     assert response.status_code == 201
     key = db.query(models_db.ApiKey).first()
     assert key.name.startswith("device-")
-    assert not key.name.startswith("ws-ticket-")
+    assert not key.name.startswith("temp-karto-delete-")
 
 
 # --- the expiry slides, so a working install never breaks -----------------------------------
@@ -520,15 +520,14 @@ def test_the_device_key_is_returned_by_the_api_listing(client, db):
     assert any(item["name"].startswith("device-") for item in response.json())
 
 
-def test_websocket_tickets_are_hidden_from_the_user(db):
+def test_internal_keys_are_hidden_from_the_user(db):
     """
-    Tickets are minted every time a page opens a socket and only removed once that
-    socket connects, so an abandoned page left rows in the user's key list until
-    hourly housekeeping. There is nothing the user can do with them.
+    The Karto deletion key lives for the one request that needs it; it sat in the
+    user's key list until then, and there is nothing the user can do with it.
     """
     user, _ = _make_user(db)
     crud.apikey.create_api_key(
-        db, user_id=user.id, name="ws-ticket-alice-123.45",
+        db, user_id=user.id, name="temp-karto-delete-alice-123.45",
         expires_delta=datetime.timedelta(minutes=1),
         purpose=crud.apikey.KeyPurpose.INTERNAL,
     )
@@ -543,15 +542,15 @@ def test_websocket_tickets_are_hidden_from_the_user(db):
 
 def test_internal_keys_do_not_consume_the_user_quota(db):
     """
-    The exemption used to be one-sided: creating a ticket skipped the quota check, but
-    the ticket then occupied a slot for real keys until it was swept.
+    The exemption used to be one-sided: creating an internal key skipped the quota
+    check, but the key then occupied a slot for real keys until it was swept.
     """
     from app.config import settings
 
     user, _ = _make_user(db)
     for i in range(5):
         crud.apikey.create_api_key(
-            db, user_id=user.id, name=f"ws-ticket-alice-{i}",
+            db, user_id=user.id, name=f"temp-karto-delete-alice-{i}",
             expires_delta=datetime.timedelta(minutes=1),
             purpose=crud.apikey.KeyPurpose.INTERNAL,
         )
@@ -567,14 +566,12 @@ def test_internal_keys_do_not_consume_the_user_quota(db):
         settings.MAX_API_KEYS_PER_USER = original
 
 
-def test_both_internal_prefixes_are_still_in_use():
+def test_the_internal_prefix_is_still_in_use():
     """
-    Guard against dead machinery: if either of these stops being used, the prefix and
-    its special-casing should go too rather than linger as unexplained surface.
+    Guard against dead machinery: if this stops being used, the prefix and its
+    special-casing should go too rather than linger as unexplained surface — the way
+    `ws-ticket-` went when the WebSocket moved to cookie authentication.
     """
-    ws_ticket_users = (REPO_ROOT / "app" / "templates" / "admin_logs.html").read_text()
-    assert "api_get_ws_ticket" in ws_ticket_users, "WebSocket tickets serve the live log view"
-
     vehicle_service = (REPO_ROOT / "app" / "services" / "vehicle_service.py").read_text()
     assert "temp-karto-delete-" in vehicle_service, "Karto deletion still mints a temp key"
     assert "delete_api_key_by_id_and_user" in vehicle_service, (

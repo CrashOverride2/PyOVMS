@@ -15,7 +15,8 @@ from app import crud, security
 from app.models import api as models_api
 from app.models import db as models_db
 from app.models.db import WebAuthnCredential
-from . import templates, get_common_template_vars, get_translator
+from . import templates, get_common_template_vars, get_translator, format_validation_error
+from app.utils.i18n_markers import N_
 from app.dependencies import require_current_user_from_cookie_fully_authenticated, get_client_ip
 from app.config import settings
 from app.csrf_protection import verify_csrf_token, get_csrf_token
@@ -69,7 +70,7 @@ def ui_profile_page_route(
 
     return templates.TemplateResponse(request, "profile.html", {
         **common_vars,
-        "page_title": "My Profile",
+        "page_title": N_("My Profile"),
         "api_keys": api_keys,
         "now_utc": now_utc_for_template,
         "is_totp_enabled": is_totp_enabled,
@@ -140,7 +141,7 @@ def ui_confirm_password_form_route(
     common_vars = get_common_template_vars(request, current_user)
     return templates.TemplateResponse(request, "confirm_password.html", {
         **common_vars,
-        "page_title": "Confirm Password",
+        "page_title": N_("Confirm Password"),
         "csrf_token": get_csrf_token(request),
         "next_url": _safe_next_url(request, next_url),
         "error_message": error_message,
@@ -260,7 +261,7 @@ def ui_update_profile_submit_route(
                 # Escape the message only — `&tab=info` is a separate parameter and
                 # must stay outside the escaped part. Without this an address
                 # containing '&' would inject query parameters of its own.
-                msg = quote_plus(f"The email '{email_to_update}' is already registered.")
+                msg = quote_plus(_("The email '%(email)s' is already registered.") % {"email": email_to_update})
                 return RedirectResponse(url=f"{base_redirect_url}?error_message={msg}&tab=info", status_code=status.HTTP_303_SEE_OTHER)
         else:
              update_payload_dict['email'] = None
@@ -280,7 +281,7 @@ def ui_update_profile_submit_route(
     try:
         user_in_update = models_api.UserUpdate(**update_payload_dict)
     except ValidationError as e:
-        error_detail = f"{e.errors()[0]['loc'][0].capitalize()}: {e.errors()[0]['msg']}"
+        error_detail = format_validation_error(_, e)
         return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(str(error_detail))}&tab=info", status_code=status.HTTP_303_SEE_OTHER)
 
     crud.user.update_user(db=db, user_db=current_user, user_in=user_in_update)
@@ -318,7 +319,7 @@ def ui_change_password_submit_route(
         user_in_update = models_api.UserUpdate(password=new_password)
     except ValidationError as e:
         security_manager.record_failure(client_ip, 'login')
-        error_detail = f"{e.errors()[0]['loc'][0].capitalize()}: {e.errors()[0]['msg']}"
+        error_detail = format_validation_error(_, e)
         return RedirectResponse(url=f"{base_redirect_url}?error_message={quote_plus(str(error_detail))}&tab=password", status_code=status.HTTP_303_SEE_OTHER)
         
     crud.user.update_user(db=db, user_db=current_user, user_in=user_in_update)
@@ -332,7 +333,14 @@ def ui_change_password_submit_route(
         pass
     # The user just proved their old password; no reason to ask again immediately.
     mark_reauthenticated(request, current_user.id)
-    return RedirectResponse(url=f"{base_redirect_url}?success_message={quote_plus(_("Password updated successfully."))}&tab=password", status_code=status.HTTP_303_SEE_OTHER)
+    redirect = RedirectResponse(url=f"{base_redirect_url}?success_message={quote_plus(_("Password updated successfully."))}&tab=password", status_code=status.HTTP_303_SEE_OTHER)
+    # update_user() bumped token_version, which ends every other session — the point
+    # of changing a password after a suspected compromise. The 2FA routes re-issue
+    # the acting session's cookie for that reason; this one did not, so the redirect
+    # above was refused and the person who had just changed their password landed
+    # on the login page instead of the success message.
+    _reissue_session_cookie(request, redirect, current_user)
+    return redirect
 
 @router.post("/apikeys/create", response_class=RedirectResponse, name="ui_create_api_key")
 def ui_create_api_key_route(
@@ -446,7 +454,7 @@ def ui_totp_setup_form_route(
     
     return templates.TemplateResponse(request, "profile_totp_setup.html", {
         **common_vars,
-        "page_title": "Setup Authenticator App (TOTP)",
+        "page_title": N_("Setup Authenticator App (TOTP)"),
         "otpauth_uri": otpauth_uri, 
         "qr_code_data_uri": qr_code_data_uri,
         "manual_setup_key": pending_secret 
@@ -633,7 +641,7 @@ def ui_download_config_backup_route(
     """
     backup = crud.config_backup.get_backup(db, owner_id=current_user.id, backup_id=backup_id)
     if backup is None:
-        raise HTTPException(status_code=404, detail="Backup not found")
+        raise HTTPException(status_code=404, detail=N_("Backup not found."))
 
     stamp = as_utc(backup.created_at).strftime("%Y%m%d-%H%M%S")
     raw_name = f"ovms-connect-backup-{stamp}" + (f"-{backup.label}" if backup.label else "")

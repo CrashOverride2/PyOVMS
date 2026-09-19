@@ -2,17 +2,43 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 import datetime
 import logging
-from typing import Optional, List
+from typing import Dict, Iterable, Optional, List
 
 from app.models import db as models_db
 from app.models import api as models_api
 from app.services.mqtt_sync_worker import mqtt_sync_worker
 from app.utils.crypto import encrypt_data
+from app.websocket_manager import manager as websocket_manager, vehicle_topic
 
 logger = logging.getLogger(__name__)
 
+# How many ids one IN (...) carries. SQLite bound 999 host parameters per statement
+# before 3.32, and every backend parses the list; the broadcaster asks for every
+# vehicle anyone is watching in one call.
+_IDS_PER_QUERY = 500
+
 def get_vehicle_by_vehicle_id(db: Session, vehicle_id: str) -> Optional[models_db.Vehicle]:
     return db.query(models_db.Vehicle).options(joinedload(models_db.Vehicle.owner)).filter(models_db.Vehicle.vehicle_id == vehicle_id.upper()).first()
+
+def get_vehicles_by_vehicle_ids(db: Session, vehicle_ids: Iterable[str]) -> Dict[str, models_db.Vehicle]:
+    """
+    The vehicles behind a set of ids, keyed by id; an id nobody has is simply absent.
+
+    One round trip for the lot instead of one per id: the live-data broadcaster
+    fetches every watched vehicle on every tick, and a fleet dashboard of ninety
+    cards was ninety SELECTs every two seconds.
+    """
+    wanted = list({vehicle_id.upper() for vehicle_id in vehicle_ids})
+    found: Dict[str, models_db.Vehicle] = {}
+    for start in range(0, len(wanted), _IDS_PER_QUERY):
+        rows = (
+            db.query(models_db.Vehicle)
+            .options(joinedload(models_db.Vehicle.owner))
+            .filter(models_db.Vehicle.vehicle_id.in_(wanted[start:start + _IDS_PER_QUERY]))
+            .all()
+        )
+        found.update({row.vehicle_id: row for row in rows})
+    return found
 
 def get_vehicle_by_id(db: Session, vehicle_db_id: int) -> Optional[models_db.Vehicle]:
     return db.query(models_db.Vehicle).options(joinedload(models_db.Vehicle.owner)).filter(models_db.Vehicle.id == vehicle_db_id).first()
@@ -62,6 +88,7 @@ def update_vehicle(db: Session, vehicle_db_id: int, vehicle_in: models_api.Vehic
         return None
     
     old_protocol = db_vehicle.protocol
+    old_vehicle_id = db_vehicle.vehicle_id
     update_data = vehicle_in.model_dump(exclude_unset=True)
 
     for field, value in update_data.items():
@@ -93,6 +120,9 @@ def update_vehicle(db: Session, vehicle_db_id: int, vehicle_in: models_api.Vehic
     if protocol_switched or password_changed:
         mqtt_sync_worker.mark_vehicle_dirty(db_vehicle.vehicle_id, acl=protocol_switched)
 
+    if db_vehicle.vehicle_id != old_vehicle_id:
+        websocket_manager.drop_topic_threadsafe(vehicle_topic(old_vehicle_id))
+
     return db_vehicle
 
 def delete_vehicle(db: Session, vehicle_db_id: int) -> Optional[models_db.Vehicle]:
@@ -107,6 +137,8 @@ def delete_vehicle(db: Session, vehicle_db_id: int) -> Optional[models_db.Vehicl
         if protocol_was in ('v3', 'both'):
             # The row is gone, so the worker will simply drop the broker entry.
             mqtt_sync_worker.mark_vehicle_dirty(vehicle_id_to_remove)
+
+        websocket_manager.drop_topic_threadsafe(vehicle_topic(vehicle_id_to_remove))
 
     return db_vehicle
 

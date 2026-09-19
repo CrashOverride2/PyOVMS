@@ -50,6 +50,11 @@ your.domain.com {
     # }
 
     # ── Main PyOVMS application ──────────────────────────────────────────────
+    # Caddy forwards the browser's Host header unchanged, which PyOVMS relies on:
+    # WebSocket handshakes are authenticated by the session cookie and refused
+    # when their Origin does not match Host (cross-site WebSocket hijacking). Do
+    # not add "header_up Host {upstream_hostport}" here; if you must, set
+    # SERVER_BASE_URL in .env to the public origin, which is accepted as well.
     reverse_proxy 127.0.0.1:8000
 
     # ── Custom error pages ───────────────────────────────────────────────────

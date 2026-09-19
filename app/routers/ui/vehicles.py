@@ -3,7 +3,6 @@ from fastapi import APIRouter, Request, Depends, Form, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any, Iterator
-import asyncio
 import json
 import csv
 import io
@@ -29,12 +28,12 @@ from app.services.vehicle_service import (
     send_command_to_vehicle,
     trigger_karto_vehicle_deletion,
 )
-from app.utils.vehicle_data_presenter import parse_crash_log_data, parse_stored_msgs_for_vehicle_info
+from app.utils.vehicle_data_presenter import parse_crash_log_data
 from app.utils.datalog_definitions import DATALOG_DEFINITIONS
 from zoneinfo import ZoneInfo
-from app.utils.vehicle_state_parser import parse_v2_messages_to_metrics_dict
 from app.utils.timestamps import as_utc
-from app.metrics_manager import metrics_manager
+from app.utils.i18n_markers import N_
+from app.utils.vehicle_live_payload import build_vehicle_live_payload
 from app.csrf_protection import verify_csrf_token, get_csrf_token
 import logging
 
@@ -199,7 +198,7 @@ def ui_add_vehicle_submit_route(
         # The regex above already constrains this to [A-Z0-9-], so nothing here needs
         # escaping today. Escaped anyway so the safety comes from this line rather than
         # from a check five lines up that a later edit could move or loosen.
-        msg = quote_plus(f"Vehicle ID '{vehicle_id_upper}' already exists.")
+        msg = quote_plus(_("Vehicle ID '%(id)s' already exists.") % {"id": vehicle_id_upper})
         return RedirectResponse(url=f"{request.url_for('ui_add_vehicle_form')}?error_message={msg}", status_code=status.HTTP_303_SEE_OTHER)
 
     owner_id_to_use = current_user.id
@@ -284,7 +283,7 @@ def ui_edit_vehicle_form_route(
         **common_vars,
         "vehicle": vehicle_api_model,
         "paranoid_token_display": paranoid_token_display,
-        "page_title": f"Edit Vehicle: {db_vehicle.vehicle_id}",
+        "page_title": _("Edit Vehicle: %(id)s") % {"id": db_vehicle.vehicle_id},
         "form_action_url": request.url_for('ui_edit_vehicle_submit', vehicle_db_id=vehicle_db_id)
     })
 
@@ -408,6 +407,50 @@ async def ui_delete_vehicle_route(
     crud.vehicle.delete_vehicle(db, vehicle_db_id)
     return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?success_message={quote_plus(_("Vehicle '%(id)s' deleted successfully.") % {'id': vehicle_to_delete.vehicle_id})}", status_code=status.HTTP_303_SEE_OTHER)
 
+def _load_vehicle_detail(db: Session, db_vehicle: models_db.Vehicle, user_id: int) -> Dict[str, Any]:
+    """
+    The vehicle page's data: every query and every parse, synchronous, for one
+    threadpool hop from the coroutine that renders it.
+
+    The first paint uses `build_vehicle_live_payload()` — the same shape the
+    `vehicle:<id>` socket pushes afterwards, so the page has one render path. A
+    V2-only vehicle has its charge-logging metrics (which the V2 handlers store in
+    metrics_manager) removed from the V3 view, as the page does on every update.
+    """
+    vehicle_id = db_vehicle.vehicle_id
+    crash_logs_db = crud.historical_data.get_historical_data_for_vehicle(db, vehicle_id, record_type_like="%Crash%", limit=50)
+    debug_logs_db = crud.historical_data.get_historical_data_for_vehicle(
+        db, vehicle_id, record_type_like="%Debug%", exclude_record_type_like="%Crash%", limit=50
+    )
+    # Vehicle history records (data notifications, e.g. *-LOG-Trip / *-LOG-Grid), grouped
+    # by record type. Crash/debug records have their own cards.
+    datalog_summary = [
+        s for s in crud.historical_data.get_historical_summary(db, vehicle_id)
+        if 'crash' not in s['h_recordtype'].lower() and 'debug' not in s['h_recordtype'].lower()
+    ]
+    live = build_vehicle_live_payload(db_vehicle)
+    if live["v3_metrics"] and db_vehicle.protocol == 'v2':
+        v2_charge_metrics = {
+            'v.c.charging', 'v.b.soc', 'v.c.power', 'v.c.kwh', 'v.b.temp',
+            'v.o.odometer', 'v.p.latitude', 'v.p.longitude'
+        }
+        live["v3_metrics"] = {k: v for k, v in live["v3_metrics"].items() if k not in v2_charge_metrics}
+    return {
+        "debug_logs_db": debug_logs_db,
+        "datalog_summary": datalog_summary,
+        "initial_live_data": live,
+        "parsed_crash_logs": _parse_crash_logs_sync(crash_logs_db),
+        "push_subscriptions": crud.push_subscription.get_subscriptions_for_vehicle(db, db_vehicle.id),
+        # Loaded here, not lazily on the event loop when the template reads it.
+        "owner_username": db_vehicle.owner.username if db_vehicle.owner else None,
+        # The terminal's favorites are the user's, not the vehicle's; rendered into
+        # the page like the metrics so the tab needs no request of its own.
+        "command_favorites": [
+            models_api.CommandFavoriteInfo.model_validate(f).model_dump()
+            for f in crud.command_favorite.list_favorites(db, user_id)
+        ],
+    }
+
 @router.get("/{vehicle_module_id}", response_class=HTMLResponse, name="ui_vehicle_detail_page")
 async def ui_vehicle_detail_page_route(
     request: Request, vehicle_module_id: str, db: Session = Depends(get_db),
@@ -425,83 +468,43 @@ async def ui_vehicle_detail_page_route(
         # Unlike the add route, this value is a *path* parameter and passes no regex —
         # a request for /vehicles/A%26tab%3Dx reaches here verbatim, so an unescaped
         # interpolation would let the caller append query parameters of their own.
-        msg = quote_plus(f"Vehicle '{vehicle_id_upper}' not found.")
+        msg = quote_plus(_("Vehicle '%(id)s' not found.") % {"id": vehicle_id_upper})
         return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={msg}", status_code=status.HTTP_303_SEE_OTHER)
     if not current_user.is_admin and db_vehicle.owner_id != current_user.id:
         return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Not authorized to view this vehicle's details."))}", status_code=status.HTTP_303_SEE_OTHER)
 
-    crash_logs_db = crud.historical_data.get_historical_data_for_vehicle(db, vehicle_id_upper, record_type_like="%Crash%", limit=50)
-    debug_logs_db = crud.historical_data.get_historical_data_for_vehicle(
-        db, vehicle_id_upper, record_type_like="%Debug%", exclude_record_type_like="%Crash%", limit=50
-    )
-    # Vehicle history records (data notifications, e.g. *-LOG-Trip / *-LOG-Grid), grouped
-    # by record type. Crash/debug records have their own cards above.
-    datalog_summary = [
-        s for s in crud.historical_data.get_historical_summary(db, vehicle_id_upper)
-        if 'crash' not in s['h_recordtype'].lower() and 'debug' not in s['h_recordtype'].lower()
-    ]
-    v2_metrics_flat = await run_in_threadpool(parse_v2_messages_to_metrics_dict, db_vehicle)
-    v3_metrics_flat = metrics_manager.get_metrics_for_vehicle(vehicle_id_upper)
-
-    # Filter out V2-sourced charge logging metrics from V3 display if vehicle is V2-only
-    # These metrics are stored in metrics_manager by V2 protocol handlers for charge logging
-    # but should not appear as "V3/MQTT metrics" when the vehicle doesn't actually use V3
-    if v3_metrics_flat and db_vehicle.protocol == 'v2':
-        v2_charge_metrics = {
-            'v.c.charging', 'v.b.soc', 'v.c.power', 'v.c.kwh', 'v.b.temp',
-            'v.o.odometer', 'v.p.latitude', 'v.p.longitude'
-        }
-        v3_metrics_flat = {k: v for k, v in v3_metrics_flat.items() if k not in v2_charge_metrics}
+    # Every read and parse of the page in one threadpool hop. This handler is a
+    # coroutine (it awaits the sends below), so a query inline here ran on the event
+    # loop and stalled every socket and response of the worker for its duration.
+    page = await run_in_threadpool(_load_vehicle_detail, db, db_vehicle, current_user.id)
+    debug_logs_db = page["debug_logs_db"]
+    datalog_summary = page["datalog_summary"]
+    initial_live_data = page["initial_live_data"]
+    parsed_crash_logs = page["parsed_crash_logs"]
+    push_subscriptions = page["push_subscriptions"]
+    command_favorites = page["command_favorites"]
+    v2_metrics_flat = initial_live_data["v2_metrics"]
+    v3_metrics_flat = initial_live_data["v3_metrics"]
 
     v2_metrics_grouped = {}
     for key, value in v2_metrics_flat.items():
-        prefix, _, rest = key.partition('.')
+        prefix, _sep, rest = key.partition('.')
         if prefix not in v2_metrics_grouped: v2_metrics_grouped[prefix] = {}
         v2_metrics_grouped[prefix][rest] = value
 
     v3_metrics_grouped = _create_user_friendly_v3_metric_groups(v3_metrics_flat)
-
-    (parsed_info, parsed_crash_logs) = await asyncio.gather(
-        run_in_threadpool(parse_stored_msgs_for_vehicle_info, db_vehicle),
-        run_in_threadpool(_parse_crash_logs_sync, crash_logs_db)
-    )
-    status_parsed, loc_parsed, tpms_parsed, diag_parsed = parsed_info
 
     debug_logs = [
         {"timestamp": log.timestamp, "record_type": log.record_type, "data": log.data_payload}
         for log in debug_logs_db
     ]
 
-    is_v2_online = db_vehicle.vehicle_id in manager.car_connections
-    now_utc = datetime.datetime.now(datetime.timezone.utc)
-    is_v3_online = False
-    if db_vehicle.last_seen_v3 and (now_utc - db_vehicle.last_seen_v3.replace(tzinfo=datetime.timezone.utc)).total_seconds() < (15 * 60):
-        is_v3_online = True
+    is_v2_online = initial_live_data["isV2Online"]
+    is_v3_online = initial_live_data["isV3Online"]
 
     vehicle_info = models_api.VehicleInfo.from_orm(db_vehicle)
-    if db_vehicle.owner: vehicle_info.owner_username = db_vehicle.owner.username
-    
-    initial_live_data = {
-        'isV2Online': is_v2_online, 'isV3Online': is_v3_online,
-        'soc': status_parsed.get('soc') if status_parsed else None, 'units': status_parsed.get('units') if status_parsed else None,
-        'line_voltage': status_parsed.get('line_voltage') if status_parsed else None, 'charge_current': status_parsed.get('charge_current') if status_parsed else None,
-        'charge_state_text': status_parsed.get('charge_state_text') if status_parsed else None, 'charge_mode_text': status_parsed.get('charge_mode_text') if status_parsed else None,
-        'estimated_range': status_parsed.get('estimated_range') if status_parsed else None, 'battery_voltage': status_parsed.get('battery_voltage') if status_parsed else None,
-        'battery_current': status_parsed.get('battery_current') if status_parsed else None, 'battery_soh': status_parsed.get('battery_soh') if status_parsed else None,
-        'vehicle_12v': diag_parsed.get('vehicle_12v') if diag_parsed else None, 'lat': loc_parsed.get('lat') if loc_parsed else None,
-        'lon': loc_parsed.get('lon') if loc_parsed else None,
-        'lastMessageAt': db_vehicle.last_message_at.isoformat() + "Z" if db_vehicle.last_message_at else None,
-        'tpms_data': tpms_parsed if tpms_parsed else None,
-        'v3_metrics': v3_metrics_flat,
-    }
-            
-    push_subscriptions = crud.push_subscription.get_subscriptions_for_vehicle(db, db_vehicle.id)
-    # The terminal's favorites are the user's, not the vehicle's; rendered into the
-    # page like the metrics so the tab needs no request of its own.
-    command_favorites = [
-        models_api.CommandFavoriteInfo.model_validate(f).model_dump()
-        for f in crud.command_favorite.list_favorites(db, current_user.id)
-    ]
+    vehicle_info.owner_username = page["owner_username"]
+
 
     return templates.TemplateResponse(request, "vehicle_detail.html", {
         **common_vars, "vehicle": vehicle_info, "is_v2_online": is_v2_online, "is_v3_online": is_v3_online,
@@ -511,7 +514,7 @@ async def ui_vehicle_detail_page_route(
         # the single place where the <, > and & escaping happens — without it the
         # car-supplied values here (units, v3_metrics) break out of the <script> block.
         # Matches the sibling metric groups above.
-        "initial_live_data": initial_live_data, "page_title": f"Vehicle Detail: {vehicle_id_upper}",
+        "initial_live_data": initial_live_data, "page_title": _("Vehicle Detail: %(id)s") % {"id": vehicle_id_upper},
         "push_subscriptions": push_subscriptions, "datalog_summary": datalog_summary,
         "command_favorites": command_favorites,
         "max_command_favorites": crud.command_favorite.MAX_COMMAND_FAVORITES_PER_USER,
@@ -531,7 +534,7 @@ def ui_vehicle_trip_detail_page_route(
     vehicle_id = vehicle_module_id.upper()
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_id)
     if not vehicle_db or (not current_user.is_admin and vehicle_db.owner_id != current_user.id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found or not authorized.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=N_("Vehicle not found or not authorized."))
         
     # This route now only serves the container page.
     # The actual data fetching happens client-side via Alpine.js.
@@ -539,7 +542,7 @@ def ui_vehicle_trip_detail_page_route(
         **common_vars,
         "vehicle": vehicle_db,
         "trip_id": trip_id,
-        "page_title": f"Trip Detail for {vehicle_id}"
+        "page_title": _("Trip Detail for %(id)s") % {"id": vehicle_id}
     })
 
 @router.get("/{vehicle_module_id}/charge/{charge_log_id}", response_class=HTMLResponse, name="ui_vehicle_charge_detail_page")
@@ -556,13 +559,13 @@ def ui_vehicle_charge_detail_page_route(
     vehicle_id = vehicle_module_id.upper()
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_id)
     if not vehicle_db or (not current_user.is_admin and vehicle_db.owner_id != current_user.id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found or not authorized.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=N_("Vehicle not found or not authorized."))
 
     return templates.TemplateResponse(request, "charge_detail.html", {
         **common_vars,
         "vehicle": vehicle_db,
         "charge_log_id": charge_log_id,
-        "page_title": f"Charge Detail for {vehicle_id}"
+        "page_title": _("Charge Detail for %(id)s") % {"id": vehicle_id}
     })
 
 @router.post("/{vehicle_module_id}/push/add-ntfy", response_class=RedirectResponse, name="ui_add_ntfy_subscription")
@@ -688,7 +691,7 @@ async def ui_send_command_to_vehicle_ajax_route(
 
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not vehicle_db:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=N_("Vehicle not found."))
     if not current_user.is_admin and vehicle_db.owner_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to command this vehicle.")
 
@@ -704,9 +707,9 @@ def download_crash_logs_csv_route(
 ):
     db_vehicle = crud.vehicle.get_vehicle_by_id(db, vehicle_db_id)
     if not db_vehicle:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=N_("Vehicle not found."))
     if not current_user.is_admin and db_vehicle.owner_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this vehicle's logs.")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=N_("Not authorized to access this vehicle's logs."))
     
     crash_logs = crud.historical_data.get_historical_data_for_vehicle(db, db_vehicle.vehicle_id, record_type_like="%Crash%", limit=1000) 
 
@@ -736,9 +739,9 @@ _DATALOG_PAGE_SIZE = 100
 def _get_datalog_vehicle_or_raise(db: Session, current_user: models_db.User, vehicle_module_id: str) -> models_db.Vehicle:
     db_vehicle = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not db_vehicle:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=N_("Vehicle not found."))
     if not current_user.is_admin and db_vehicle.owner_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this vehicle's data logs.")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=N_("Not authorized to access this vehicle's data logs."))
     return db_vehicle
 
 @router.get("/{vehicle_module_id}/datalogs", response_class=HTMLResponse, name="ui_vehicle_datalogs_page")
@@ -813,7 +816,7 @@ def ui_vehicle_datalogs_page_route(
         "description": definition["description"] if definition else None,
         "charts": charts, "charts_json": json.dumps(charts) if charts else None,
         "page": page, "has_more": has_more,
-        "page_title": f"Data Logs: {vehicle_id}",
+        "page_title": common_vars["_"]("Data Logs: %(id)s") % {"id": vehicle_id},
     })
 
 @router.get("/{vehicle_module_id}/datalogs/export", name="ui_vehicle_datalogs_export")

@@ -78,6 +78,25 @@ def test_no_fstring_inside_a_translated_flash_message(path):
     )
 
 
+@pytest.mark.parametrize("path", ROUTERS, ids=lambda p: p.name)
+def test_no_literal_is_quoted_straight_into_a_flash_message(path):
+    """
+    `msg = quote_plus(f"Username '{username}' already exists.")` passes the test above
+    — the flash value is `{msg}`, an interpolation — and is still English on every
+    page. Nine messages were written that way. A literal, f-string or not, directly
+    inside quote_plus() is the shape.
+    """
+    src = path.read_text()
+    offenders = [
+        m.group(0)[:80]
+        for m in re.finditer(r"quote_plus\(\s*f?['\"]", src)
+    ]
+    assert offenders == [], (
+        f"{path.name}: a literal quoted straight into a flash message; translate it "
+        "first: quote_plus(_(\"... %(x)s ...\") % {...}):\n" + "\n".join(offenders)
+    )
+
+
 def test_the_guard_sees_the_routers_it_thinks_it_does():
     """A path typo here would make both tests above pass by checking nothing."""
     assert len(ROUTERS) >= 10, f"only found {len(ROUTERS)} UI routers under {UI_DIR}"

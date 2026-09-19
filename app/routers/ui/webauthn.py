@@ -10,7 +10,8 @@ from app.models.db import User, WebAuthnCredential
 from app.utils.webauthn_helper import WebAuthnHelper
 from app.security_events import security_event_logger, SecurityEventType, SecurityEventSeverity
 from app.security_manager import security_manager
-from app.routers.ui import get_common_template_vars, templates
+from app.utils.i18n_markers import N_
+from app.routers.ui import get_common_template_vars, get_translator, templates
 from app.config import get_settings
 from app.csrf_protection import verify_csrf_token
 from app.utils.two_factor import SecondFactor, required_second_factor
@@ -69,7 +70,7 @@ def ui_webauthn_register(
     """Display WebAuthn registration page."""
     context = get_common_template_vars(request, current_user)
     context.update({
-        "page_title": "Register Security Key"
+        "page_title": N_("Register Security Key")
     })
 
     return templates.TemplateResponse(request, "webauthn_register.html", context)
@@ -83,6 +84,7 @@ def ui_webauthn_register_begin(
     current_user: User = Depends(require_current_user_from_cookie_fully_authenticated)
 ):
     """Start WebAuthn registration process."""
+    _ = get_translator(request)
     verify_csrf_token(request, data.csrf_token, rotate_token=False)
 
     # Step-up required. This is the chain the audit called out: brief access to a
@@ -93,7 +95,7 @@ def ui_webauthn_register_begin(
     if not has_recent_reauth(request, current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Please confirm your password before registering a security key.",
+            detail=_("Please confirm your password before registering a security key."),
         )
 
     # Get user's existing credentials
@@ -138,6 +140,7 @@ def ui_webauthn_register_complete(
     client_ip: str = Depends(get_client_ip)
 ):
     """Complete WebAuthn registration."""
+    _ = get_translator(request)
     verify_csrf_token(request, data.csrf_token, rotate_token=False)
 
     # Verify challenge from session
@@ -150,13 +153,13 @@ def ui_webauthn_register_complete(
     if not expected_challenge_b64 or stored_user_id != current_user.id or not stored_usage_mode:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired registration session"
+            detail=_("Invalid or expired registration session")
         )
 
     if data.usage_mode != stored_usage_mode:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Registration was started for a different credential type. Please start over.",
+            detail=_("Registration was started for a different credential type. Please start over."),
         )
 
     try:
@@ -225,7 +228,7 @@ def ui_webauthn_register_complete(
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Registration failed: {str(e)}"
+            detail=_("Registration failed. Please try again.")
         )
 
 
@@ -237,7 +240,7 @@ def ui_webauthn_login(
     """Display WebAuthn login page."""
     context = get_common_template_vars(request, None)
     context.update({
-        "page_title": "WebAuthn Login"
+        "page_title": N_("WebAuthn Login")
     })
 
     return templates.TemplateResponse(request, "webauthn_login.html", context)
@@ -314,6 +317,7 @@ def ui_webauthn_auth_complete(
     client_ip: str = Depends(get_client_ip)
 ):
     """Complete WebAuthn authentication."""
+    _ = get_translator(request)
     try:
         verify_csrf_token(request, data.csrf_token, rotate_token=False)
     except HTTPException as e:
@@ -332,7 +336,7 @@ def ui_webauthn_auth_complete(
     if not expected_challenge_b64:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired authentication session"
+            detail=_("Invalid or expired authentication session")
         )
 
     try:
@@ -370,7 +374,7 @@ def ui_webauthn_auth_complete(
                 pass
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Unknown credential or not configured for passwordless login"
+                detail=_("Unknown credential or not configured for passwordless login")
             )
 
         # Get associated user
@@ -378,7 +382,7 @@ def ui_webauthn_auth_complete(
         if not user or not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="User account is inactive"
+                detail=_("User account is inactive")
             )
 
         # Convert base64url challenge to bytes
@@ -494,7 +498,7 @@ def ui_webauthn_auth_complete(
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Authentication failed: {str(e)}"
+            detail=_("Authentication failed. Please try again.")
         )
 
 
@@ -508,12 +512,13 @@ def ui_webauthn_delete(
     client_ip: str = Depends(get_client_ip)
 ):
     """Delete a WebAuthn credential."""
+    _ = get_translator(request)
     verify_csrf_token(request, csrf_token)
 
     if not has_recent_reauth(request, current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Please confirm your password before removing a security key.",
+            detail=_("Please confirm your password before removing a security key."),
         )
 
     credential = db.query(WebAuthnCredential).filter(
@@ -524,7 +529,7 @@ def ui_webauthn_delete(
     if not credential:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Credential not found"
+            detail=_("Credential not found")
         )
 
     credential_name = credential.credential_name
@@ -591,7 +596,7 @@ async def ui_webauthn_2fa_form(
     return templates.TemplateResponse(request, "login_webauthn_2fa.html", {
         **common_vars,
         "request": request,
-        "page_title": "Two-Factor Authentication",
+        "page_title": N_("Two-Factor Authentication"),
         "username_for_display": username_for_display,
     })
 
@@ -604,6 +609,7 @@ async def ui_webauthn_2fa_begin(
     client_ip: str = Depends(get_client_ip)
 ):
     """Start WebAuthn 2FA authentication process."""
+    _ = get_translator(request)
     try:
         verify_csrf_token(request, data.csrf_token, rotate_token=False)
     except HTTPException as e:
@@ -631,7 +637,7 @@ async def ui_webauthn_2fa_begin(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No pending 2FA session"
+            detail=_("No pending 2FA session")
         )
 
     # Get user's 2FA WebAuthn credentials
@@ -644,7 +650,7 @@ async def ui_webauthn_2fa_begin(
     if not credentials_2fa:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No 2FA WebAuthn credentials registered"
+            detail=_("No 2FA WebAuthn credentials registered")
         )
 
     # Generate authentication options
@@ -667,6 +673,7 @@ async def ui_webauthn_2fa_complete(
     client_ip: str = Depends(get_client_ip)
 ):
     """Complete WebAuthn 2FA authentication."""
+    _ = get_translator(request)
     try:
         verify_csrf_token(request, data.csrf_token, rotate_token=False)
     except HTTPException as e:
@@ -691,7 +698,7 @@ async def ui_webauthn_2fa_complete(
     if not expected_challenge_b64:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired authentication session"
+            detail=_("Invalid or expired authentication session")
         )
 
     pending_user_id = request.session.get("pending_2fa_user_id")
@@ -706,7 +713,7 @@ async def ui_webauthn_2fa_complete(
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive"
+            detail=_("User account is inactive")
         )
 
     try:
@@ -730,7 +737,7 @@ async def ui_webauthn_2fa_complete(
         if not credential:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Unknown credential or not configured for 2FA"
+                detail=_("Unknown credential or not configured for 2FA")
             )
 
         # Convert base64url challenge to bytes
@@ -819,5 +826,5 @@ async def ui_webauthn_2fa_complete(
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Authentication failed: {str(e)}"
+            detail=_("Authentication failed. Please try again.")
         )

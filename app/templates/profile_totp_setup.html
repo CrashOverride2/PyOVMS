@@ -40,9 +40,6 @@
                            class="mt-1 block w-full px-3 py-2 bg-input-bg border-border-color text-text-primary rounded-md shadow-sm focus:border-neon-blue focus:ring-1 focus:ring-neon-blue sm:text-sm"
                            placeholder="123456" autocomplete="one-time-code">
                 </div>
-                 {% if request.query_params.get('error_message') %}
-                    <p class="text-sm text-red-400 mt-2">{{ request.query_params.get('error_message') }}</p>
-                {% endif %}
                 <div class="mt-6">
                     <button type="submit"
                             class="w-full px-4 py-2.5 text-sm font-medium text-dark-bg bg-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue-darker hover:border-neon-blue-darker hover:shadow-lg hover:shadow-neon-blue/40 transition-all duration-200">
