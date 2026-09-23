@@ -145,6 +145,7 @@ class MosquittoAuthManager:
                 "topic read ovms/+/+/metric/v/p/longitude",
                 "topic read ovms/+/+/metric/v/p/altitude",
                 "topic read ovms/+/+/metric/v/p/speed",
+                "topic read ovms/+/+/metric/v/p/gpslock",
                 "topic read ovms/+/+/metric/m/time/utc",
                 "topic read ovms/+/+/notify/data/#",
                 ""
