@@ -373,18 +373,35 @@ async def api_reset_badge_count(
         "message": "Badge count reset to 0"
     }
 
+class BadgeResetRequest(BaseModel):
+    device_id: Optional[str] = Field(None, max_length=255, description="The persistent device id of the app asking — the one device not sent a badge reset.")
+
+
 @router.post("/user/reset-all-badges", status_code=http_status.HTTP_200_OK,
              dependencies=[Depends(require_active_api_user)])
 async def api_reset_all_badge_counts(
+    background_tasks: BackgroundTasks,
+    body: Optional[BadgeResetRequest] = None,
     db: Session = Depends(get_db),
     current_user: models_db.User = Depends(require_active_api_user)
 ):
     """
     Reset badge counts for ALL vehicles owned by the current user.
     This is typically called when a user opens the app to clear all notification badges.
+
+    When a count was actually cleared, the user's other devices are sent a silent
+    badge reset (iOS: `aps.badge = 0`; Android/UnifiedPush: a data message the app
+    answers by cancelling its notifications), except the device named in the body.
+    An app that names none — an older one — gets one itself, which changes nothing.
     """
-    # Reset badge counts for all user's vehicles in background
     vehicles_reset = await run_in_threadpool(widget_push_service.reset_all_badge_counts_for_user, current_user.id)
+    if vehicles_reset:
+        # After the response: the caller is an app coming to the foreground.
+        background_tasks.add_task(
+            notifications.dispatch_badge_reset,
+            current_user.id,
+            body.device_id if body else None,
+        )
 
     return {
         "status": "success",
@@ -432,10 +449,9 @@ def api_register_unified_push_endpoint(
         f"endpoint={body.endpoint[:60]}{'...' if len(body.endpoint) > 60 else ''}"
     )
 
-    # Update legacy vehicle-level fields for backward compatibility
-    vehicle_db.unified_push_endpoint = body.endpoint
-    vehicle_db.enable_unified_push_notifications = True
-    # Insert/update per-device subscription row (removes conflicting FCM subscription for this device)
+    # Insert/update per-device subscription row (removes conflicting FCM subscription
+    # for this device). The subscription is the only target: no vehicle-level copy,
+    # which outlived its subscription and kept being delivered to.
     crud.push_subscription.upsert_subscription(db, vehicle_db.id, device_id, 'up', body.endpoint)
     db.commit()
 
@@ -469,10 +485,8 @@ def api_register_fcm_token(
         f"device_id={device_id[:8]}..., token={body.token[:10]}..."
     )
 
-    # Update legacy vehicle-level fields for backward compatibility
-    vehicle_db.fcm_token = body.token
-    vehicle_db.enable_fcm_notifications = True
-    # Insert/update per-device subscription row (removes conflicting UP subscription for this device)
+    # Insert/update per-device subscription row (removes conflicting UP subscription
+    # for this device). The subscription is the only target, as for UnifiedPush.
     crud.push_subscription.upsert_subscription(db, vehicle_db.id, device_id, 'fcm', body.token)
     db.commit()
 

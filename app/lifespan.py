@@ -231,7 +231,8 @@ def _run_housekeeping_pass(db) -> None:
         ("delete expired API keys", lambda: crud.apikey.delete_expired_api_keys(db), None),
         ("purge unverified accounts", lambda: purge_expired_registrations(db),
          "Housekeeping: Deleted {n} account(s) with an expired verification link."),
-        ("close stale charge sessions", lambda: charge_manager.check_for_stale_sessions(db), None),
+        ("close stale charge sessions", lambda: charge_manager.check_for_stale_sessions(db),
+         "Housekeeping: Closed {n} orphaned charge session(s) no longer recorded."),
     )
     for label, step, message in steps:
         try:
@@ -249,6 +250,10 @@ def _run_housekeeping_pass(db) -> None:
             module_logger.info(message.format(n=count))
 
 
+HOUSEKEEPING_FIRST_DELAY_SECONDS = 300
+HOUSEKEEPING_INTERVAL_SECONDS = 3600
+
+
 async def periodic_housekeeping(shutdown_event: asyncio.Event):
     """
     Hourly cleanup: expired history, API keys, unverified accounts, stale charge sessions.
@@ -259,12 +264,15 @@ async def periodic_housekeeping(shutdown_event: asyncio.Event):
     the only trace was "Task exception was never retrieved" at shutdown. Nothing
     expired and nothing was purged until the next restart.
     """
+    delay = HOUSEKEEPING_FIRST_DELAY_SECONDS
     while not shutdown_event.is_set():
         try:
-            for _ in range(3600):
+            for _ in range(delay):
                 if shutdown_event.is_set(): break
                 await asyncio.sleep(1)
             if shutdown_event.is_set(): break
+            # Before the pass, so a pass that raises still waits the full hour.
+            delay = HOUSEKEEPING_INTERVAL_SECONDS
 
             module_logger.info("Running periodic housekeeping...")
             metrics_manager.evict_stale_metrics()

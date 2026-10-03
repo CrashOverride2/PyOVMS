@@ -27,6 +27,7 @@ class ChargeLogSummary(BaseModel):
     energy_added_kwh: Optional[float] = None
     max_power_kw: Optional[float] = None
     average_power_kw: Optional[float] = None
+    in_progress: bool = False
 
     class Config:
         from_attributes = True

@@ -12,10 +12,13 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from app import crud
 from app.config import settings
 from app.database import SessionLocal
-from app.notifications.channels.apns import send_apns_notification
-from app.notifications.channels.fcm import send_fcm_notification
+from app.notifications.channels.apns import send_apns_badge_reset, send_apns_notification
+from app.notifications.channels.fcm import send_fcm_badge_reset, send_fcm_notification
 from app.notifications.channels.ntfy import send_ntfy_notification
-from app.notifications.channels.unified_push import send_unified_push_notification
+from app.notifications.channels.unified_push import (
+    send_unified_push_badge_reset,
+    send_unified_push_notification,
+)
 from app.notifications.email_queue import queue_email_notification
 from app.notifications.errors import InvalidPushTargetError
 from app.notifications.outbound import close_all_sessions
@@ -72,6 +75,10 @@ class DispatchTarget:
     kwargs: Dict[str, Any] = field(repr=False)
     subscription_id: Optional[int] = None
     device_id: Optional[str] = None
+    # Whether a transient failure books another attempt. False for the badge reset:
+    # it is "now or never" on every channel (TTL 0), and a retry 5-60 s later could
+    # arrive after a newer alert and clear that one.
+    retry: bool = True
 
 
 @dataclass(frozen=True)
@@ -276,32 +283,13 @@ def build_dispatch_plan(
                 auth_password=_decrypt_optional(sub.ntfy_auth_password),
                 auth_query_param_name=sub.ntfy_auth_query_param_name,
             )
-    elif vehicle_db.enable_ntfy_notifications:
-        topic_to_use = vehicle_db.ntfy_topic or settings.NTFY_DEFAULT_TOPIC
-        if topic_to_use:
-            add(
-                "NTFY", send_ntfy_notification,
-                topic=topic_to_use,
-                title=icon_title,
-                message=message_plain,
-                priority=ntfy_priority,
-                tags=ntfy_tags,
-                server_url=vehicle_db.ntfy_server_url,
-                auth_method=vehicle_db.ntfy_auth_method,
-                auth_token=_decrypt_optional(vehicle_db.ntfy_auth_token),
-                auth_user=vehicle_db.ntfy_auth_user,
-                auth_password=_decrypt_optional(vehicle_db.ntfy_auth_password),
-                auth_query_param_name=vehicle_db.ntfy_auth_query_param_name,
-            )
-        else:
-            logger.warning(f"NTFY enabled for {vehicle_id} but no topic resolved (vehicle or default).")
 
     # --- Email --------------------------------------------------------------
     #
     # The only channel that does not talk to the far end from the fan-out: mail goes on
-    # the queue and a mail worker delivers it. The target still exists so that the cap,
-    # the legacy fallback and the logging stay identical across channels — it just
-    # returns as soon as the message is accepted.
+    # the queue and a mail worker delivers it. The target still exists so that the cap
+    # and the logging stay identical across channels — it just returns as soon as the
+    # message is accepted.
     if email_subs:
         for sub in email_subs:
             add(
@@ -311,16 +299,6 @@ def build_dispatch_plan(
                 body_text=message_plain,
                 body_html=message_html,
             )
-    elif vehicle_db.enable_email_notifications and vehicle_db.notification_email:
-        add(
-            "Email", queue_email_notification,
-            recipient_email=vehicle_db.notification_email,
-            subject=icon_title,
-            body_text=message_plain,
-            body_html=message_html,
-        )
-    elif vehicle_db.enable_email_notifications:
-        logger.warning(f"Email notifications enabled for {vehicle_id} but no recipient email configured.")
 
     # --- FCM ----------------------------------------------------------------
     if fcm_subs:
@@ -332,18 +310,8 @@ def build_dispatch_plan(
                 body=message_plain,
                 data=push_data_payload,
                 is_apns_token=False,
+                badge=badge(),
             )
-    elif vehicle_db.enable_fcm_notifications and vehicle_db.fcm_token:
-        add(
-            "FCM", send_fcm_notification,
-            device_token=vehicle_db.fcm_token,
-            title=icon_title,
-            body=message_plain,
-            data=push_data_payload,
-            is_apns_token=False,
-        )
-    elif vehicle_db.enable_fcm_notifications:
-        logger.warning(f"FCM notifications enabled for {vehicle_id} but no FCM token configured.")
 
     # --- APNs (directly, or tunnelled through FCM) --------------------------
     apns_via_fcm = (settings.APNS_DELIVERY_METHOD or "apns").lower() == 'fcm'
@@ -357,6 +325,7 @@ def build_dispatch_plan(
                     body=message_plain,
                     data=push_data_payload,
                     is_apns_token=True,
+                    badge=badge(),
                 )
             else:
                 add(
@@ -367,27 +336,6 @@ def build_dispatch_plan(
                     data=push_data_payload,
                     badge=badge(),
                 )
-    elif vehicle_db.enable_apns_notifications and vehicle_db.apns_token:
-        if apns_via_fcm:
-            add(
-                "APNs/FCM", send_fcm_notification,
-                device_token=vehicle_db.apns_token,
-                title=icon_title,
-                body=message_plain,
-                data=push_data_payload,
-                is_apns_token=True,
-            )
-        else:
-            add(
-                "APNs", send_apns_notification,
-                device_token=vehicle_db.apns_token,
-                title=icon_title,
-                body=message_plain,
-                data=push_data_payload,
-                badge=badge(),
-            )
-    elif vehicle_db.enable_apns_notifications:
-        logger.warning(f"APNs notifications enabled for {vehicle_id} but no APNs token configured.")
 
     # --- UnifiedPush --------------------------------------------------------
     if up_subs:
@@ -400,15 +348,6 @@ def build_dispatch_plan(
                 data=push_data_payload,
                 badge=badge(),
             )
-    elif vehicle_db.enable_unified_push_notifications and vehicle_db.unified_push_endpoint:
-        add(
-            "UnifiedPush", send_unified_push_notification,
-            endpoint_url=vehicle_db.unified_push_endpoint,
-            title=icon_title,
-            body=message_plain,
-            data=push_data_payload,
-            badge=badge(),
-        )
 
     return targets
 
@@ -455,7 +394,7 @@ def _send_one(target: DispatchTarget, vehicle_id: str,
         logger.warning(f"{target.channel}: push target for {vehicle_id} is invalid: {e}")
         return SendOutcome(target.channel, False)
     except Exception as e:
-        if is_transient(e) and attempt < MAX_SEND_ATTEMPTS:
+        if target.retry and is_transient(e) and attempt < MAX_SEND_ATTEMPTS:
             delay = backoff_delay(attempt)
             if _schedule_retry(target, vehicle_id, vehicle_id_fk, attempt + 1, delay):
                 logger.warning(
@@ -576,8 +515,10 @@ def dispatch_notification_to_vehicle(
 
         # The badge count is a stored counter, so reading it is a write. Deferred behind
         # a callable and resolved at most once, by the first badge-carrying target: a
-        # vehicle with no APNs/UnifiedPush recipient must not accumulate a badge for
+        # vehicle with no FCM/APNs/UnifiedPush recipient must not accumulate a badge for
         # notifications that were never delivered to a device that could clear it.
+        # The figure sent is the owner's total over all their vehicles: the app has one
+        # icon badge for every car.
         def _next_badge_count() -> int:
             from app.widget_push_service import widget_push_service
             return widget_push_service.increment_badge_count(vehicle_id) or 1
@@ -656,3 +597,135 @@ def dispatch_notification_to_vehicle(
     if dead:
         _reap_dead_subscriptions(vehicle_id_fk, vehicle_id, dead)
     return True
+
+
+# The channels that carry a badge, and therefore the ones a badge reset goes to.
+BADGE_PUSH_TYPES = ("fcm", "apns", "up")
+
+
+def _badge_reset_subscriptions(db, owner_id: int) -> list:
+    """Every badge-carrying subscription of the owner's vehicles, newest first."""
+    from app.models.db import PushSubscription, Vehicle
+
+    return (
+        db.query(PushSubscription)
+        .join(Vehicle, PushSubscription.vehicle_id_fk == Vehicle.id)
+        .filter(Vehicle.owner_id == owner_id, PushSubscription.push_type.in_(BADGE_PUSH_TYPES))
+        .order_by(PushSubscription.created_at.desc())
+        .all()
+    )
+
+
+def build_badge_reset_plan(db, owner_id: int, exclude_device_id: Optional[str] = None) -> List[DispatchTarget]:
+    """One silent badge reset per device of the account, except the one that asked.
+
+    A device is subscribed once per vehicle, so the same token turns up several times;
+    it is reset once. Capped like a notification's fan-out, newest registrations first.
+    Never retried (`retry=False`): a reset that cannot go out now is dropped, exactly
+    as the push service drops one it cannot deliver now. No network I/O here, as in
+    build_dispatch_plan.
+    """
+    return _badge_reset_plan(_badge_reset_subscriptions(db, owner_id), exclude_device_id)
+
+
+def _badge_reset_plan(subs: list, exclude_device_id: Optional[str]) -> List[DispatchTarget]:
+    apns_via_fcm = (settings.APNS_DELIVERY_METHOD or "apns").lower() == 'fcm'
+    seen = set()
+    targets: List[DispatchTarget] = []
+    for sub in subs:
+        if exclude_device_id and sub.device_id == exclude_device_id:
+            continue
+        key = (sub.push_type, sub.endpoint)
+        if not sub.endpoint or key in seen:
+            continue
+        seen.add(key)
+        if len(targets) >= MAX_RECIPIENTS_PER_NOTIFICATION:
+            break
+
+        if sub.push_type == 'fcm':
+            channel, sender, kwargs = "FCM", send_fcm_badge_reset, {"device_token": sub.endpoint}
+        elif sub.push_type == 'apns' and apns_via_fcm:
+            channel, sender, kwargs = "APNs/FCM", send_fcm_badge_reset, {
+                "device_token": sub.endpoint, "is_apns_token": True}
+        elif sub.push_type == 'apns':
+            channel, sender, kwargs = "APNs", send_apns_badge_reset, {"device_token": sub.endpoint}
+        else:
+            channel, sender, kwargs = "UnifiedPush", send_unified_push_badge_reset, {
+                "endpoint_url": sub.endpoint}
+        targets.append(DispatchTarget(
+            channel=f"{channel} badge reset",
+            sender=sender,
+            kwargs=kwargs,
+            subscription_id=sub.id,
+            device_id=sub.device_id,
+            retry=False,
+        ))
+    return targets
+
+
+def _account_badge_total(db, owner_id: int) -> int:
+    """The owner's unread count over all of their vehicles — what a push carries."""
+    from sqlalchemy import func
+    from app.models.db import Vehicle
+
+    total = db.query(func.coalesce(func.sum(Vehicle.badge_count), 0)).filter(
+        Vehicle.owner_id == owner_id
+    ).scalar()
+    return int(total or 0)
+
+
+def dispatch_badge_reset(owner_id: int, exclude_device_id: Optional[str] = None) -> int:
+    """Clear the icon badge on the account's other devices. Returns the targets tried.
+
+    Called after a reset that actually changed a counter — one device opening the app
+    means every unread push was seen, and the others would otherwise keep their badge
+    (on Android: the notifications in the shade) until they are opened themselves or
+    the next push sets a new count. Never raises.
+
+    Skipped when the account has counted a push again by the time it would go out:
+    the counter was cleared before the response, this runs after it, and a push
+    dispatched in between would reach the other devices around the same time as the
+    reset — which, arriving second, takes it out of the Android shade and sets the
+    iPhone's badge to 0 over a count of 1. Skipping costs less: the new push sets the
+    badge to the right figure itself, and only older notifications stay in the shade.
+    """
+    db = SessionLocal()
+    try:
+        if _account_badge_total(db, owner_id):
+            logger.info(f"Badge reset for user {owner_id} skipped: a newer push was counted meanwhile.")
+            return 0
+        subs = _badge_reset_subscriptions(db, owner_id)
+        targets = _badge_reset_plan(subs, exclude_device_id)
+        # Every row a token has — one per vehicle the device follows. The reset goes
+        # out once per token, so a dead one is reaped from all of them here; reaped
+        # from the row it went out on alone, the others stayed until a notification
+        # for each of those vehicles tried the token again.
+        key_by_sub = {sub.id: (sub.push_type, sub.endpoint) for sub in subs}
+        rows_by_key: Dict[Tuple[str, str], List[Tuple[int, int, Optional[str]]]] = {}
+        for sub in subs:
+            rows_by_key.setdefault((sub.push_type, sub.endpoint), []).append(
+                (sub.id, sub.vehicle_id_fk, sub.device_id))
+    except Exception as e:
+        logger.error(f"Badge reset plan for user {owner_id} failed: {e}", exc_info=True)
+        return 0
+    finally:
+        db.close()
+
+    if not targets:
+        return 0
+
+    label = f"user {owner_id}"
+    outcomes = _execute(targets, label)
+    dead_by_vehicle: Dict[int, List[Tuple[int, str, str]]] = {}
+    for outcome in outcomes:
+        if not outcome.dead:
+            continue
+        sub_id, _device, reason = outcome.dead
+        for row_id, vehicle_id_fk, device_id in rows_by_key.get(key_by_sub.get(sub_id), ()):
+            dead_by_vehicle.setdefault(vehicle_id_fk, []).append((row_id, device_id or "?", reason))
+    for vehicle_id_fk, dead in dead_by_vehicle.items():
+        _reap_dead_subscriptions(vehicle_id_fk, label, dead)
+
+    accepted = sum(1 for o in outcomes if o.ok)
+    logger.info(f"Badge reset for {label}: {accepted}/{len(outcomes)} device(s) accepted.")
+    return len(targets)

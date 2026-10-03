@@ -115,7 +115,12 @@ class MqttMetricsSubscriber:
             )
 
             if metric_changed or not msg.retain:
-                charge_manager.process_metric(vehicle_id, metric_name, metric_value, timestamp)
+                # Retained is passed on: its value is the module's last publish, its
+                # arrival after a restart is not when that happened, and a session
+                # resumed from it must not be dated by it.
+                charge_manager.process_metric(
+                    vehicle_id, metric_name, metric_value, timestamp, retained=msg.retain
+                )
 
             if msg.retain:
                 if metric_changed:

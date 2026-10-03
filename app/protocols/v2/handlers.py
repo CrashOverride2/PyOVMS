@@ -375,10 +375,20 @@ async def _handle_app_push_subscription(conn: ClientConnection, msg_data: PushSu
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, conn.vehicle_id)
     if vehicle_db and msg_data.net_pass == decrypt_data(vehicle_db.encrypted_server_password):
         push_type = (msg_data.push_type or "").lower()
+        token = (msg_data.push_key_value or "").strip()
         if push_type == "gcm" and settings.ALLOW_FCM_TOKEN_FROM_V2:
-            crud.vehicle.update_vehicle_push_token(db, conn.vehicle_id, "fcm", msg_data.push_key_value)
+            subscription_type = "fcm"
         elif push_type == "apns" and settings.ALLOW_APNS_TOKEN_FROM_V2:
-            crud.vehicle.update_vehicle_push_token(db, conn.vehicle_id, "apns", msg_data.push_key_value)
+            subscription_type = "apns"
+        else:
+            return
+        if not token:
+            return
+        device_id = f"v2:{msg_data.app_id or 'app'}"[:255]
+        crud.push_subscription.upsert_subscription(
+            db, vehicle_db.id, device_id, subscription_type, token[:500]
+        )
+        db.commit()
 
 CAR_MESSAGE_HANDLERS: Dict[str, MessageHandler] = {
     'A': _handle_car_ping, 'a': _handle_car_ping_ack,

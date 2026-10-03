@@ -1,7 +1,7 @@
 """Helpers for validating e-mail addresses and header values before they reach SMTP.
 
-Notification recipients are user-supplied (vehicle `notification_email`, manually
-added e-mail push subscriptions) and notification subjects are partly *vehicle*
+Notification recipients are user-supplied (manually added e-mail push
+subscriptions) and notification subjects are partly *vehicle*
 supplied. Python's default `compat32` e-mail policy happily serialises a header
 containing CR/LF, so an unchecked value lets the submitter append arbitrary
 headers — extra `Bcc:` recipients, a forged `From:`, or a second message body —
@@ -9,7 +9,6 @@ turning the server into an open relay for spam sent from its own domain.
 """
 
 import re
-from typing import Optional
 
 # Deliberately stricter than RFC 5322: no quoted local parts, no comments, no
 # display names. Notification recipients are plain addresses, and every exotic
@@ -58,20 +57,6 @@ def validate_email_address(value: str) -> str:
         raise InvalidEmailAddress("E-mail address is not a valid address.")
 
     return candidate
-
-
-def validate_optional_email_address(value: Optional[str]) -> Optional[str]:
-    """
-    Validate an optional address field.
-
-    None and the empty string mean "not configured" and pass through untouched;
-    everything else must be a valid address.
-    """
-    if value is None:
-        return None
-    if not value.strip():
-        return value
-    return validate_email_address(value)
 
 
 def sanitize_header_value(value: str) -> str:

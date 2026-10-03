@@ -57,7 +57,8 @@ def send_fcm_notification(
     title: str,
     body: str,
     data: Optional[dict] = None,
-    is_apns_token: bool = False
+    is_apns_token: bool = False,
+    badge: int = 1,
 ) -> bool:
     if not _firebase_app_initialized:
         logger.warning("Firebase Admin SDK not initialized. Skipping FCM notification.")
@@ -71,22 +72,36 @@ def send_fcm_notification(
         "data": data if data else {}
     }
 
+    # The APNs side of the message. "mutable-content": 1 runs the iOS app's Notification
+    # Service Extension (it masks a SIM PIN in the text and records the push for the
+    # app's history); it needs an alert, so a silent push must never carry it. The alert
+    # is stated here rather than left for FCM to derive from `notification`: identical
+    # text, and nothing depends on how FCM merges the two.
+    aps = messaging.Aps(
+        alert=messaging.ApsAlert(title=title, body=body),
+        sound="default",
+        badge=badge,
+        mutable_content=True,
+    )
+
     if is_apns_token:
         payload_data = data if data else {}
-        apns_payload = messaging.APNSPayload(
-            aps=messaging.Aps(
-                alert=messaging.ApsAlert(title=title, body=body),
-                sound="default",
-                badge=1,
-            ),
-            **payload_data
-        )
+        apns_payload = messaging.APNSPayload(aps=aps, **payload_data)
         message_args["apns"] = messaging.APNSConfig(payload=apns_payload)
         logger.debug(f"FCM: Assembling message for APNs token {device_token[:10]}...")
     else:
+        # An FCM token does not say which platform it belongs to: the app registers
+        # iPhones and Android phones alike as push_type 'fcm'. So the message carries
+        # both overrides and FCM applies the one for the token's platform. `data` stays
+        # in message.data, which FCM places at the top level of the APNs userInfo —
+        # where the iOS extension reads vehicle_id, timestamp and notification_type.
         message_args["notification"] = messaging.Notification(
             title=title,
             body=body
+        )
+        message_args["apns"] = messaging.APNSConfig(payload=messaging.APNSPayload(aps=aps))
+        message_args["android"] = messaging.AndroidConfig(
+            notification=messaging.AndroidNotification(notification_count=badge),
         )
         logger.debug(f"FCM: Assembling message for FCM token {device_token[:10]}...")
 
@@ -107,4 +122,60 @@ def send_fcm_notification(
         return False
     except Exception as e:
         logger.error(f"FCM send failed for token {device_token[:10]}...: {e}")
+        return False
+
+
+# The data a badge reset carries, so the app can tell it from a notification.
+BADGE_RESET_DATA = {"type": "badge_reset"}
+
+
+def send_fcm_badge_reset(device_token: str, is_apns_token: bool = False) -> bool:
+    """Tell one device that the account's unread count is back to 0.
+
+    Sent to a user's *other* devices when one of them opens the app. Nothing is shown:
+    on iOS it is a badge-only APNs push (`aps.badge = 0`, no alert, no sound and no
+    `mutable-content`, so the extension does not run), on Android a data message the
+    app's background handler answers by cancelling the notifications it shows — the
+    launcher's dot and count are those notifications.
+
+    Time to live 0 on both sides: delivered now or dropped. A reset held while the
+    device is offline could otherwise arrive after a newer alert and clear that one.
+    High priority on Android, because a dozing phone is exactly the one whose dot is
+    still up when it is picked up. FCM deprioritizes an app whose high-priority messages
+    form a *pattern* of showing nothing (docs: android/message-priority); a reset follows
+    at most once per batch of visible notifications, so it never becomes one. Never
+    retried by the dispatcher either (`DispatchTarget.retry`): a resend after a
+    transient error would undo exactly what TTL 0 is for.
+    """
+    if not _firebase_app_initialized:
+        logger.warning("Firebase Admin SDK not initialized. Skipping FCM badge reset.")
+        return False
+    if not device_token:
+        return False
+
+    apns = messaging.APNSConfig(
+        headers={"apns-push-type": "alert", "apns-priority": "10", "apns-expiration": "0"},
+        payload=messaging.APNSPayload(
+            aps=messaging.Aps(badge=0),
+            **(BADGE_RESET_DATA if is_apns_token else {}),
+        ),
+    )
+    message_args = {"token": device_token, "apns": apns}
+    if not is_apns_token:
+        message_args["data"] = dict(BADGE_RESET_DATA)
+        message_args["android"] = messaging.AndroidConfig(priority="high", ttl=0)
+
+    try:
+        messaging.send(messaging.Message(**message_args))
+        logger.info(f"FCM badge reset sent to token starting with {device_token[:10]}...")
+        return True
+    except (messaging.UnregisteredError, messaging.SenderIdMismatchError) as e:
+        raise InvalidPushTargetError(f"FCM token {device_token[:10]}... is invalid/unregistered: {e}") from e
+    except TRANSIENT_EXCEPTIONS:
+        raise
+    except firebase_admin.exceptions.InvalidArgumentError as e:
+        logger.warning(f"FCM rejected badge reset for token {device_token[:10]}...: {e}. Will not retry.")
+        return False
+    except Exception as e:
+        logger.error(f"FCM badge reset failed for token {device_token[:10]}...: {e}")
         return False

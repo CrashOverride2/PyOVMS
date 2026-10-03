@@ -38,29 +38,14 @@ from app.notifications.retry import (
 # ---------------------------------------------------------------------------
 
 def _vehicle(**overrides):
-    """A Vehicle-shaped object with every flag off and no legacy targets."""
+    """A Vehicle-shaped object. It carries no notification targets of its own: those
+    are subscriptions only, and an attribute read of a dropped column fails here."""
     base = {
         "id": 1,
         "owner_id": 42,
         "vehicle_id": "CAR1",
         "protocol": "v3",
         "notification_preference": None,
-        "enable_ntfy_notifications": False,
-        "ntfy_topic": None,
-        "ntfy_server_url": None,
-        "ntfy_auth_method": None,
-        "ntfy_auth_token": None,
-        "ntfy_auth_user": None,
-        "ntfy_auth_password": None,
-        "ntfy_auth_query_param_name": None,
-        "enable_email_notifications": False,
-        "notification_email": None,
-        "enable_fcm_notifications": False,
-        "fcm_token": None,
-        "enable_apns_notifications": False,
-        "apns_token": None,
-        "enable_unified_push_notifications": False,
-        "unified_push_endpoint": None,
     }
     base.update(overrides)
     return types.SimpleNamespace(**base)
@@ -216,9 +201,10 @@ def test_plan_carries_no_orm_objects(dispatch_env):
     """
     sessions = []
     db = _FakeSession(sessions)
+    dispatch_env.subscriptions = [_subscription(1, "email", "owner@example.com")]
     targets = dispatcher.build_dispatch_plan(
         db,
-        _vehicle(enable_email_notifications=True, notification_email="owner@example.com"),
+        _vehicle(),
         icon_title="t", message_plain="m", message_html=None,
         ntfy_priority=3, ntfy_tags=None, push_data_payload={}, badge_count=1,
     )
@@ -265,22 +251,8 @@ def test_a_permanently_dead_target_is_unsubscribed(dispatch_env):
     assert _channels(dispatch_env) == ["FCM", "NTFY"]
 
 
-def test_a_dead_legacy_target_is_not_unsubscribed(dispatch_env):
-    """There is no subscription row behind a vehicle-level token; nothing to delete."""
-    dispatch_env.vehicle = _vehicle(enable_fcm_notifications=True, fcm_token="legacy-token")
-
-    def gone(**_kwargs):
-        raise InvalidPushTargetError("token unregistered")
-
-    dispatch_env.senders["FCM"] = gone
-
-    _dispatch()
-
-    assert dispatch_env.deleted == []
-
-
 # ---------------------------------------------------------------------------
-# fan-out is bounded, and the vehicle-level fallback still works
+# fan-out is bounded, and only subscriptions are targets
 # ---------------------------------------------------------------------------
 
 def test_fan_out_is_capped(dispatch_env):
@@ -294,31 +266,18 @@ def test_fan_out_is_capped(dispatch_env):
     assert len(dispatch_env.sent) == dispatcher.MAX_RECIPIENTS_PER_NOTIFICATION
 
 
-def test_legacy_vehicle_targets_are_used_when_no_subscription_exists(dispatch_env):
-    dispatch_env.vehicle = _vehicle(
-        enable_ntfy_notifications=True, ntfy_topic="legacy-topic",
-        enable_email_notifications=True, notification_email="owner@example.com",
-    )
-
+def test_a_vehicle_without_subscriptions_reaches_nobody(dispatch_env):
+    """There is no vehicle-level fallback any more. It used to deliver to a target that
+    the GUI did not list and that removing its subscription did not remove — an FCM
+    token left behind by a switch to UnifiedPush made every notification arrive twice."""
     _dispatch()
 
-    assert _channels(dispatch_env) == ["Email", "NTFY"]
-
-
-def test_subscriptions_win_over_the_legacy_target_on_the_same_channel(dispatch_env):
-    dispatch_env.vehicle = _vehicle(enable_ntfy_notifications=True, ntfy_topic="legacy-topic")
-    dispatch_env.subscriptions = [_subscription(1, "ntfy", "per-device-topic")]
-
-    _dispatch()
-
-    assert [k["topic"] for _c, k, _s in dispatch_env.sent] == ["per-device-topic"]
+    assert dispatch_env.sent == []
 
 
 def test_protocol_preference_suppresses_the_other_source(dispatch_env):
-    dispatch_env.vehicle = _vehicle(
-        protocol="both", notification_preference="v2",
-        enable_email_notifications=True, notification_email="owner@example.com",
-    )
+    dispatch_env.vehicle = _vehicle(protocol="both", notification_preference="v2")
+    dispatch_env.subscriptions = [_subscription(1, "email", "owner@example.com")]
 
     _dispatch(source_protocol="v3")
     assert dispatch_env.sent == []
@@ -728,6 +687,34 @@ def test_the_badge_is_incremented_once_for_several_badge_targets(dispatch_env):
 
     assert dispatch_env.badge_increments == 1
     assert {k["badge"] for _c, k, _s in dispatch_env.sent} == {7}
+
+
+def test_fcm_targets_carry_the_badge_and_count_it_once(dispatch_env):
+    """iPhones register as push_type 'fcm', so an FCM target is a badge-carrying one: it
+    receives the badge, and several of them still count one notification once."""
+    dispatch_env.subscriptions = [
+        _subscription(1, "fcm", "token-a"),
+        _subscription(2, "fcm", "token-b"),
+        _subscription(3, "apns", "token-c"),
+    ]
+
+    _dispatch()
+
+    assert dispatch_env.badge_increments == 1
+    assert _channels(dispatch_env) == ["APNs", "FCM", "FCM"]
+    assert {k["badge"] for _c, k, _s in dispatch_env.sent} == {7}
+
+
+def test_apns_via_fcm_carries_the_counted_badge(dispatch_env, monkeypatch):
+    monkeypatch.setattr(dispatcher.settings, "APNS_DELIVERY_METHOD", "fcm")
+    dispatch_env.subscriptions = [_subscription(1, "apns", "token-a")]
+
+    _dispatch()
+
+    assert dispatch_env.badge_increments == 1
+    ((channel, kwargs, _s),) = dispatch_env.sent
+    assert channel == "FCM" and kwargs["is_apns_token"] is True
+    assert kwargs["badge"] == 7
 
 
 # ---------------------------------------------------------------------------

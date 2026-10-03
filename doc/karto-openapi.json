@@ -38,6 +38,231 @@
         "title": "HeatmapPoint",
         "type": "object"
       },
+      "OpenTrip": {
+        "description": "A trip that is still running: what has been recorded of it so far. Nothing here is\nfinal \u2014 the trip may yet be discarded as too short when it ends.",
+        "properties": {
+          "average_speed_kph": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Speed Kph"
+          },
+          "average_speed_mph": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Average Speed Mph"
+          },
+          "current_soc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The vehicle's SoC now, when known.",
+            "title": "Current Soc"
+          },
+          "distance_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Length of the track recorded so far.",
+            "title": "Distance Km"
+          },
+          "distance_miles": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Distance Miles"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "From the start to the newest point.",
+            "title": "Duration Seconds"
+          },
+          "energy_used_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Energy used so far, when known.",
+            "title": "Energy Used Kwh"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_lat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Lat"
+          },
+          "last_lon": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Lon"
+          },
+          "last_point_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Time of the newest recorded point.",
+            "title": "Last Point Time"
+          },
+          "last_speed_kph": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Speed Kph"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "enum": [
+                  "driving",
+                  "ending"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`driving`, or `ending` while the vehicle is off and the trip waits out its end grace period. Null while the service has not picked the trip up since a restart.",
+            "title": "Phase"
+          },
+          "soc_used": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Soc Used"
+          },
+          "start_lat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Lat"
+          },
+          "start_lon": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Lon"
+          },
+          "start_soc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Soc"
+          },
+          "start_time": {
+            "format": "date-time",
+            "title": "Start Time",
+            "type": "string"
+          },
+          "status": {
+            "description": "Always `in_progress`.",
+            "title": "Status",
+            "type": "string"
+          },
+          "vehicle_id": {
+            "title": "Vehicle Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "vehicle_id",
+          "status",
+          "start_time",
+          "soc_used",
+          "distance_miles",
+          "average_speed_mph"
+        ],
+        "title": "OpenTrip",
+        "type": "object"
+      },
       "PaginatedTripSearchSummary": {
         "description": "Holds a list of trip search results along with pagination metadata.",
         "properties": {
@@ -966,7 +1191,7 @@
     },
     "description": "\nKarto is a trip tracking and analysis service for vehicles monitored via\n[OVMS (Open Vehicle Monitoring System)](https://www.openvehicles.com/).\n\nIt ingests GPS and telemetry data from MQTT, assembles them into discrete trips,\nand exposes them through this REST API.\n\n## Authentication\n\nAll endpoints require authentication via one of:\n- **JWT cookie** \u2013 issued by the OVMS web UI (cookie name `ovms_session`)\n- **API key** \u2013 passed in the `X-API-Key` request header\n\nBoth methods are validated against the OVMS user database.\n\n## Units\n\nUnless noted otherwise, all source data from MQTT is metric:\n- Distances: **km** (plus `_miles` variants)\n- Speeds: **km/h** (plus `_mph` variants)\n- Energy: **kWh**\n- Consumption: **kWh/100 km** (plus `_per_100mi` variants)\n\n## Data model\n\nA **Trip** begins when `v.e.on=1` is received together with a first GPS fix, and ends\nafter a configurable grace period once `v.e.on=0` is received. Trips shorter than\n`KARTO_TRIP_MIN_DISTANCE_KM` are automatically discarded.\n",
     "title": "Karto Trip Service",
-    "version": "1.1.0"
+    "version": "1.2.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -1188,7 +1413,7 @@
     },
     "/api/karto/v1/trips/{trip_id}": {
       "delete": {
-        "description": "Deletes a trip, its associated GPS points, and its map preview image.\nEnsures the authenticated user has permission before deleting.",
+        "description": "Deletes a trip, its associated GPS points, and both of its map preview images.\nEnsures the authenticated user has permission before deleting. 409 while the trip\nis in progress.",
         "operationId": "delete_trip_api_karto_v1_trips__trip_id__delete",
         "parameters": [
           {
@@ -1205,6 +1430,9 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "409": {
+            "description": "The trip is still in progress."
           },
           "422": {
             "content": {
@@ -1298,7 +1526,7 @@
     },
     "/api/karto/v1/trips/{trip_id}/gpx": {
       "get": {
-        "description": "Exports the trip's track data as a GPX file.",
+        "description": "Exports the trip's track data as a GPX file. 409 while the trip is in progress.",
         "operationId": "get_trip_gpx_api_karto_v1_trips__trip_id__gpx_get",
         "parameters": [
           {
@@ -1315,6 +1543,9 @@
         "responses": {
           "200": {
             "description": "Successful Response"
+          },
+          "409": {
+            "description": "The trip is still in progress."
           },
           "422": {
             "content": {
@@ -1341,7 +1572,7 @@
     },
     "/api/karto/v1/trips/{trip_id}/kml": {
       "get": {
-        "description": "Exports the trip's track data as a KML file.",
+        "description": "Exports the trip's track data as a KML file. 409 while the trip is in progress.",
         "operationId": "get_trip_kml_api_karto_v1_trips__trip_id__kml_get",
         "parameters": [
           {
@@ -1358,6 +1589,9 @@
         "responses": {
           "200": {
             "description": "Successful Response"
+          },
+          "409": {
+            "description": "The trip is still in progress."
           },
           "422": {
             "content": {
@@ -1551,7 +1785,7 @@
     },
     "/api/karto/v1/vehicles/{vehicle_id}/trips": {
       "delete": {
-        "description": "Deletes ALL trips, associated GPS points, and map previews for a vehicle.\nThis is an irreversible operation. Ensures the authenticated user has\npermission before deleting.",
+        "description": "Deletes all completed trips, their GPS points and map previews for a vehicle.\nThis is an irreversible operation. Ensures the authenticated user has\npermission before deleting.\n\nA trip still in progress is kept, as a single one cannot be deleted (409): the\ntracker would start a new trip with the next point, and the deleted ride would\ncome back as its second half. It is listed once it has ended and can be deleted\nthen. `include_in_progress=true` deletes it as well \u2014 for deleting the vehicle.",
         "operationId": "delete_all_trips_for_vehicle_api_karto_v1_vehicles__vehicle_id__trips_delete",
         "parameters": [
           {
@@ -1561,6 +1795,18 @@
             "schema": {
               "title": "Vehicle Id",
               "type": "string"
+            }
+          },
+          {
+            "description": "Also delete the trip still in progress. Only for deleting the vehicle itself: while it is tracked, the next point would start a new trip with the rest of the ride.",
+            "in": "query",
+            "name": "include_in_progress",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Also delete the trip still in progress. Only for deleting the vehicle itself: while it is tracked, the next point would start a new trip with the rest of the ride.",
+              "title": "Include In Progress",
+              "type": "boolean"
             }
           }
         ],
@@ -1654,6 +1900,57 @@
           }
         ],
         "summary": "List trips for a vehicle",
+        "tags": [
+          "Karto API"
+        ]
+      }
+    },
+    "/api/karto/v1/vehicles/{vehicle_id}/trips/current": {
+      "get": {
+        "description": "The vehicle's trip in progress, as recorded so far \u2014 204 when there is none.\n\nThe list of trips holds completed ones only, so this is the one way to learn the id\nof a running trip; its track so far is `GET /trips/{id}`. A running trip can still\nvanish rather than complete: one shorter than the minimum distance is discarded when\nit ends, so a client polling the trip has to read a 404 as \"ended and dropped\".\n\nA trip that has received nothing for `KARTO_TRIP_TIMEOUT_SECONDS` is not reported:\nit is waiting to be finalized, not running.",
+        "operationId": "get_current_trip_api_karto_v1_vehicles__vehicle_id__trips_current_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "vehicle_id",
+            "required": true,
+            "schema": {
+              "title": "Vehicle Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenTrip"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "204": {
+            "description": "The vehicle has no trip in progress."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "The trip in progress, if any",
         "tags": [
           "Karto API"
         ]

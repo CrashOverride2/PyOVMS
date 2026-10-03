@@ -1173,6 +1173,14 @@ msgstr "Critiques"
 msgid "Current Password"
 msgstr "Mot de passe actuel"
 
+#: app/templates/trip_detail.html
+msgid "Current SOC"
+msgstr "SOC actuel"
+
+#: app/templates/trip_detail.html
+msgid "Current position"
+msgstr "Position actuelle"
+
 #: app/templates/blocked_ips.html
 msgid "Currently Blocked IPs"
 msgstr "IP actuellement bloquées"
@@ -1482,6 +1490,10 @@ msgstr "SOC final"
 #: app/templates/charge_detail.html app/templates/trip_detail.html
 msgid "End Time"
 msgstr "Heure de fin"
+
+#: app/templates/trip_detail.html app/templates/vehicle_detail.html
+msgid "Ending"
+msgstr "Se termine"
 
 #: app/templates/_trip_search_heatmap.html
 msgid "Ends within bounding box"
@@ -1943,6 +1955,10 @@ msgstr "Mettre en place des restrictions IP supplémentaires"
 msgid "Important Notes"
 msgstr "Remarques importantes"
 
+#: app/templates/trip_detail.html app/templates/vehicle_detail.html
+msgid "In progress"
+msgstr "En cours"
+
 #: app/templates/autoprovision_management.html app/templates/profile.html
 msgid "Inactive"
 msgstr "Inactif"
@@ -2182,6 +2198,10 @@ msgstr "Dernière semaine"
 #: app/templates/admin_dashboard.html
 msgid "Last fetch"
 msgstr "Dernière récupération"
+
+#: app/templates/trip_detail.html app/templates/vehicle_detail.html
+msgid "Last position"
+msgstr "Dernière position"
 
 #: app/templates/email/admin_lifecycle_vehicle.txt
 #: app/templates/email/unused_vehicle_warning.txt
@@ -3953,6 +3973,18 @@ msgstr "Ce lien de réinitialisation du mot de passe a expiré. Veuillez en dema
 msgid "This password reset link is invalid or has already been used."
 msgstr "Ce lien de réinitialisation du mot de passe n'est pas valide ou a déjà été utilisé."
 
+#: app/templates/trip_detail.html
+msgid "This trip has ended and was too short to keep."
+msgstr "Ce trajet est terminé et était trop court pour être conservé."
+
+#: app/templates/trip_detail.html
+msgid ""
+"This trip is still running. The figures are what has been recorded so far and update "
+"by themselves."
+msgstr ""
+"Ce trajet est toujours en cours. Les valeurs montrent ce qui a été enregistré "
+"jusqu'ici et se mettent à jour d'elles-mêmes."
+
 #: app/templates/edit_vehicle.html
 msgid ""
 "This value is sent by the vehicle when it's in paranoid mode and is generally not "
@@ -5009,6 +5041,10 @@ msgstr "facultatif"
 #: app/templates/add_vehicle_wizard.html
 msgid "optional display name"
 msgstr "nom d'affichage facultatif"
+
+#: app/templates/vehicle_detail.html
+msgid "since"
+msgstr "depuis"
 
 #: app/templates/totp_key_rotation.html
 msgid "user"

@@ -28,10 +28,10 @@ logger = logging.getLogger(__name__)
 # one alphanumeric character rather than reasoning about what a given server does with
 # a dot segment.
 #
-# Otherwise the check is about characters, not length: the length bound is the storage
-# column (Vehicle.ntfy_topic is String(100)), deliberately not NTFY's own 64, so that
-# upgrading cannot start refusing a topic that this server previously accepted and
-# stored. NTFY's own rule is [-_A-Za-z0-9]{1,64} and it enforces that itself; '.' is
+# Otherwise the check is about characters, not length: the length bound is what the
+# vehicle-level topic column held (String(100), since moved into push_subscriptions),
+# deliberately not NTFY's own 64, so that upgrading cannot start refusing a topic that
+# this server previously accepted and stored. NTFY's own rule is [-_A-Za-z0-9]{1,64} and it enforces that itself; '.' is
 # tolerated here because topics generated from vehicle ids have historically contained
 # one.
 _TOPIC_RE = re.compile(r"^(?=.*[A-Za-z0-9])[A-Za-z0-9_.-]{1,100}$")

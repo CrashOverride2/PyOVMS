@@ -141,6 +141,11 @@ async def trigger_karto_vehicle_deletion(db: Session, vehicle_id: str, current_u
         # 2. Construct the full URL and headers for the API call
         url = f"{settings.SERVER_BASE_URL.rstrip('/')}/api/karto/v1/vehicles/{vehicle_id}/trips"
         headers = {"X-API-Key": plain_key}
+        # Karto's bulk delete keeps a trip that is still running unless asked —
+        # for the app's "delete all trips" that keeps the ride whole. Deleting the
+        # vehicle has to take everything, or the reaper later completes that one
+        # trip under a vehicle id that may already belong to someone else.
+        params = {"include_in_progress": "true"}
 
         # 3. Define the blocking request function to be run in a threadpool.
         #    Retries a few times: the common failure is a restarting Karto, not a
@@ -150,7 +155,7 @@ async def trigger_karto_vehicle_deletion(db: Session, vehicle_id: str, current_u
             last_error = None
             for attempt in range(1, KARTO_DELETE_ATTEMPTS + 1):
                 try:
-                    response = requests.delete(url, headers=headers, timeout=30)
+                    response = requests.delete(url, headers=headers, params=params, timeout=30)
                     response.raise_for_status()
                     logger.info(
                         f"Karto: trip data for vehicle {vehicle_id} deleted "

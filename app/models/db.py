@@ -73,28 +73,10 @@ class Vehicle(Base):
 
     paranoid_token = Column(LargeBinary, nullable=True)
 
-    enable_ntfy_notifications = Column(Boolean, default=False)
-    enable_email_notifications = Column(Boolean, default=False)
-    enable_fcm_notifications = Column(Boolean, default=False)
-    enable_apns_notifications = Column(Boolean, default=False, nullable=False)
     enable_trip_tracking = Column(Boolean, default=False, nullable=False)
     enable_charge_logging = Column(Boolean, default=False, nullable=False)
-    enable_unified_push_notifications = Column(Boolean, default=False, nullable=False)
-    unified_push_endpoint = Column(String(500), nullable=True)
     badge_count = Column(Integer, default=0, nullable=False)
 
-    ntfy_topic = Column(String(100))
-    ntfy_server_url = Column(String(255))
-    ntfy_auth_method = Column(String(50))
-    ntfy_auth_token = Column(LargeBinary, nullable=True)
-    ntfy_auth_user = Column(String(100))
-    ntfy_auth_password = Column(LargeBinary, nullable=True)
-    ntfy_auth_query_param_name = Column(String(50))
-
-    notification_email = Column(String(255)) 
-
-    fcm_token = Column(String(255)) 
-    apns_token = Column(String(255)) 
 
     last_seen_tcp = Column(DateTime(timezone=True), index=True, nullable=True)
     last_seen_v3 = Column(DateTime(timezone=True), index=True, nullable=True)

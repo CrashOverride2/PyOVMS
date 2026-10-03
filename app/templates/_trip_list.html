@@ -1,3 +1,31 @@
+{# The trip in progress: no preview yet (that is rendered when it ends), no delete
+   (Karto refuses one while the tracker still writes to it), figures "so far". #}
+<div x-show="tripsState.showCurrentTrip" x-cloak class="mb-4">
+    <a :href="tripsState.currentTrip.detailHref"
+        class="block bg-gray-800/50 p-4 rounded-md border border-green-700/60 transition-all hover:border-neon-blue/70 hover:shadow-lg">
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold rounded-full border"
+                :class="tripsState.currentTrip.phaseClass">
+                <span class="h-2 w-2 rounded-full bg-current animate-pulse"></span>
+                <span x-text="tripsState.currentTrip.phaseText"></span>
+            </span>
+            <h3 class="font-semibold text-text-primary text-base" x-text="tripsState.currentTrip.startDateText"></h3>
+        </div>
+        <p class="text-xs text-text-secondary mt-1">
+            <span x-text="tripsState.currentTrip.sinceText"></span>
+            <span x-show="tripsState.currentTrip.lastPointText"> · </span>
+            <span x-text="tripsState.currentTrip.lastPointText"></span>
+        </p>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-3 text-sm mt-3 border-t border-border-color/30 pt-3">
+            <div><dt class="text-text-secondary text-xs">{{ _('Duration') }}</dt><dd class="text-text-primary font-medium" x-text="tripsState.currentTrip.durationText"></dd></div>
+            <div><dt class="text-text-secondary text-xs">{{ _('Distance') }}</dt><dd class="text-text-primary font-medium" x-text="tripsState.currentTrip.distanceText"></dd></div>
+            <div><dt class="text-text-secondary text-xs">{{ _('Avg. Speed') }}</dt><dd class="text-text-primary font-medium" x-text="tripsState.currentTrip.averageSpeedText"></dd></div>
+            <div><dt class="text-text-secondary text-xs">{{ _('SOC Used') }}</dt><dd class="font-medium" :class="tripsState.currentTrip.socClass" x-text="tripsState.currentTrip.socUsedText"></dd></div>
+            <div x-show="tripsState.currentTrip.energyUsedText"><dt class="text-text-secondary text-xs">{{ _('Energy Used') }}</dt><dd class="text-text-primary font-medium" x-text="tripsState.currentTrip.energyUsedText"></dd></div>
+        </div>
+    </a>
+</div>
+
 <div x-show="tripsState.showLoading" class="p-4 text-center text-text-secondary">
     <p>{{ _('Loading trips...') }}</p>
 </div>

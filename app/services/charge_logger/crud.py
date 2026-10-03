@@ -46,6 +46,16 @@ def create_charge_log(db: Session, vehicle_id_fk: int, start_time: datetime.date
     db.refresh(db_log)
     return db_log
 
+def _power_figures(db: Session, charge_log_id: UUID) -> Tuple[Optional[float], Optional[float]]:
+    """Max and average charge power over a session's points; (None, None) without any."""
+    valid_powers = [p[0] for p in db.query(models.ChargeLogPoint.power_kw).filter(
+        models.ChargeLogPoint.charge_log_id_fk == charge_log_id,
+        models.ChargeLogPoint.power_kw.isnot(None)
+    ).all()]
+    if not valid_powers:
+        return None, None
+    return max(valid_powers), sum(valid_powers) / len(valid_powers)
+
 def update_charge_log(db: Session, charge_log_id: UUID, end_time: datetime.datetime, end_soc: Optional[float], energy_added_kwh: Optional[float]) -> Optional[models.ChargeLog]:
     db_log = db.query(models.ChargeLog).filter(models.ChargeLog.id == charge_log_id).first()
     if db_log:
@@ -53,24 +63,76 @@ def update_charge_log(db: Session, charge_log_id: UUID, end_time: datetime.datet
         db_log.end_soc = _safe_float_parse(end_soc)
         db_log.energy_added_kwh = _safe_float_parse(energy_added_kwh)
 
-        power_points_query = db.query(models.ChargeLogPoint.power_kw).filter(
-            models.ChargeLogPoint.charge_log_id_fk == charge_log_id,
-            models.ChargeLogPoint.power_kw.isnot(None)
-        )
-        
-        power_points = power_points_query.all()
-        
-        if power_points:
-            valid_powers = [p[0] for p in power_points]
-            if valid_powers:
-                db_log.max_power_kw = max(valid_powers)
-                db_log.average_power_kw = sum(valid_powers) / len(valid_powers)
+        max_power, average_power = _power_figures(db, charge_log_id)
+        if max_power is not None:
+            db_log.max_power_kw = max_power
+            db_log.average_power_kw = average_power
 
         db.commit()
         db.refresh(db_log)
     return db_log
 
-def create_charge_log_point(db: Session, charge_log_id_fk: UUID, timestamp: datetime.datetime, soc: Optional[float], power_kw: Optional[float], battery_temp_c: Optional[float]):
+def close_open_charge_log(db: Session, charge_log_id: UUID, end_time: datetime.datetime,
+                          end_soc: Optional[float], energy_added_kwh: Optional[float]) -> bool:
+    """`update_charge_log` for a row nobody holds: only if it is still open.
+
+    The housekeeping pass decides to close a row on what it read a moment earlier.
+    Conditional on `end_time IS NULL` in the statement itself, a row that was closed
+    in between keeps the end it was given rather than being overwritten with a guess.
+    """
+    values = {
+        "end_time": end_time,
+        "end_soc": _safe_float_parse(end_soc),
+        "energy_added_kwh": _safe_float_parse(energy_added_kwh),
+    }
+    max_power, average_power = _power_figures(db, charge_log_id)
+    if max_power is not None:
+        values.update(max_power_kw=max_power, average_power_kw=average_power)
+    updated = db.query(models.ChargeLog).filter(
+        models.ChargeLog.id == charge_log_id, models.ChargeLog.end_time.is_(None)
+    ).update(values, synchronize_session=False)
+    db.commit()
+    return updated == 1
+
+def delete_open_charge_log(db: Session, charge_log_id: UUID) -> bool:
+    """`delete_charge_log` for a row nobody holds: only if it is still open.
+
+    Points first and explicitly: SQLite runs without `PRAGMA foreign_keys`
+    (app/database.py), so the CASCADE on the points' foreign key does nothing there.
+    Both statements are conditional on the row being open, in one transaction.
+    """
+    still_open = db.query(models.ChargeLog.id).filter(
+        models.ChargeLog.id == charge_log_id, models.ChargeLog.end_time.is_(None)
+    )
+    db.query(models.ChargeLogPoint).filter(
+        models.ChargeLogPoint.charge_log_id_fk.in_(still_open.scalar_subquery())
+    ).delete(synchronize_session=False)
+    deleted = db.query(models.ChargeLog).filter(
+        models.ChargeLog.id == charge_log_id, models.ChargeLog.end_time.is_(None)
+    ).delete(synchronize_session=False)
+    if deleted != 1:
+        db.rollback()
+        return False
+    db.commit()
+    return True
+
+def _charge_log_exists(db: Session, charge_log_id: UUID) -> bool:
+    return db.query(models.ChargeLog.id).filter(models.ChargeLog.id == charge_log_id).first() is not None
+
+def create_charge_log_point(db: Session, charge_log_id_fk: UUID, timestamp: datetime.datetime, soc: Optional[float], power_kw: Optional[float], battery_temp_c: Optional[float]) -> bool:
+    """Store one point of a session. False means the session's row is gone.
+
+    Every IntegrityError used to be read as the expected duplicate (the unique
+    constraint on log and timestamp) and swallowed — including the foreign-key
+    violation of a row that had been deleted under a live session, so every later
+    point of that charge was dropped without a word. Only the duplicate is ignored
+    now; a missing parent is reported to the caller, which drops the session. The
+    parent is checked up front as well, because SQLite does not enforce the foreign
+    key here (app/database.py) and would store the point beside a row that is gone.
+    """
+    if not _charge_log_exists(db, charge_log_id_fk):
+        logger.warning(f"Charge log {charge_log_id_fk} no longer exists; point at {timestamp} not stored.")
+        return False
     db_point = models.ChargeLogPoint(
         charge_log_id_fk=charge_log_id_fk,
         timestamp=timestamp,
@@ -83,8 +145,19 @@ def create_charge_log_point(db: Session, charge_log_id_fk: UUID, timestamp: date
         db.commit()
     except IntegrityError as e:
         db.rollback()
+        # Decided by looking, not by the driver's message: constraint names and error
+        # texts differ between SQLite, PostgreSQL and MySQL.
+        if not _charge_log_exists(db, charge_log_id_fk):
+            logger.warning(f"Charge log {charge_log_id_fk} was deleted; point at {timestamp} not stored: {e}")
+            return False
+        duplicate = db.query(models.ChargeLogPoint.id).filter(
+            models.ChargeLogPoint.charge_log_id_fk == charge_log_id_fk,
+            models.ChargeLogPoint.timestamp == timestamp,
+        ).first()
+        if duplicate is None:
+            raise
         logger.debug(f"Duplicate charge log point ignored for charge_log_id={charge_log_id_fk} at timestamp={timestamp}: {e}")
-        # Silently ignore duplicate entries - this is expected behavior with the unique constraint
+    return True
 
 def get_charge_logs_for_vehicle(db: Session, vehicle_id: str, limit: int, offset: int) -> Tuple[List[ChargeLogSummary], int]:
     vehicle = db.query(ovms_models.Vehicle).filter(ovms_models.Vehicle.vehicle_id == vehicle_id).first()

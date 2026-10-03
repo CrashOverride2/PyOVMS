@@ -73,10 +73,9 @@ def test_widget_push(vehicle_id: str, force_update: bool = False, include_badge:
         logger.info(f"Found vehicle: {vehicle_id}")
         logger.info(f"  - Owner: {vehicle_db.owner.username if vehicle_db.owner else 'Unknown'}")
         logger.info(f"  - Silent push enabled: {vehicle_db.enable_silent_push_notifications}")
-        logger.info(f"  - FCM token: {'Yes' if vehicle_db.fcm_token else 'No'}")
-        logger.info(f"  - APNs token: {'Yes' if vehicle_db.apns_token else 'No'}")
-        logger.info(f"  - FCM enabled: {vehicle_db.enable_fcm_notifications}")
-        logger.info(f"  - APNs enabled: {vehicle_db.enable_apns_notifications}")
+        push_types = [s.push_type for s in vehicle_db.push_subscriptions]
+        logger.info(f"  - FCM subscriptions: {push_types.count('fcm')}")
+        logger.info(f"  - APNs subscriptions: {push_types.count('apns')}")
         logger.info(f"  - Current badge count: {vehicle_db.badge_count}")
 
         if not vehicle_db.enable_silent_push_notifications:
@@ -141,8 +140,9 @@ def list_vehicles():
             logger.info(f"Vehicle ID: {vehicle.vehicle_id}")
             logger.info(f"  Owner: {vehicle.owner.username if vehicle.owner else 'Unknown'}")
             logger.info(f"  Silent push: {'✅' if vehicle.enable_silent_push_notifications else '❌'}")
-            logger.info(f"  FCM token: {'✅' if vehicle.fcm_token else '❌'}")
-            logger.info(f"  APNs token: {'✅' if vehicle.apns_token else '❌'}")
+            push_types = {s.push_type for s in vehicle.push_subscriptions}
+            logger.info(f"  FCM subscription: {'✅' if 'fcm' in push_types else '❌'}")
+            logger.info(f"  APNs subscription: {'✅' if 'apns' in push_types else '❌'}")
             logger.info(f"  Badge count: {vehicle.badge_count}")
             logger.info("-" * 80)
 

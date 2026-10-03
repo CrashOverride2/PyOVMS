@@ -84,6 +84,16 @@ def test_karto_deletion_retries_before_giving_up():
     assert "KARTO_DELETE_ATTEMPTS" in source
 
 
+def test_karto_deletion_includes_the_running_trip():
+    """
+    Karto's bulk delete keeps an in-progress trip by default; a vehicle deletion
+    must ask for it too, or one trip outlives the vehicle.
+    """
+    source = _code_only(vehicle_service.trigger_karto_vehicle_deletion)
+    assert "'include_in_progress': 'true'" in source
+    assert "params=params" in source
+
+
 @pytest.mark.parametrize(
     "route_module,route",
     [

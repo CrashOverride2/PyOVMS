@@ -16,7 +16,15 @@
     <template x-if="hasTrip">
         <div x-cloak>
             <div class="bg-card-bg p-6 rounded-lg shadow-xl border border-neon-blue/50">
-                <h1 class="text-2xl md:text-3xl font-bold mb-4 text-neon-blue">{{ _('Trip Details') }}</h1>
+                <div class="flex flex-wrap items-center gap-3 mb-4">
+                    <h1 class="text-2xl md:text-3xl font-bold text-neon-blue">{{ _('Trip Details') }}</h1>
+                    <span x-show="isOpen" class="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold rounded-full border"
+                        :class="tripView.phaseClass">
+                        <span class="h-2 w-2 rounded-full bg-current animate-pulse"></span>
+                        <span x-text="tripView.phaseText"></span>
+                    </span>
+                </div>
+                <p x-show="isOpen" class="text-sm text-text-secondary mb-4">{{ _('This trip is still running. The figures are what has been recorded so far and update by themselves.') }}</p>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-2">
                         <div id="trip-map"
@@ -27,17 +35,17 @@
                         <h2 class="text-xl font-semibold text-neon-yellow mb-3">{{ _('Summary') }}</h2>
                         <dl class="text-sm space-y-2">
                             <div class="flex justify-between"><dt class="text-text-secondary">{{ _('Start Time') }}</dt><dd class="text-text-primary text-right" x-text="tripView.startTimeText"></dd></div>
-                            <div class="flex justify-between"><dt class="text-text-secondary">{{ _('End Time') }}</dt><dd class="text-text-primary text-right" x-text="tripView.endTimeText"></dd></div>
+                            <div class="flex justify-between"><dt class="text-text-secondary" x-text="tripView.endTimeLabel"></dt><dd class="text-text-primary text-right" x-text="tripView.endTimeText"></dd></div>
                             <div class="flex justify-between"><dt class="text-text-secondary">{{ _('Duration') }}</dt><dd class="text-text-primary font-medium" x-text="tripView.durationText"></dd></div>
                             <div class="flex justify-between"><dt class="text-text-secondary">{{ _('Distance') }}</dt><dd class="text-text-primary font-medium" x-text="tripView.distanceText"></dd></div>
                             <div class="flex justify-between"><dt class="text-text-secondary">{{ _('Avg. Speed') }}</dt><dd class="text-text-primary font-medium" x-text="tripView.averageSpeedText"></dd></div>
                             <div class="flex justify-between pt-2 border-t border-border-color/30"><dt class="text-text-secondary">{{ _('Start SOC') }}</dt><dd class="text-text-primary font-medium" x-text="tripView.startSocText"></dd></div>
-                            <div class="flex justify-between"><dt class="text-text-secondary">{{ _('End SOC') }}</dt><dd class="text-text-primary font-medium" x-text="tripView.endSocText"></dd></div>
+                            <div class="flex justify-between"><dt class="text-text-secondary" x-text="tripView.endSocLabel"></dt><dd class="text-text-primary font-medium" x-text="tripView.endSocText"></dd></div>
                             <div class="flex justify-between"><dt class="text-text-secondary">{{ _('SOC Used') }}</dt><dd class="font-medium" :class="tripView.socUsedClass" x-text="tripView.socUsedText"></dd></div>
                             <div class="flex justify-between"><dt class="text-text-secondary">{{ _('Energy Used') }}</dt><dd class="text-text-primary font-medium" x-text="tripView.energyUsedText"></dd></div>
                             <div class="flex justify-between"><dt class="text-text-secondary">{{ _('Avg. Consumption') }}</dt><dd class="text-text-primary font-medium" x-text="tripView.avgConsumptionText"></dd></div>
                         </dl>
-                        <div class="mt-6 pt-4 border-t border-border-color/30 space-y-3">
+                        <div x-show="showActions" class="mt-6 pt-4 border-t border-border-color/30 space-y-3">
                             <div class="flex space-x-3">
                                 <a :href="tripView.gpxHref"
                                 class="flex-1 text-center px-4 py-2 text-sm font-medium text-neon-green border border-neon-green rounded-md hover:bg-neon-green hover:text-dark-bg transition-colors">
@@ -106,6 +114,18 @@ const tripDetailConfig = {
     searchBackUrl: {{ (url_for('ui_vehicle_detail_page', vehicle_module_id=vehicle.vehicle_id) ~ '?tab=search') | tojson | safe }},
     tripsBackText: {{ ('← ' + _('Back to All Trips')) | tojson | safe }},
     searchBackText: {{ ('← ' + _('Back to Search')) | tojson | safe }},
+    labels: {
+        endTime: {{ _('End Time') | tojson | safe }},
+        endSoc: {{ _('End SOC') | tojson | safe }},
+        lastPosition: {{ _('Last position') | tojson | safe }},
+        currentSoc: {{ _('Current SOC') | tojson | safe }},
+        inProgress: {{ _('In progress') | tojson | safe }},
+        ending: {{ _('Ending') | tojson | safe }},
+        currentPosition: {{ _('Current position') | tojson | safe }},
+        tripStart: {{ _('Trip Start') | tojson | safe }},
+        tripEnd: {{ _('Trip End') | tojson | safe }},
+        discarded: {{ _('This trip has ended and was too short to keep.') | tojson | safe }},
+    },
     tripDeletedRedirect: {{ (url_for('ui_vehicle_detail_page', vehicle_module_id=vehicle.vehicle_id) ~ '?tab=trips&success_message=' ~ _('Trip deleted successfully.')) | tojson | safe }}
 };
 document.addEventListener('alpine:init', () => {
@@ -118,13 +138,33 @@ document.addEventListener('alpine:init', () => {
         error: null,
         showError: false,
         map: null,
+        tripMapResizeObserver: null,
         userTimezone: tripDetailConfig.userTimezone,
         showDeleteConfirm: false,
         mapBlurClass: '',
         backUrl: tripDetailConfig.tripsBackUrl,
         backText: tripDetailConfig.tripsBackText,
+        // A trip that is still running: its summary comes from `…/trips/current`
+        // (the trip itself has no end figures yet), the actions are hidden (Karto
+        // refuses to delete it, and an export would be a fragment), and the page
+        // re-reads both every 30 s until the trip has ended.
+        isOpen: false,
+        showActions: false,
+        refreshTimer: null,
+        // A refresh that came due while the tab was hidden waits for it to be shown.
+        refreshDue: false,
+        refreshInFlight: false,
+        // The last figures `…/trips/current` gave for this trip: a refresh that
+        // cannot read them keeps these rather than blanking every tile.
+        lastCurrent: null,
+        trackLayer: null,
+        markerLayer: null,
         tripView: {
             startTimeText: 'N/A',
+            endTimeLabel: tripDetailConfig.labels.endTime,
+            endSocLabel: tripDetailConfig.labels.endSoc,
+            phaseText: '',
+            phaseClass: '',
             endTimeText: 'N/A',
             durationText: 'N/A',
             distanceText: 'N/A',
@@ -147,15 +187,48 @@ document.addEventListener('alpine:init', () => {
             }
             this.refreshUiState();
             this.fetchTripDetails();
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden && this.refreshDue) {
+                    this.refreshDue = false;
+                    this.refreshNow();
+                }
+            });
         },
         refreshUiState() {
             this.showError = !!this.error;
             this.hasTrip = !!this.trip;
+            this.isOpen = !!this.trip && this.trip.status === 'in_progress';
+            this.showActions = !!this.trip && !this.isOpen;
             this.mapBlurClass = this.showDeleteConfirm ? 'blur-sm pointer-events-none' : '';
         },
-        buildTripView() {
+        buildTripView(current = null) {
             if (!this.trip) return;
             const tripId = this.trip.id;
+            const labels = tripDetailConfig.labels;
+            if (this.trip.status === 'in_progress') {
+                // Fold in what the running trip has so far; the row has none of it.
+                const c = current || {};
+                this.trip = Object.assign({}, this.trip, {
+                    end_time: c.last_point_time ?? null,
+                    duration_seconds: c.duration_seconds ?? null,
+                    distance_km: c.distance_km ?? null,
+                    average_speed_kph: c.average_speed_kph ?? null,
+                    end_soc: c.current_soc ?? null,
+                    soc_used: c.soc_used ?? null,
+                    energy_used_kwh: c.energy_used_kwh ?? null,
+                    consumption_kwh_per_100km: (c.energy_used_kwh && c.distance_km) ? c.energy_used_kwh / c.distance_km * 100 : null,
+                    consumption_kwh_per_100mi: (c.energy_used_kwh && c.distance_km) ? c.energy_used_kwh / (c.distance_km * KM_TO_MI) * 100 : null,
+                });
+                this.tripView.endTimeLabel = labels.lastPosition;
+                this.tripView.endSocLabel = labels.currentSoc;
+                this.tripView.phaseText = c.phase === 'ending' ? labels.ending : labels.inProgress;
+                this.tripView.phaseClass = c.phase === 'ending'
+                    ? 'bg-yellow-900/40 text-yellow-300 border-yellow-700/60'
+                    : 'bg-green-900/40 text-green-300 border-green-700/60';
+            } else {
+                this.tripView.endTimeLabel = labels.endTime;
+                this.tripView.endSocLabel = labels.endSoc;
+            }
             this.tripView.startTimeText = this.formatDateTime(this.trip.start_time);
             this.tripView.endTimeText = this.formatDateTime(this.trip.end_time);
             this.tripView.durationText = this.formatDuration(this.trip.duration_seconds);
@@ -166,13 +239,13 @@ document.addEventListener('alpine:init', () => {
             this.tripView.socUsedText = this.formatSoc(this.trip.soc_used);
             this.tripView.socUsedClass = this.getSocColor(this.trip.soc_used);
             this.tripView.energyUsedText = this.trip.energy_used_kwh != null
-                ? `${this.trip.energy_used_kwh.toFixed(2)} kWh` : 'N/A';
+                ? `${Number(this.trip.energy_used_kwh).toFixed(2)} kWh` : 'N/A';
             if (tripDetailConfig.userPrefersImperial) {
                 this.tripView.avgConsumptionText = this.trip.consumption_kwh_per_100mi != null
-                    ? `${this.trip.consumption_kwh_per_100mi.toFixed(1)} kWh/100 mi` : 'N/A';
+                    ? `${Number(this.trip.consumption_kwh_per_100mi).toFixed(1)} kWh/100 mi` : 'N/A';
             } else {
                 this.tripView.avgConsumptionText = this.trip.consumption_kwh_per_100km != null
-                    ? `${this.trip.consumption_kwh_per_100km.toFixed(1)} kWh/100 km` : 'N/A';
+                    ? `${Number(this.trip.consumption_kwh_per_100km).toFixed(1)} kWh/100 km` : 'N/A';
             }
             this.tripView.gpxHref = `/api/karto/v1/trips/${tripId}/gpx`;
             this.tripView.kmlHref = `/api/karto/v1/trips/${tripId}/kml`;
@@ -190,19 +263,8 @@ document.addEventListener('alpine:init', () => {
             this.isLoading = true;
             this.error = null;
             this.refreshUiState();
-            fetch(`/api/karto/v1/trips/${this.tripId}`, { credentials: 'include' })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(err => { throw new Error(err.detail || `{{ _('Failed to load trip details (Status: ') }}${response.status})`); });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    this.trip = data;
-                    this.buildTripView();
-                    this.refreshUiState();
-                    this.$nextTick(() => this.initMap());
-                })
+            this.loadTrip(false)
+                .then(() => this.scheduleRefresh())
                 .catch(err => {
                     this.error = err.message;
                     this.refreshUiState();
@@ -211,8 +273,87 @@ document.addEventListener('alpine:init', () => {
                 .finally(() => this.isLoading = false);
         },
 
+        // One read of the trip — and, while it runs, of its figures so far. `refresh`
+        // keeps the map where the user put it and only redraws the line.
+        async loadTrip(refresh) {
+            const response = await fetch(`/api/karto/v1/trips/${this.tripId}`, { credentials: 'include' });
+            if (response.status === 404 && refresh) {
+                // It was running a moment ago: a trip under the minimum distance is
+                // discarded when it ends rather than completed.
+                this.teardownMap();
+                this.trip = null;
+                this.error = tripDetailConfig.labels.discarded;
+                this.refreshUiState();
+                return;
+            }
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.detail || `{{ _('Failed to load trip details (Status: ') }}${response.status})`);
+            }
+            const data = await response.json();
+            let current = null;
+            if (data.status === 'in_progress') {
+                try {
+                    const r = await fetch(`/api/karto/v1/vehicles/${this.vehicleId}/trips/current`, { credentials: 'include' });
+                    if (r.ok && r.status !== 204) {
+                        const c = await r.json();
+                        if (c && c.id === data.id) current = c;
+                    }
+                } catch (err) {
+                    console.warn('Current trip figures unavailable', err);
+                }
+                // A failed read, or the gap between the trip ending and its row
+                // saying so, keeps the figures already on screen.
+                if (current) this.lastCurrent = current;
+                else current = this.lastCurrent;
+            }
+            this.trip = data;
+            this.buildTripView(current);
+            this.refreshUiState();
+            if (refresh && this.map) this.drawTrack(false);
+            else this.$nextTick(() => this.initMap());
+        },
+
+        // The running trip re-reads itself every 30 s. Re-armed after every attempt,
+        // failed ones included (a 502 while Karto restarts must not end it), never
+        // two at once, and not while the tab is hidden: a refresh that comes due
+        // then is made when the tab is shown again.
+        scheduleRefresh() {
+            clearTimeout(this.refreshTimer);
+            this.refreshTimer = null;
+            if (!this.isOpen) return;
+            this.refreshTimer = setTimeout(() => this.refreshNow(), 30000);
+        },
+        refreshNow() {
+            clearTimeout(this.refreshTimer);
+            this.refreshTimer = null;
+            if (!this.isOpen || this.refreshInFlight) return;
+            if (document.hidden) { this.refreshDue = true; return; }
+            this.refreshInFlight = true;
+            this.loadTrip(true)
+                .catch(err => console.warn('Trip refresh failed', err))
+                .finally(() => {
+                    this.refreshInFlight = false;
+                    this.scheduleRefresh();
+                });
+        },
+
+        // The map lives inside `x-if="hasTrip"`, so a trip that goes away takes its
+        // element with it. Leaflet and the observer would otherwise stay attached to
+        // the removed node: a map nobody can see, still answering resizes.
+        teardownMap() {
+            if (this.tripMapResizeObserver) this.tripMapResizeObserver.disconnect();
+            this.tripMapResizeObserver = null;
+            if (this.map) this.map.remove();
+            this.map = null;
+            this.trackLayer = null;
+            this.markerLayer = null;
+        },
+
         initMap(attempt = 0) {
             if (typeof L === 'undefined' || !this.trip || !this.trip.geojson) {
+                // A trip that has only just started has a single point and no line yet;
+                // the next refresh draws it.
                 document.getElementById('trip-map').innerHTML = `<div class="flex items-center justify-center h-full text-text-secondary">{{ _("Map data not available for this trip.") }}</div>`;
                 return;
             }
@@ -228,6 +369,10 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (this.map) this.map.remove();
+            this.trackLayer = null;
+            this.markerLayer = null;
+            // A running trip may have shown the "no map data" note in here first.
+            tripMapEl.innerHTML = '';
             this.map = L.map('trip-map');
             
             const protomapsUrl = {{ PROTOMAPS_URL | tojson | safe }};
@@ -305,20 +450,34 @@ document.addEventListener('alpine:init', () => {
                 }).addTo(this.map);
             }
 
-            const geojsonData = JSON.parse(this.trip.geojson);
-            const tripPath = L.geoJSON(geojsonData, { style: { color: "#39FF14", weight: 4, opacity: 0.8 } }).addTo(this.map);
-            this.map.fitBounds(tripPath.getBounds().pad(0.1));
             if (this.tripMapResizeObserver) this.tripMapResizeObserver.disconnect();
             this.tripMapResizeObserver = new ResizeObserver(() => { if (this.map) this.map.invalidateSize({ pan: false }); });
             this.tripMapResizeObserver.observe(tripMapEl);
             requestAnimationFrame(() => { if (this.map) this.map.invalidateSize({ pan: false }); });
             setTimeout(() => { if (this.map) this.map.invalidateSize({ pan: false }); }, 500);
 
+            this.drawTrack(true);
+        },
+
+        // The line and its two markers. The end of a running trip is where the vehicle
+        // is now, not a finish flag.
+        drawTrack(fit) {
+            if (!this.map || !this.trip || !this.trip.geojson) return;
+            const labels = tripDetailConfig.labels;
+            const geojsonData = JSON.parse(this.trip.geojson);
+            if (this.trackLayer) this.map.removeLayer(this.trackLayer);
+            if (this.markerLayer) this.map.removeLayer(this.markerLayer);
+            this.trackLayer = L.geoJSON(geojsonData, { style: { color: "#39FF14", weight: 4, opacity: 0.8 } }).addTo(this.map);
+            if (fit) this.map.fitBounds(this.trackLayer.getBounds().pad(0.1));
+
             const startCoordGeoJSON = geojsonData.coordinates[0];
             const endCoordGeoJSON = geojsonData.coordinates[geojsonData.coordinates.length - 1];
-
-            L.marker([startCoordGeoJSON[1], startCoordGeoJSON[0]], { icon: L.divIcon({ className: 'text-2xl', html: '🟢' }) }).addTo(this.map).bindPopup("{{ _('Trip Start') }}");
-            L.marker([endCoordGeoJSON[1], endCoordGeoJSON[0]], { icon: L.divIcon({ className: 'text-2xl', html: '🏁' }) }).addTo(this.map).bindPopup("{{ _('Trip End') }}");
+            const open = this.trip.status === 'in_progress';
+            this.markerLayer = L.layerGroup([
+                L.marker([startCoordGeoJSON[1], startCoordGeoJSON[0]], { icon: L.divIcon({ className: 'text-2xl', html: '🟢' }) }).bindPopup(labels.tripStart),
+                L.marker([endCoordGeoJSON[1], endCoordGeoJSON[0]], { icon: L.divIcon({ className: 'text-2xl', html: open ? '🚗' : '🏁' }) })
+                    .bindPopup(open ? labels.currentPosition : labels.tripEnd),
+            ]).addTo(this.map);
         },
 
         deleteTrip(id) {
@@ -356,21 +515,16 @@ document.addEventListener('alpine:init', () => {
         },
         formatDistance(km) {
             if (km === null || km === undefined) return 'N/A';
-            if (tripDetailConfig.userPrefersImperial) return `${(km * KM_TO_MI).toFixed(2)} mi`;
-            return `${km.toFixed(2)} km`;
+            if (tripDetailConfig.userPrefersImperial) return `${(Number(km) * KM_TO_MI).toFixed(2)} mi`;
+            return `${Number(km).toFixed(2)} km`;
         },
         formatSpeed(kph) {
             if (kph === null || kph === undefined) return 'N/A';
             if (tripDetailConfig.userPrefersImperial) return `${(kph * KM_TO_MI).toFixed(1)} mph`;
             return `${kph.toFixed(1)} kph`;
         },
-        formatSoc(soc) { return soc !== null ? `${soc.toFixed(1)} %` : 'N/A'; },
-        getSocColor(soc) { return soc > 0 ? 'text-red-400' : (soc < 0 ? 'text-green-400' : 'text-text-primary'); },
-        getStatusColor(status) {
-            if (status === 'completed') return 'bg-green-700/70 text-green-300';
-            if (status === 'timeout') return 'bg-yellow-700/70 text-yellow-300';
-            return 'bg-blue-700/70 text-blue-300';
-        }
+        formatSoc(soc) { return soc != null ? `${Number(soc).toFixed(1)} %` : 'N/A'; },
+        getSocColor(soc) { return soc > 0 ? 'text-red-400' : (soc < 0 ? 'text-green-400' : 'text-text-primary'); }
     }));
 });
 </script>

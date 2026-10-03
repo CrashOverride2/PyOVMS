@@ -14,6 +14,7 @@ from app.notifications.channels.unified_push import send_unified_push_notificati
 from app.notifications.dispatcher import (
     MAX_RECIPIENTS_PER_NOTIFICATION,
     build_dispatch_plan,
+    dispatch_badge_reset,
     dispatch_notification_to_vehicle,
     shutdown_dispatch_pool,
 )
@@ -78,6 +79,7 @@ __all__ = [
     "backoff_delay",
     "build_dispatch_plan",
     "close_all_sessions",
+    "dispatch_badge_reset",
     "dispatch_notification_to_vehicle",
     "mail_queue",
     "initialize_apns_client",

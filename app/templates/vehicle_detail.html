@@ -264,6 +264,12 @@
             failed_to_load_data: {{ _('Failed to load data (Status: ') | tojson | safe }},
             service_unavailable: {{ _('Service unavailable. Server sent an unexpected response (Status: ') | tojson | safe }}
         },
+        trips: {
+            inProgress: {{ _('In progress') | tojson | safe }},
+            ending: {{ _('Ending') | tojson | safe }},
+            since: {{ _('since') | tojson | safe }},
+            lastPoint: {{ _('Last position') | tojson | safe }},
+        },
         favorites: {
             saveFailed: {{ _('Could not save favorite.') | tojson | safe }},
             deleteFailed: {{ _('Could not remove favorite.') | tojson | safe }},
@@ -702,11 +708,27 @@
         }
     }
 
+// The card's fields with nothing in them: the CSP build of Alpine reads plain paths
+// only, so the object is never null — the card is hidden instead.
+function emptyCurrentTrip() {
+    return {
+        id: null, detailHref: '#', phaseText: '', phaseClass: '', startDateText: '',
+        sinceText: '', lastPointText: '', durationText: '', distanceText: '',
+        averageSpeedText: '', socUsedText: '', socClass: '', energyUsedText: null,
+    };
+}
+
 function createTripsState() {
     return {
         hasBeenInitialized: false,
         isLoading: true,
         isPaginating: false,
+        // A background reload (a trip just ended) has its own flag: it must neither dim
+        // the list nor disable the pagination the user may be reaching for.
+        isReloading: false,
+        // Each list request takes a number and only the newest may write, so a
+        // background reload still out when the user turns the page cannot land on it.
+        tripsRequestSeq: 0,
         error: null,
         trips: [],
         displayTrips: [],
@@ -724,6 +746,18 @@ function createTripsState() {
         showNextPage: false,
         currentPageText: '1',
         totalPagesText: '1',
+        // The trip in progress (`GET …/trips/current`), shown above the list, which
+        // holds completed trips only. Polled while a trip is open or the vehicle is on;
+        // when it goes away the list is reloaded, since that is where it reappears —
+        // or not, if it was too short to keep.
+        currentTrip: emptyCurrentTrip(),
+        showCurrentTrip: false,
+        currentTripId: null,
+        vehicleOn: false,
+        currentTripTimer: null,
+        currentTripInFlight: false,
+        // A poll that came due while the tab was hidden is made when it is shown.
+        currentTripDue: false,
 
         init(vehicleId, userTimezone) {
             if (this.hasBeenInitialized || !vehicleId) return;
@@ -735,13 +769,104 @@ function createTripsState() {
             const pageToLoad = savedPage ? parseInt(savedPage, 10) : 1;
 
             this.fetchTrips(pageToLoad);
+            this.fetchCurrentTrip();
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden && this.currentTripDue) {
+                    this.currentTripDue = false;
+                    this.fetchCurrentTrip();
+                }
+            });
 
             if (savedPage) {
                 sessionStorage.removeItem('vehicleDetailTripPage');
             }
         },
 
-        async fetchTrips(page = 1) {
+        // Told by the page whenever the live data says the vehicle switched on or off.
+        // The trip row only exists from the first GPS fix on, so "on" alone is no trip
+        // yet — but it is the reason to start looking.
+        setVehicleOn(isOn) {
+            const on = !!isOn;
+            if (on === this.vehicleOn) return;
+            this.vehicleOn = on;
+            if (this.hasBeenInitialized) this.fetchCurrentTrip();
+        },
+
+        scheduleCurrentTrip() {
+            clearTimeout(this.currentTripTimer);
+            this.currentTripTimer = null;
+            if (!this.currentTripId && !this.vehicleOn) return;
+            this.currentTripTimer = setTimeout(() => this.fetchCurrentTrip(), 30000);
+        },
+
+        // Never two at once (the vehicle switching on asks too), nothing while the tab
+        // is hidden, and re-armed after every attempt, failed ones included.
+        async fetchCurrentTrip() {
+            if (!this.vehicleId || this.currentTripInFlight) return;
+            clearTimeout(this.currentTripTimer);
+            this.currentTripTimer = null;
+            if (document.hidden) { this.currentTripDue = true; return; }
+            this.currentTripInFlight = true;
+            try {
+                const response = await fetch(`/api/karto/v1/vehicles/${this.vehicleId}/trips/current`, { credentials: 'include' });
+                const previousId = this.currentTripId;
+                if (response.status === 204) {
+                    this.currentTripId = null;
+                    this.currentTrip = emptyCurrentTrip();
+                    this.showCurrentTrip = false;
+                } else if (response.ok) {
+                    const trip = await response.json();
+                    this.currentTripId = trip.id;
+                    this.currentTrip = this.mapCurrentTrip(trip);
+                    this.showCurrentTrip = true;
+                } else {
+                    // Anything else (an older Karto without the route, a hiccup) leaves
+                    // the card as it was: the list is what this tab is for.
+                    return;
+                }
+                // The trip that was running has ended — also when the next one started
+                // between two polls and the id simply changed.
+                if (previousId && previousId !== this.currentTripId) this.reloadTripsInPlace();
+            } catch (err) {
+                console.warn('Could not load the trip in progress', err);
+            } finally {
+                this.currentTripInFlight = false;
+                this.refreshViewState();
+                this.scheduleCurrentTrip();
+            }
+        },
+
+        // A finished trip joins the list: reload the page the user is on, without
+        // scrolling, and keep the list if that reload fails.
+        reloadTripsInPlace() {
+            if (this.isLoading || this.isPaginating || this.isReloading) return;
+            this.fetchTrips(this.pagination.current_page || 1, { background: true });
+        },
+
+        mapCurrentTrip(trip) {
+            const t = vehicleDetailTranslations.trips;
+            return {
+                id: trip.id,
+                detailHref: `/vehicle/${this.vehicleId}/trip/${trip.id}`,
+                phaseText: trip.phase === 'ending' ? t.ending : t.inProgress,
+                phaseClass: trip.phase === 'ending'
+                    ? 'bg-yellow-900/40 text-yellow-300 border-yellow-700/60'
+                    : 'bg-green-900/40 text-green-300 border-green-700/60',
+                startDateText: this.formatDateTime(trip.start_time, { dateStyle: 'full' }),
+                sinceText: `${t.since} ${this.formatDateTime(trip.start_time, { timeStyle: 'short' })}`,
+                lastPointText: trip.last_point_time
+                    ? `${t.lastPoint}: ${this.formatDateTime(trip.last_point_time, { timeStyle: 'short' })}`
+                    : '',
+                durationText: this.formatDuration(trip.duration_seconds),
+                distanceText: this.formatDistance(trip.distance_km),
+                averageSpeedText: this.formatSpeed(trip.average_speed_kph),
+                socUsedText: this.formatSoc(trip.soc_used),
+                socClass: this.getSocColor(trip.soc_used),
+                energyUsedText: trip.energy_used_kwh != null ? `${Number(trip.energy_used_kwh).toFixed(2)} kWh` : null,
+            };
+        },
+
+        async fetchTrips(page = 1, { background = false } = {}) {
             if (!this.vehicleId) {
                 this.error = "Invalid Vehicle ID for trips.";
                 this.isLoading = false;
@@ -749,9 +874,11 @@ function createTripsState() {
                 return;
             }
             
-            if (this.trips.length > 0) { this.isPaginating = true; } 
+            const seq = ++this.tripsRequestSeq;
+            if (background) { this.isReloading = true; }
+            else if (this.trips.length > 0) { this.isPaginating = true; }
             else { this.isLoading = true; }
-            this.error = null;
+            if (!background) this.error = null;
             this.refreshViewState();
             
             const url = new URL(`/api/karto/v1/vehicles/${this.vehicleId}/trips`, window.location.origin);
@@ -759,6 +886,7 @@ function createTripsState() {
 
             try {
                 const response = await fetch(url, { credentials: 'include' });
+                if (seq !== this.tripsRequestSeq) return;
                 if (!response.ok) {
                     const contentType = response.headers.get("content-type");
                     if (contentType && contentType.includes("application/json")) {
@@ -769,17 +897,24 @@ function createTripsState() {
                     }
                 }
                 const data = await response.json();
+                if (seq !== this.tripsRequestSeq) return;
+                this.error = null;
                 this.trips = data.trips;
                 this.pagination = data.pagination;
                 this.mapTripsForDisplay();
             } catch (err) {
-                this.error = err.message;
+                if (seq !== this.tripsRequestSeq) return;
+                if (background && this.trips.length > 0) console.warn('Trip list reload failed', err);
+                else this.error = err.message;
             } finally {
+                // A superseded request leaves the flags to the one that replaced it.
+                if (seq !== this.tripsRequestSeq) return;
                 const wasPaginating = this.isPaginating;
                 this.isLoading = false;
                 this.isPaginating = false;
+                this.isReloading = false;
                 this.refreshViewState();
-                if (wasPaginating) {
+                if (wasPaginating && !background) {
                     setTimeout(() => {
                         const el = document.getElementById('trip-list-container');
                         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -792,7 +927,7 @@ function createTripsState() {
             this.showLoading = this.isLoading;
             this.showError = !!this.error;
             const hasTrips = this.displayTrips.length > 0;
-            this.showEmpty = !this.isLoading && !this.error && !hasTrips;
+            this.showEmpty = !this.isLoading && !this.error && !hasTrips && !this.showCurrentTrip;
             this.showList = !this.isLoading && !this.error && hasTrips;
             this.listOpacityClass = this.isPaginating ? 'opacity-50' : '';
             const currentPage = this.pagination.current_page || 1;
@@ -967,8 +1102,15 @@ function createTripsState() {
                 this.displayCharges = this.charges.map((charge) => ({
                     id: charge.id,
                     detailHref: `/vehicle/${this.vehicleId}/charge/${charge.id}`,
+                    // A session being recorded right now is in the list as it is
+                    // written; it said "N/A" for its duration and looked like a broken
+                    // record. The server says so (`in_progress`), not a missing end: a
+                    // restart mid-charge leaves a row open that nobody records any more
+                    // until the housekeeping pass closes it.
+                    inProgress: charge.in_progress === true,
+                    inProgressText: vehicleDetailTranslations.trips.inProgress,
                     startTimeText: this.formatDateTime(charge.start_time),
-                    durationText: this.formatDuration(charge.duration_seconds),
+                    durationText: charge.in_progress === true ? vehicleDetailTranslations.trips.inProgress : this.formatDuration(charge.duration_seconds),
                     startSocText: this.formatSoc(charge.start_soc),
                     endSocText: this.formatSoc(charge.end_soc),
                     energyText: this.formatEnergy(charge.energy_added_kwh)
@@ -1818,6 +1960,7 @@ function createTripsState() {
                 this.protocolView.v3Offline = !v3Online;
 
                 this.overview = liveView.derive(this.liveData);
+                this.tripsState.setVehicleOn(this.overview.isOn);
 
                 const wheels = this.liveData?.tpms_data?.wheels || [];
                 this.tpmsWheelCards = wheels.map((tyre) => {

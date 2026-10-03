@@ -5,7 +5,6 @@ import re
 import unicodedata
 from urllib.parse import urlparse
 
-from app.utils.email_validation import validate_optional_email_address
 from app.utils.i18n_markers import N_
 from app.utils.timestamps import UtcDatetime
 
@@ -150,8 +149,6 @@ class VehicleInfo(BaseModel):
     notification_preference: Optional[str] = 'v3'
     enable_trip_tracking: bool = False
     enable_charge_logging: bool = False
-    enable_unified_push_notifications: bool = False
-    unified_push_endpoint: Optional[str] = None
     badge_count: int = 0
 
     connection_type: Optional[str] = None
@@ -162,17 +159,6 @@ class VehicleInfo(BaseModel):
     latest_location_parsed: Optional[Dict[str, Any]] = None
     latest_tpms_parsed: Optional[Dict[str, Any]] = None
     latest_diag_parsed: Optional[Dict[str, Any]] = None
-
-    enable_ntfy_notifications: bool = False
-    enable_email_notifications: bool = False
-    enable_fcm_notifications: bool = False
-    enable_apns_notifications: bool = False
-
-    ntfy_topic: Optional[str] = None
-    ntfy_server_url: Optional[str] = None
-    notification_email: Optional[str] = None
-    fcm_token: Optional[str] = None
-    apns_token: Optional[str] = None
 
     last_seen_tcp: Optional[UtcDatetime] = None
     last_seen_v3: Optional[UtcDatetime] = None
@@ -198,26 +184,7 @@ class VehicleCreate(BaseModel):
     notification_preference: Optional[str] = Field('v3', description="For 'both' protocol, which one should send notifications: 'v2' or 'v3'")
     enable_trip_tracking: bool = False
     enable_charge_logging: bool = False
-    enable_unified_push_notifications: bool = False
     badge_count: int = 0
-
-    enable_ntfy_notifications: bool = False
-    enable_email_notifications: bool = False
-    enable_fcm_notifications: bool = False
-    enable_apns_notifications: bool = False
-
-    ntfy_topic: Optional[str] = Field(None, max_length=100)
-    ntfy_server_url: Optional[str] = Field(None, max_length=255)
-    ntfy_auth_method: Optional[str] = Field(None, max_length=50)
-    ntfy_auth_token: Optional[str] = Field(None, max_length=255)
-    ntfy_auth_user: Optional[str] = Field(None, max_length=100)
-    ntfy_auth_password: Optional[str] = Field(None, max_length=100)
-    ntfy_auth_query_param_name: Optional[str] = Field(None, max_length=50)
-
-    notification_email: Optional[str] = Field(None, max_length=255)
-    fcm_token: Optional[str] = Field(None, max_length=255, description="Firebase Cloud Messaging (FCM) token for Android push notifications.")
-    apns_token: Optional[str] = Field(None, max_length=255, description="Apple Push Notification service (APNs) token for iOS push notifications.")
-    unified_push_endpoint: Optional[str] = Field(None, max_length=500, description="UnifiedPush endpoint URL for open-standard push notifications.")
     paranoid_token: Optional[str] = Field(None, max_length=64)
     owner_id: Optional[int] = None
 
@@ -231,20 +198,6 @@ class VehicleCreate(BaseModel):
             raise ValueError(N_('Vehicle ID must only contain letters, numbers, and hyphens'))
         return v_upper
 
-    @field_validator('unified_push_endpoint')
-    @classmethod
-    def validate_unified_push_endpoint(cls, v):
-        return _validate_push_endpoint_url(v)
-
-    @field_validator('ntfy_server_url')
-    @classmethod
-    def validate_ntfy_server_url(cls, v):
-        return _validate_ntfy_server_url(v)
-
-    @field_validator('notification_email')
-    @classmethod
-    def validate_notification_email(cls, v):
-        return validate_optional_email_address(v)
 
 class VehicleUpdate(BaseModel):
     vehicle_id: Optional[str] = Field(None, min_length=1, max_length=32)
@@ -255,26 +208,7 @@ class VehicleUpdate(BaseModel):
     notification_preference: Optional[str] = None
     enable_trip_tracking: Optional[bool] = None
     enable_charge_logging: Optional[bool] = None
-    enable_unified_push_notifications: Optional[bool] = None
-    unified_push_endpoint: Optional[str] = Field(None, max_length=500, validate_default=False, description="UnifiedPush endpoint URL for open-standard push notifications.")
     badge_count: Optional[int] = None
-
-    enable_ntfy_notifications: Optional[bool] = None
-    enable_email_notifications: Optional[bool] = None
-    enable_fcm_notifications: Optional[bool] = None
-    enable_apns_notifications: Optional[bool] = None
-
-    ntfy_topic: Optional[str] = Field(None, max_length=100, validate_default=False)
-    ntfy_server_url: Optional[str] = Field(None, max_length=255, validate_default=False)
-    ntfy_auth_method: Optional[str] = Field(None, max_length=50, validate_default=False)
-    ntfy_auth_token: Optional[str] = Field(None, max_length=255, validate_default=False)
-    ntfy_auth_user: Optional[str] = Field(None, max_length=100, validate_default=False)
-    ntfy_auth_password: Optional[str] = Field(None, max_length=100, validate_default=False)
-    ntfy_auth_query_param_name: Optional[str] = Field(None, max_length=50, validate_default=False)
-
-    notification_email: Optional[str] = Field(None, max_length=255, validate_default=False)
-    fcm_token: Optional[str] = Field(None, max_length=255, validate_default=False, description="Firebase Cloud Messaging (FCM) token for Android push notifications.")
-    apns_token: Optional[str] = Field(None, max_length=255, validate_default=False, description="Apple Push Notification service (APNs) token for iOS push notifications.")
     paranoid_token: Optional[str] = Field(None, max_length=64, validate_default=False)
 
     @field_validator('vehicle_id', mode='before')
@@ -289,20 +223,6 @@ class VehicleUpdate(BaseModel):
             return v_upper
         return v
 
-    @field_validator('unified_push_endpoint')
-    @classmethod
-    def validate_unified_push_endpoint(cls, v):
-        return _validate_push_endpoint_url(v)
-
-    @field_validator('ntfy_server_url')
-    @classmethod
-    def validate_ntfy_server_url(cls, v):
-        return _validate_ntfy_server_url(v)
-
-    @field_validator('notification_email')
-    @classmethod
-    def validate_notification_email(cls, v):
-        return validate_optional_email_address(v)
 
 class VehicleSecureInfo(VehicleInfo):
     """

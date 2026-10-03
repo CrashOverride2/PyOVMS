@@ -48,3 +48,28 @@ def send_unified_push_notification(endpoint_url: str, title: str, body: str, dat
         f"Will not retry. Response: {response_body}"
     )
     return False
+
+
+def send_unified_push_badge_reset(endpoint_url: str) -> bool:
+    """`{"type": "badge_reset", "badge": 0}`: the app cancels the notifications it shows
+    (on Android those are the launcher's dot and count) and files nothing. `TTL: 0`, so
+    a distributor drops it rather than delivering it after a newer alert."""
+    try:
+        status_code, response_body = post(
+            endpoint_url,
+            json={"type": "badge_reset", "badge": 0},
+            headers={"TTL": "0"},
+            allowed_schemes=ALLOWED_SCHEMES,
+        )
+    except ValueError as e:
+        logger.error(f"UnifiedPush: Blocked outbound request — {e}")
+        return False
+
+    if 200 <= status_code < 300:
+        return True
+    if status_code in GONE_STATUS_CODES:
+        raise InvalidPushTargetError(f"UnifiedPush endpoint gone (HTTP {status_code})")
+    if status_code == 429 or status_code >= 500:
+        raise TransientDeliveryError(f"UnifiedPush endpoint returned HTTP {status_code}")
+    logger.error(f"UnifiedPush badge reset to {endpoint_url[:40]}... returned HTTP {status_code}.")
+    return False

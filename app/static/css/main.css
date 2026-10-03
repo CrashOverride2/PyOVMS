@@ -2221,6 +2221,10 @@ video {
   background-color: rgb(22 27 34 / 0.8);
 }
 
+.bg-current {
+  background-color: currentColor;
+}
+
 .bg-dark-bg {
   --tw-bg-opacity: 1;
   background-color: rgb(13 17 23 / var(--tw-bg-opacity, 1));

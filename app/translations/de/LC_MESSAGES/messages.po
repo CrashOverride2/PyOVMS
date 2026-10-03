@@ -1171,6 +1171,14 @@ msgstr "Kritisch"
 msgid "Current Password"
 msgstr "Aktuelles Passwort"
 
+#: app/templates/trip_detail.html
+msgid "Current SOC"
+msgstr "Aktueller SOC"
+
+#: app/templates/trip_detail.html
+msgid "Current position"
+msgstr "Aktuelle Position"
+
 #: app/templates/blocked_ips.html
 msgid "Currently Blocked IPs"
 msgstr "Aktuell gesperrte IPs"
@@ -1480,6 +1488,10 @@ msgstr "End-SOC"
 #: app/templates/charge_detail.html app/templates/trip_detail.html
 msgid "End Time"
 msgstr "Endzeit"
+
+#: app/templates/trip_detail.html app/templates/vehicle_detail.html
+msgid "Ending"
+msgstr "Wird beendet"
 
 #: app/templates/_trip_search_heatmap.html
 msgid "Ends within bounding box"
@@ -1945,6 +1957,10 @@ msgstr "Zusätzliche IP-Beschränkungen einrichten"
 msgid "Important Notes"
 msgstr "Wichtige Hinweise"
 
+#: app/templates/trip_detail.html app/templates/vehicle_detail.html
+msgid "In progress"
+msgstr "Läuft"
+
 #: app/templates/autoprovision_management.html app/templates/profile.html
 msgid "Inactive"
 msgstr "Inaktiv"
@@ -2182,6 +2198,10 @@ msgstr "Letzte Woche"
 #: app/templates/admin_dashboard.html
 msgid "Last fetch"
 msgstr "Letzte Aktualisierung"
+
+#: app/templates/trip_detail.html app/templates/vehicle_detail.html
+msgid "Last position"
+msgstr "Letzte Position"
 
 #: app/templates/email/admin_lifecycle_vehicle.txt
 #: app/templates/email/unused_vehicle_warning.txt
@@ -3959,6 +3979,18 @@ msgstr "Dieser Zurücksetzungslink ist abgelaufen. Bitte fordern Sie einen neuen
 msgid "This password reset link is invalid or has already been used."
 msgstr "Dieser Zurücksetzungslink ist ungültig oder wurde bereits verwendet."
 
+#: app/templates/trip_detail.html
+msgid "This trip has ended and was too short to keep."
+msgstr "Diese Fahrt ist beendet und war zu kurz, um gespeichert zu werden."
+
+#: app/templates/trip_detail.html
+msgid ""
+"This trip is still running. The figures are what has been recorded so far and update "
+"by themselves."
+msgstr ""
+"Diese Fahrt läuft noch. Die Werte zeigen den bisherigen Stand und aktualisieren sich "
+"selbst."
+
 #: app/templates/edit_vehicle.html
 msgid ""
 "This value is sent by the vehicle when it's in paranoid mode and is generally not "
@@ -5018,6 +5050,10 @@ msgstr "optional"
 #: app/templates/add_vehicle_wizard.html
 msgid "optional display name"
 msgstr "optionaler Anzeigename"
+
+#: app/templates/vehicle_detail.html
+msgid "since"
+msgstr "seit"
 
 #: app/templates/totp_key_rotation.html
 msgid "user"

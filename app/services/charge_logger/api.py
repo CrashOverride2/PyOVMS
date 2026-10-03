@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from . import crud, gpx_generator, kml_generator
 from .api_models import PaginatedChargeLogSummary, PaginationDetails, ChargeLogDetail, ChargeStatistics
+from .charge_manager import charge_manager
 from .database import get_db
 from .security import get_current_user
 from app.models.db import User as OvmsUser
@@ -44,7 +45,9 @@ def get_charge_logs_for_vehicle(
     )
     
     total_pages = math.ceil(total_items / limit) if total_items > 0 else 1
-    
+    for charge in charges:
+        charge.in_progress = charge.end_time is None and charge_manager.is_session_active(charge.id)
+
     return PaginatedChargeLogSummary(
         pagination=PaginationDetails(
             total_items=total_items,
@@ -72,6 +75,7 @@ def get_charge_log_details(
     if charge_detail.end_time and charge_detail.start_time:
         duration = charge_detail.end_time - charge_detail.start_time
         charge_detail.duration_seconds = int(duration.total_seconds())
+    charge_detail.in_progress = charge_detail.end_time is None and charge_manager.is_session_active(charge_detail.id)
 
     return charge_detail
 

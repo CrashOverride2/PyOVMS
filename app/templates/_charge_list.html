@@ -36,6 +36,10 @@
                     <div>
                         <dt class="text-text-secondary text-xs">{{ _('Start Time') }}</dt>
                         <dd class="text-text-primary font-medium" x-text="charge.startTimeText"></dd>
+                        <span x-show="charge.inProgress" class="inline-flex items-center gap-1.5 mt-1 px-2 py-0.5 text-xs font-semibold rounded-full border bg-green-900/40 text-green-300 border-green-700/60">
+                            <span class="h-2 w-2 rounded-full bg-current animate-pulse"></span>
+                            <span x-text="charge.inProgressText"></span>
+                        </span>
                     </div>
                     <div>
                         <dt class="text-text-secondary text-xs">{{ _('Duration') }}</dt>

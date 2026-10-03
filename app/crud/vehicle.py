@@ -53,7 +53,7 @@ def get_vehicle_count(db: Session) -> int:
     return db.query(func.count(models_db.Vehicle.id)).scalar()
 
 def create_vehicle(db: Session, vehicle_in: models_api.VehicleCreate, owner_id: int) -> models_db.Vehicle:
-    _encrypted_fields = {'server_password', 'module_password', 'ntfy_auth_token', 'ntfy_auth_password', 'paranoid_token'}
+    _encrypted_fields = {'server_password', 'module_password', 'paranoid_token'}
     vehicle_data = vehicle_in.model_dump(exclude_unset=True, exclude=_encrypted_fields)
 
     db_vehicle = models_db.Vehicle(**vehicle_data)
@@ -63,10 +63,6 @@ def create_vehicle(db: Session, vehicle_in: models_api.VehicleCreate, owner_id: 
     # Encrypt sensitive fields
     db_vehicle.encrypted_server_password = encrypt_data(vehicle_in.server_password)
     db_vehicle.encrypted_module_password = encrypt_data(vehicle_in.module_password) if vehicle_in.module_password else None
-    if vehicle_in.ntfy_auth_token:
-        db_vehicle.ntfy_auth_token = encrypt_data(vehicle_in.ntfy_auth_token)
-    if vehicle_in.ntfy_auth_password:
-        db_vehicle.ntfy_auth_password = encrypt_data(vehicle_in.ntfy_auth_password)
     if vehicle_in.paranoid_token:
         db_vehicle.paranoid_token = encrypt_data(vehicle_in.paranoid_token)
     
@@ -98,10 +94,6 @@ def update_vehicle(db: Session, vehicle_db_id: int, vehicle_in: models_api.Vehic
             db_vehicle.encrypted_module_password = encrypt_data(value) if value else None
         elif field == "vehicle_id" and value is not None:
             db_vehicle.vehicle_id = value.upper()
-        elif field == "ntfy_auth_token":
-            db_vehicle.ntfy_auth_token = encrypt_data(value) if value else None
-        elif field == "ntfy_auth_password":
-            db_vehicle.ntfy_auth_password = encrypt_data(value) if value else None
         elif field == "paranoid_token":
             db_vehicle.paranoid_token = encrypt_data(value) if value else None
         else:
@@ -246,32 +238,4 @@ def clear_unused_reminder(db: Session, vehicle_db_id: int) -> Optional[models_db
         vehicle.unused_reminder_sent_at = None
         db.commit()
         db.refresh(vehicle)
-    return vehicle
-
-
-def update_vehicle_push_token(db: Session, vehicle_id: str, push_type: str, token_value: str) -> Optional[models_db.Vehicle]:
-    vehicle = get_vehicle_by_vehicle_id(db, vehicle_id.upper())
-    if not vehicle:
-        logger.warning(f"Vehicle {vehicle_id} not found for push token update.")
-        return None
-    
-    push_type_lower = push_type.lower()
-    updated = False
-    if push_type_lower in ("fcm", "gcm"): 
-        if vehicle.fcm_token != token_value:
-            vehicle.fcm_token = token_value
-            updated = True
-    elif push_type_lower == "apns":
-        if vehicle.apns_token != token_value:
-            vehicle.apns_token = token_value
-            updated = True
-    else:
-        logger.warning(f"Unsupported push token type '{push_type}' for vehicle {vehicle_id}")
-        return None
-        
-    if updated:
-        vehicle.updated_at = datetime.datetime.now(datetime.timezone.utc)
-        db.commit()
-        db.refresh(vehicle)
-        logger.info(f"Updated {push_type.upper()} token for vehicle {vehicle_id}")
     return vehicle
