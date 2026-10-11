@@ -25,7 +25,8 @@ Pinned here:
   is dropped;
 - the state is read and written under the manager's lock;
 - the first housekeeping pass runs minutes after startup, not an hour;
-- the list API says `in_progress` only for a row that is being recorded.
+- the list API says `in_progress` only for a row that is being recorded, and the delete
+  refuses that row (409) while an orphan or a closed one goes.
 """
 
 import asyncio
@@ -441,6 +442,85 @@ def test_retained_values_write_no_point_into_a_live_session(db, manager):
     assert _point_count(db, log_id) == 1
 
 
+def test_a_new_charge_after_a_restart_is_not_merged_into_the_old_row(db, manager):
+    """A restart mid-charge left the row open; the retained burst then said the
+    vehicle is not charging. The next start is a new charge: the old row ends at its
+    last point, it is not resumed with the pause inside it."""
+    start = NOW - datetime.timedelta(minutes=40)
+    last = NOW - datetime.timedelta(minutes=20)
+    old_id = _open_row(db, start, points=[(start, 20.0, 7.0), (last, 45.0, 7.0)])
+
+    manager.process_metric("CAR1", "v.c.charging", "no", NOW - datetime.timedelta(minutes=10), retained=True)
+    manager.process_metric("CAR1", "v.c.charging", "yes", NOW)
+
+    new_id = manager.active_sessions["CAR1"].charge_log_id
+    assert new_id != old_id
+    old = _row(db, old_id)
+    assert _utc(old.end_time) == last and old.end_soc == 45.0
+
+
+def test_a_live_start_first_heard_after_a_restart_still_resumes(db, manager):
+    start = NOW - datetime.timedelta(minutes=40)
+    last = NOW - datetime.timedelta(minutes=5)
+    log_id = _open_row(db, start, points=[(start, 20.0, 7.0), (last, 45.0, 7.0)])
+    manager.process_metric("CAR1", "v.c.charging", "yes", NOW)
+    assert manager.active_sessions["CAR1"].charge_log_id == log_id
+
+
+def test_a_retained_end_is_dated_by_the_last_activity(db, manager):
+    """The broker link dropped mid-charge and the charge ended meanwhile: the retained
+    "no" on reconnect ends the session where it was last heard, not at the reconnect."""
+    manager.process_metric("CAR1", "v.c.charging", "yes", NOW)
+    log_id = manager.active_sessions["CAR1"].charge_log_id
+    heard = NOW + datetime.timedelta(minutes=10)
+    manager.process_metric("CAR1", "v.b.soc", "60", heard)
+    manager.process_metric("CAR1", "v.c.charging", "no", NOW + datetime.timedelta(minutes=45), retained=True)
+    assert "CAR1" not in manager.active_sessions
+    assert _utc(_row(db, log_id).end_time) == heard
+
+
+def test_a_retained_start_after_the_end_was_heard_is_a_new_charge(db, manager):
+    """The end was heard; the broker link then dropped and the car started again. The
+    retained "yes" on reconnect is a new charge, not the old row resumed."""
+    start = NOW - datetime.timedelta(minutes=40)
+    last = NOW - datetime.timedelta(minutes=20)
+    old_id = _open_row(db, start, points=[(start, 20.0, 7.0), (last, 45.0, 7.0)])
+    manager.process_metric("CAR1", "v.c.charging", "no", NOW - datetime.timedelta(minutes=10))
+    # Heard not charging with nothing held: the left-open row is closed at once.
+    assert _utc(_row(db, old_id).end_time) == last
+    manager.process_metric("CAR1", "v.c.charging", "yes", NOW, retained=True)
+    assert manager.active_sessions["CAR1"].charge_log_id != old_id
+
+
+def test_a_failing_close_does_not_lose_the_new_charge(db, manager, monkeypatch):
+    start = NOW - datetime.timedelta(minutes=40)
+    _open_row(db, start, points=[(start, 20.0, 7.0)])
+    manager._seen_charging["CAR1"] = False
+
+    def broken(*a, **k):
+        raise RuntimeError("database is locked")
+
+    monkeypatch.setattr(manager, "_close_open_row", broken)
+    manager.process_metric("CAR1", "v.c.charging", "yes", NOW)
+    assert "CAR1" in manager.active_sessions
+
+
+def test_a_retained_end_keeps_a_charge_the_energy_proves(db, manager, monkeypatch):
+    """Never heard again after its start, the session would be under the minimum at
+    its last activity and deleted; the retained v.c.kwh says a charge happened."""
+    from app.services.charge_logger import charge_manager as module
+    monkeypatch.setattr(module.metrics_manager, "get_metrics_for_vehicle",
+                        lambda vehicle_id: {"v.b.soc": "70", "v.c.kwh": "12.5"})
+    manager.process_metric("CAR1", "v.c.charging", "yes", NOW)
+    log_id = manager.active_sessions["CAR1"].charge_log_id
+    reconnect = NOW + datetime.timedelta(minutes=25)
+    manager.process_metric("CAR1", "v.c.kwh", "12.5", reconnect, retained=True)
+    manager.process_metric("CAR1", "v.c.charging", "no", reconnect, retained=True)
+    row = _row(db, log_id)
+    assert row is not None and row.energy_added_kwh == 12.5
+    assert _utc(row.end_time) == reconnect
+
+
 def test_the_subscriber_passes_the_retained_flag_on(monkeypatch):
     from app import mqtt_metrics_subscriber as sub_module
 
@@ -607,3 +687,28 @@ def test_the_list_api_reports_in_progress_only_for_a_recorded_session(db, manage
     )
     flags = {c.id: c.in_progress for c in result.charges}
     assert flags == {live_id: True, orphan_id: False}
+
+
+def test_the_delete_refuses_a_session_being_recorded(db, manager, monkeypatch):
+    from fastapi import HTTPException
+
+    from app.services.charge_logger import api as charge_api
+
+    monkeypatch.setattr(charge_api, "charge_manager", manager)
+    monkeypatch.setattr(charge_api.crud, "check_vehicle_ownership", lambda *a, **k: True)
+
+    orphan_id = _open_row(db, datetime.datetime.now(UTC) - datetime.timedelta(hours=5))
+    manager.process_metric("CAR1", "v.c.charging", "yes", datetime.datetime.now(UTC))
+    live_id = manager.active_sessions["CAR1"].charge_log_id
+    user = SimpleNamespace(id=1)
+
+    with pytest.raises(HTTPException) as refused:
+        charge_api.delete_charge_log(live_id, db=db, current_user=user)
+    assert refused.value.status_code == 409
+    assert _row(db, live_id) is not None
+    assert manager.active_sessions["CAR1"].charge_log_id == live_id
+
+    # An open row nobody records any more is not in progress, and goes.
+    response = charge_api.delete_charge_log(orphan_id, db=db, current_user=user)
+    assert response.status_code == 204
+    assert _row(db, orphan_id) is None

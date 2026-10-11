@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ _('Support Mode Enabled') }}</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .header { text-align: center; border-bottom: 1px solid #eeeeee; padding-bottom: 20px; margin-bottom: 20px; }
+        .header h1 { color: #333333; }
+        .content { color: #555555; line-height: 1.6; }
+        .details-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .details-table td { padding: 8px; border: 1px solid #dddddd; }
+        .details-table td:first-child { font-weight: bold; background-color: #f9f9f9; }
+        .button { display: block; width: fit-content; margin: 30px auto; padding: 15px 25px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; }
+        .note { font-size: 13px; color: #777777; }
+        .footer { text-align: center; font-size: 12px; color: #999999; margin-top: 30px; border-top: 1px solid #eeeeee; padding-top: 20px; }
+        a { color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛟 {{ _('Support Mode Enabled') }}</h1>
+        </div>
+        <div class="content">
+            <p>{{ _('Hello %(name)s,') % {'name': admin_display_name} }}</p>
+            <p>{{ _('A user has granted the administrators remote access to their vehicle. Until the time below, every administrator can open the vehicle as if it were their own: live data, logs, charges and the terminal. Administrator API keys can also access the vehicle over MQTT. Trips and notification settings remain private.') }}</p>
+
+            <table class="details-table">
+                <tr>
+                    <td>{{ _('Owner') }}</td>
+                    <td>{{ owner_username }}</td>
+                </tr>
+                <tr>
+                    <td>{{ _('Vehicle') }}</td>
+                    <td>{{ vehicle_label }}</td>
+                </tr>
+                <tr>
+                    <td>{{ _('Access granted until') }}</td>
+                    <td>{{ support_until }}</td>
+                </tr>
+            </table>
+
+            <a href="{{ vehicle_url }}" class="button">{{ _('Open Vehicle') }}</a>
+            <p class="note">{{ _('Every access is recorded in the security events.') }}</p>
+        </div>
+        <div class="footer">
+            <p>{{ _('PyOVMS Control Server') }} | <a href="{{ server_base_url }}">{{ server_base_url }}</a></p>
+        </div>
+    </div>
+</body>
+</html>

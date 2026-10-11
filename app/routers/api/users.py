@@ -130,6 +130,9 @@ def update_user_api(
     if (user_in.is_admin is False or user_in.is_active is False) and crud.user.is_last_active_admin(db, db_user):
         raise HTTPException(status_code=400, detail="Cannot remove the last remaining admin account.")
 
+    if user_in.is_admin and not db_user.is_admin and crud.user.owns_vehicles(db, db_user.id):
+        raise HTTPException(status_code=409, detail="A user who owns vehicles cannot be made an administrator.")
+
     if db_user.id == current_admin.id:
         if user_in.is_active is False: raise HTTPException(status_code=400, detail="Admin cannot deactivate themselves.")
         if user_in.is_admin is False: raise HTTPException(status_code=400, detail="Admin cannot remove their own admin status.")

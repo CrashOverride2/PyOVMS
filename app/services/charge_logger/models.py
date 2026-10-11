@@ -42,3 +42,6 @@ class ChargeLogPoint(Base):
     battery_temp_c = Column(Float, nullable=True)
 
     charge_log = relationship("ChargeLog", back_populates="points")
+
+# `Vehicle` names `VehicleEvent` beside `ChargeLog`; register both mappers.
+from app.services.event_logger import models as _event_logger_models  # noqa: E402,F401

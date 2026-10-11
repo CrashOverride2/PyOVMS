@@ -1,6 +1,6 @@
 {
   "name": "pyovms",
-  "version": "2.3.6",
+  "version": "2.5.5",
   "description": "Tailwind CSS build for PyOVMS",
   "scripts": {
     "build": "tailwindcss -i ./app/static/css/input.css -o ./app/static/css/main.css",
@@ -17,6 +17,6 @@
     "protomaps-leaflet": "^5.1.0",
     "redoc": "^2.5.2",
     "swagger-ui-dist": "^5.32.6",
-    "tailwindcss": "^3.4.1"
+    "tailwindcss": "^3.4.19"
   }
 }

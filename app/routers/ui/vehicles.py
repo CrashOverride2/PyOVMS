@@ -1,5 +1,5 @@
 from urllib.parse import quote_plus
-from fastapi import APIRouter, Request, Depends, Form, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Request, Depends, Form, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any, Iterator
@@ -34,11 +34,31 @@ from zoneinfo import ZoneInfo
 from app.utils.timestamps import as_utc
 from app.utils.i18n_markers import N_
 from app.utils.vehicle_live_payload import build_vehicle_live_payload
+from app.utils.vehicle_access import (
+    VehicleAccess,
+    can_administer_vehicle,
+    is_vehicle_owner,
+    support_active,
+    vehicle_access,
+)
+from app.services import support_mode
+from app import notifications
 from app.csrf_protection import verify_csrf_token, get_csrf_token
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter() 
+
+def _client_ip(request: Request) -> Optional[str]:
+    """The peer as uvicorn's proxy-header handling resolved it (see get_client_ip)."""
+    return request.client.host if request.client else None
+
+
+def _support_redirect(request: Request, _) -> RedirectResponse:
+    """An admin asking for a vehicle whose owner has not granted support mode."""
+    msg = quote_plus(_("Support mode is not active for this vehicle."))
+    return RedirectResponse(url=f"{request.url_for('ui_admin_dashboard')}?error_message={msg}", status_code=status.HTTP_303_SEE_OTHER)
+
 
 def _dashboard_url(request: Request, user: models_db.User) -> str:
     """Landing page to return to after a vehicle action.
@@ -243,7 +263,7 @@ def ui_edit_vehicle_form_route(
     if not db_vehicle:
         return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Vehicle not found."))}", status_code=status.HTTP_303_SEE_OTHER)
 
-    if not current_user.is_admin and db_vehicle.owner_id != current_user.id:
+    if not can_administer_vehicle(current_user, db_vehicle):
         return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Not authorized to edit this vehicle."))}", status_code=status.HTTP_303_SEE_OTHER)
     
     vehicle_api_model = models_api.VehicleSecureInfo.model_validate(db_vehicle, from_attributes=True)
@@ -289,7 +309,7 @@ def ui_edit_vehicle_submit_route(
     if not current_db_vehicle:
         return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Vehicle to update not found."))}", status_code=status.HTTP_303_SEE_OTHER)
 
-    if not current_user.is_admin and current_db_vehicle.owner_id != current_user.id:
+    if not can_administer_vehicle(current_user, current_db_vehicle):
         return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Not authorized to edit this vehicle."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     vehicle_id_upper = vehicle_id.upper()
@@ -360,7 +380,7 @@ async def ui_delete_vehicle_route(
     if not vehicle_to_delete:
         return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Vehicle not found for deletion."))}", status_code=status.HTTP_303_SEE_OTHER)
 
-    if not current_user.is_admin and vehicle_to_delete.owner_id != current_user.id:
+    if not can_administer_vehicle(current_user, vehicle_to_delete):
         return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Not authorized to delete this vehicle."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     if delete_confirmation != vehicle_to_delete.vehicle_id:
@@ -385,7 +405,9 @@ async def ui_delete_vehicle_route(
     crud.vehicle.delete_vehicle(db, vehicle_db_id)
     return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?success_message={quote_plus(_("Vehicle '%(id)s' deleted successfully.") % {'id': vehicle_to_delete.vehicle_id})}", status_code=status.HTTP_303_SEE_OTHER)
 
-def _load_vehicle_detail(db: Session, db_vehicle: models_db.Vehicle, user_id: int) -> Dict[str, Any]:
+def _load_vehicle_detail(
+    db: Session, db_vehicle: models_db.Vehicle, user: models_db.User, access: VehicleAccess, ip: Optional[str]
+) -> Dict[str, Any]:
     """
     The vehicle page's data: every query and every parse, synchronous, for one
     threadpool hop from the coroutine that renders it.
@@ -396,6 +418,9 @@ def _load_vehicle_detail(db: Session, db_vehicle: models_db.Vehicle, user_id: in
     metrics_manager) removed from the V3 view, as the page does on every update.
     """
     vehicle_id = db_vehicle.vehicle_id
+    is_owner = access is VehicleAccess.OWNER
+    if access is VehicleAccess.SUPPORT:
+        support_mode.record_support_access(user, db_vehicle, "page", ip=ip)
     crash_logs_db = crud.historical_data.get_historical_data_for_vehicle(db, vehicle_id, record_type_like="%Crash%", limit=50)
     debug_logs_db = crud.historical_data.get_historical_data_for_vehicle(
         db, vehicle_id, record_type_like="%Debug%", exclude_record_type_like="%Crash%", limit=50
@@ -418,14 +443,16 @@ def _load_vehicle_detail(db: Session, db_vehicle: models_db.Vehicle, user_id: in
         "datalog_summary": datalog_summary,
         "initial_live_data": live,
         "parsed_crash_logs": _parse_crash_logs_sync(crash_logs_db),
-        "push_subscriptions": crud.push_subscription.get_subscriptions_for_vehicle(db, db_vehicle.id),
+        # The notification targets are the owner's alone, support mode or not: an
+        # admin neither sees nor edits them (app/utils/vehicle_access.py).
+        "push_subscriptions": crud.push_subscription.get_subscriptions_for_vehicle(db, db_vehicle.id) if is_owner else [],
         # Loaded here, not lazily on the event loop when the template reads it.
         "owner_username": db_vehicle.owner.username if db_vehicle.owner else None,
         # The terminal's favorites are the user's, not the vehicle's; rendered into
         # the page like the metrics so the tab needs no request of its own.
         "command_favorites": [
             models_api.CommandFavoriteInfo.model_validate(f).model_dump()
-            for f in crud.command_favorite.list_favorites(db, user_id)
+            for f in crud.command_favorite.list_favorites(db, user.id)
         ],
     }
 
@@ -435,9 +462,6 @@ async def ui_vehicle_detail_page_route(
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated)
 ):
     _ = get_translator(request)
-    if current_user.is_admin:
-        return RedirectResponse(url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus(_("Admins cannot view detailed vehicle information."))}", status_code=status.HTTP_303_SEE_OTHER)
-
     common_vars = get_common_template_vars(request, current_user)
     vehicle_id_upper = vehicle_module_id.upper()
     db_vehicle = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_id_upper)
@@ -448,13 +472,17 @@ async def ui_vehicle_detail_page_route(
         # interpolation would let the caller append query parameters of their own.
         msg = quote_plus(_("Vehicle '%(id)s' not found.") % {"id": vehicle_id_upper})
         return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={msg}", status_code=status.HTTP_303_SEE_OTHER)
-    if not current_user.is_admin and db_vehicle.owner_id != current_user.id:
+    access = vehicle_access(current_user, db_vehicle)
+    if access is VehicleAccess.NONE:
+        if current_user.is_admin:
+            return _support_redirect(request, _)
         return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Not authorized to view this vehicle's details."))}", status_code=status.HTTP_303_SEE_OTHER)
+    is_owner = access is VehicleAccess.OWNER
 
     # Every read and parse of the page in one threadpool hop. This handler is a
     # coroutine (it awaits the sends below), so a query inline here ran on the event
     # loop and stalled every socket and response of the worker for its duration.
-    page = await run_in_threadpool(_load_vehicle_detail, db, db_vehicle, current_user.id)
+    page = await run_in_threadpool(_load_vehicle_detail, db, db_vehicle, current_user, access, _client_ip(request))
     debug_logs_db = page["debug_logs_db"]
     datalog_summary = page["datalog_summary"]
     initial_live_data = page["initial_live_data"]
@@ -496,6 +524,18 @@ async def ui_vehicle_detail_page_route(
         "push_subscriptions": push_subscriptions, "datalog_summary": datalog_summary,
         "command_favorites": command_favorites,
         "max_command_favorites": crud.command_favorite.MAX_COMMAND_FAVORITES_PER_USER,
+        # Climate and 12 V events are recorded under the charge log's switch and from
+        # V3 metrics only (app/services/event_logger): a V2-only vehicle has none.
+        "show_events_tab": bool(db_vehicle.enable_charge_logging) and db_vehicle.protocol in ("v3", "both"),
+        # Support mode: the owner's switch, and what an admin viewing under it sees.
+        # Trips and notification targets stay the owner's (app/utils/vehicle_access.py).
+        "is_owner": is_owner,
+        "viewing_as_support": access is VehicleAccess.SUPPORT,
+        "support": {
+            "active": support_active(db_vehicle),
+            "until": as_utc(db_vehicle.support_until) if support_active(db_vehicle) else None,
+            "durations": [("24h", _("24 hours")), ("7d", _("7 days")), ("30d", _("30 days"))],
+        },
     })
 
 @router.get("/{vehicle_module_id}/trip/{trip_id}", response_class=HTMLResponse, name="ui_vehicle_trip_detail_page")
@@ -505,15 +545,15 @@ def ui_vehicle_trip_detail_page_route(
     db: Session = Depends(get_db)
 ):
     _ = get_translator(request)
-    if current_user.is_admin:
-        return RedirectResponse(url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus(_("Admins cannot view trip information."))}", status_code=status.HTTP_303_SEE_OTHER)
-
     common_vars = get_common_template_vars(request, current_user)
     vehicle_id = vehicle_module_id.upper()
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_id)
-    if not vehicle_db or (not current_user.is_admin and vehicle_db.owner_id != current_user.id):
+    # Trips are the owner's alone: support mode does not open them to the admins.
+    if not is_vehicle_owner(current_user, vehicle_db):
+        if current_user.is_admin:
+            return RedirectResponse(url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus(_("Admins cannot view trip information."))}", status_code=status.HTTP_303_SEE_OTHER)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=N_("Vehicle not found or not authorized."))
-        
+
     # This route now only serves the container page.
     # The actual data fetching happens client-side via Alpine.js.
     return templates.TemplateResponse(request, "trip_detail.html", {
@@ -530,13 +570,12 @@ def ui_vehicle_charge_detail_page_route(
     db: Session = Depends(get_db)
 ):
     _ = get_translator(request)
-    if current_user.is_admin:
-        return RedirectResponse(url=f"{request.url_for('ui_admin_dashboard')}?error_message={quote_plus(_("Admins cannot view charge information."))}", status_code=status.HTTP_303_SEE_OTHER)
-
     common_vars = get_common_template_vars(request, current_user)
     vehicle_id = vehicle_module_id.upper()
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_id)
-    if not vehicle_db or (not current_user.is_admin and vehicle_db.owner_id != current_user.id):
+    if not support_mode.check_vehicle_access(current_user, vehicle_db, kind="page", ip=_client_ip(request)):
+        if current_user.is_admin:
+            return _support_redirect(request, _)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=N_("Vehicle not found or not authorized."))
 
     return templates.TemplateResponse(request, "charge_detail.html", {
@@ -570,7 +609,9 @@ def ui_add_ntfy_subscription_route(
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not vehicle_db:
         return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Vehicle not found."))}", status_code=status.HTTP_303_SEE_OTHER)
-    if not current_user.is_admin and vehicle_db.owner_id != current_user.id:
+    # Notification targets are the owner's, support mode or not: one an admin added
+    # would outlive the grant and keep delivering the owner's notifications.
+    if not is_vehicle_owner(current_user, vehicle_db):
         return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Not authorized."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     topic = ntfy_topic.strip()
@@ -615,7 +656,9 @@ def ui_add_email_recipient_route(
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not vehicle_db:
         return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Vehicle not found."))}", status_code=status.HTTP_303_SEE_OTHER)
-    if not current_user.is_admin and vehicle_db.owner_id != current_user.id:
+    # Notification targets are the owner's, support mode or not: one an admin added
+    # would outlive the grant and keep delivering the owner's notifications.
+    if not is_vehicle_owner(current_user, vehicle_db):
         return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Not authorized."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     # A bare '@' check let CR/LF through, which the SMTP layer would have turned
@@ -646,7 +689,9 @@ def ui_delete_push_subscription_route(
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not vehicle_db:
         return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Vehicle not found."))}", status_code=status.HTTP_303_SEE_OTHER)
-    if not current_user.is_admin and vehicle_db.owner_id != current_user.id:
+    # Notification targets are the owner's, support mode or not: one an admin added
+    # would outlive the grant and keep delivering the owner's notifications.
+    if not is_vehicle_owner(current_user, vehicle_db):
         return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Not authorized."))}", status_code=status.HTTP_303_SEE_OTHER)
 
     crud.push_subscription.delete_subscription(db, subscription_id, vehicle_db.id)
@@ -670,7 +715,12 @@ async def ui_send_command_to_vehicle_ajax_route(
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not vehicle_db:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=N_("Vehicle not found."))
-    if not current_user.is_admin and vehicle_db.owner_id != current_user.id:
+    allowed = await run_in_threadpool(
+        support_mode.check_vehicle_access, current_user, vehicle_db,
+        kind="command", ip=_client_ip(request),
+        detail={"command": support_mode.summarize_command(command_str), "via": "ui"},
+    )
+    if not allowed:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to command this vehicle.")
 
     result = await send_command_to_vehicle(vehicle_db, command_str, protocol_preference)
@@ -678,15 +728,80 @@ async def ui_send_command_to_vehicle_ajax_route(
     result_data["csrf_token"] = get_csrf_token(request)
     return JSONResponse(content=result_data)
 
+def _support_tab_url(request: Request, vehicle_id: str) -> str:
+    return f"{request.url_for('ui_vehicle_detail_page', vehicle_module_id=vehicle_id)}?tab=support"
+
+
+@router.post("/{vehicle_module_id}/support/enable", response_class=RedirectResponse, name="ui_enable_support_mode")
+def ui_enable_support_mode_route(
+    request: Request, vehicle_module_id: str, background_tasks: BackgroundTasks,
+    duration: str = Form(""),
+    csrf_token: str = Form(""),
+    db: Session = Depends(get_db),
+    current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated)
+):
+    """The owner opens the vehicle to every admin for a chosen time (support mode)."""
+    _ = get_translator(request)
+    vehicle_id = vehicle_module_id.upper()
+    tab_url = _support_tab_url(request, vehicle_id)
+    try:
+        verify_csrf_token(request, csrf_token)
+    except HTTPException as e:
+        return RedirectResponse(url=f"{tab_url}&error_message={quote_plus(_(str(e.detail)))}", status_code=status.HTTP_303_SEE_OTHER)
+
+    vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_id)
+    if not is_vehicle_owner(current_user, vehicle_db):
+        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Only the vehicle's owner can change support mode."))}", status_code=status.HTTP_303_SEE_OTHER)
+    if duration not in support_mode.SUPPORT_DURATIONS:
+        return RedirectResponse(url=f"{tab_url}&error_message={quote_plus(_("Please choose a valid duration."))}", status_code=status.HTTP_303_SEE_OTHER)
+
+    until, was_active = support_mode.enable_support(db, vehicle_db, current_user, duration, ip=_client_ip(request))
+    if not was_active and support_mode.admin_mail_due(vehicle_db.vehicle_id):
+        background_tasks.add_task(
+            notifications.send_support_mode_enabled_admin_notification,
+            vehicle_id=vehicle_db.vehicle_id,
+            vehicle_name=vehicle_db.vehicle_name,
+            owner_username=current_user.username,
+            until=until,
+        )
+    msg = _("Support mode extended.") if was_active else _("Support mode enabled. The administrators have been notified.")
+    return RedirectResponse(url=f"{tab_url}&success_message={quote_plus(msg)}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/{vehicle_module_id}/support/disable", response_class=RedirectResponse, name="ui_disable_support_mode")
+def ui_disable_support_mode_route(
+    request: Request, vehicle_module_id: str,
+    csrf_token: str = Form(""),
+    db: Session = Depends(get_db),
+    current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated)
+):
+    """The owner ends support mode before its time."""
+    _ = get_translator(request)
+    vehicle_id = vehicle_module_id.upper()
+    tab_url = _support_tab_url(request, vehicle_id)
+    try:
+        verify_csrf_token(request, csrf_token)
+    except HTTPException as e:
+        return RedirectResponse(url=f"{tab_url}&error_message={quote_plus(_(str(e.detail)))}", status_code=status.HTTP_303_SEE_OTHER)
+
+    vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_id)
+    if not is_vehicle_owner(current_user, vehicle_db):
+        return RedirectResponse(url=f"{_dashboard_url(request, current_user)}?error_message={quote_plus(_("Only the vehicle's owner can change support mode."))}", status_code=status.HTTP_303_SEE_OTHER)
+
+    if support_mode.disable_support(db, vehicle_db, ip=_client_ip(request)):
+        return RedirectResponse(url=f"{tab_url}&success_message={quote_plus(_("Support mode ended."))}", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url=f"{tab_url}&info_message={quote_plus(_("Support mode was not active."))}", status_code=status.HTTP_303_SEE_OTHER)
+
+
 @router.get("/{vehicle_db_id}/crashlogs/download", name="ui_download_crash_logs")
 def download_crash_logs_csv_route(
-    vehicle_db_id: int, db: Session = Depends(get_db),
+    request: Request, vehicle_db_id: int, db: Session = Depends(get_db),
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated)
 ):
     db_vehicle = crud.vehicle.get_vehicle_by_id(db, vehicle_db_id)
     if not db_vehicle:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=N_("Vehicle not found."))
-    if not current_user.is_admin and db_vehicle.owner_id != current_user.id:
+    if not support_mode.check_vehicle_access(current_user, db_vehicle, kind="page", ip=_client_ip(request)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=N_("Not authorized to access this vehicle's logs."))
     
     crash_logs = crud.historical_data.get_historical_data_for_vehicle(db, db_vehicle.vehicle_id, record_type_like="%Crash%", limit=1000) 
@@ -714,11 +829,13 @@ def download_crash_logs_csv_route(
 
 _DATALOG_PAGE_SIZE = 100
 
-def _get_datalog_vehicle_or_raise(db: Session, current_user: models_db.User, vehicle_module_id: str) -> models_db.Vehicle:
+def _get_datalog_vehicle_or_raise(
+    db: Session, current_user: models_db.User, vehicle_module_id: str, request: Request
+) -> models_db.Vehicle:
     db_vehicle = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not db_vehicle:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=N_("Vehicle not found."))
-    if not current_user.is_admin and db_vehicle.owner_id != current_user.id:
+    if not support_mode.check_vehicle_access(current_user, db_vehicle, kind="page", ip=_client_ip(request)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=N_("Not authorized to access this vehicle's data logs."))
     return db_vehicle
 
@@ -731,7 +848,7 @@ def ui_vehicle_datalogs_page_route(
 ):
     """History records (data notifications) of a vehicle: type overview plus a paged,
     column-split view of the records of one type."""
-    db_vehicle = _get_datalog_vehicle_or_raise(db, current_user, vehicle_module_id)
+    db_vehicle = _get_datalog_vehicle_or_raise(db, current_user, vehicle_module_id, request)
     common_vars = get_common_template_vars(request, current_user)
     vehicle_id = db_vehicle.vehicle_id
 
@@ -799,12 +916,12 @@ def ui_vehicle_datalogs_page_route(
 
 @router.get("/{vehicle_module_id}/datalogs/export", name="ui_vehicle_datalogs_export")
 def ui_vehicle_datalogs_export_route(
-    vehicle_module_id: str, type: str,
+    request: Request, vehicle_module_id: str, type: str,
     db: Session = Depends(get_db),
     current_user: models_db.User = Depends(require_current_user_from_cookie_fully_authenticated)
 ):
     """CSV export of all stored records of one record type."""
-    db_vehicle = _get_datalog_vehicle_or_raise(db, current_user, vehicle_module_id)
+    db_vehicle = _get_datalog_vehicle_or_raise(db, current_user, vehicle_module_id, request)
 
     records_db = crud.historical_data.get_historical_data_for_vehicle(
         db, db_vehicle.vehicle_id, record_type_equals=type, limit=10000, sort_ascending=True

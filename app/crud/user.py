@@ -59,6 +59,12 @@ def get_active_admins(db: Session) -> List[models_db.User]:
     return db.query(models_db.User).filter(models_db.User.is_admin == True, models_db.User.is_active == True).all()
 
 
+def owns_vehicles(db: Session, user_id: int) -> bool:
+    """Whether the account owns any vehicle. An account with vehicles cannot be made
+    an admin."""
+    return db.query(models_db.Vehicle.id).filter(models_db.Vehicle.owner_id == user_id).first() is not None
+
+
 def is_last_active_admin(db: Session, user: models_db.User) -> bool:
     """
     Whether `user` is an active admin and no other active admin exists.
@@ -174,6 +180,10 @@ def update_user(db: Session, user_db: models_db.User, user_in: models_api.UserUp
             f"their vehicles and ACL regeneration."
         )
         _queue_broker_resync_for_user(db, user_db)
+
+    # Admin rights decide which support grants this account's API keys reach on the broker.
+    if 'is_admin' in update_data and user_db.is_admin != old_is_admin:
+        mqtt_sync_worker.mark_acl_dirty()
 
     return user_db
 

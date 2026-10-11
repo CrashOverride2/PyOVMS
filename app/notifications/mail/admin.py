@@ -6,7 +6,9 @@ down the whole notification, and that is handled once, here.
 """
 
 import logging
+import datetime
 from typing import TYPE_CHECKING, List, Optional
+from urllib.parse import quote
 
 from app.config import settings
 from app.notifications.email_queue import Priority, queue_email_notification
@@ -26,6 +28,7 @@ logger = logging.getLogger(__name__)
 UNTRANSLATED_SUBJECT_MSGIDS = (
     N_("New User Registration on PyOVMS"),
     N_("OVMS Security Alert: IP Blocked"),
+    N_("Support mode enabled"),
 )
 
 
@@ -180,6 +183,40 @@ def send_new_user_admin_notification(new_user: "User"):
         )
     except Exception as e:
         logger.error(f"Error preparing new user admin notification: {e}", exc_info=True)
+
+
+def send_support_mode_enabled_admin_notification(
+    *,
+    vehicle_id: str,
+    vehicle_name: Optional[str],
+    owner_username: str,
+    until: datetime.datetime,
+):
+    """Tell every active admin that an owner enabled support mode. Plain values only;
+    the caller throttles it per vehicle."""
+    if not _email_is_configured("support mode notification"):
+        return
+
+    try:
+        base_url = settings.SERVER_BASE_URL.rstrip('/')
+        label = f"{vehicle_name} ({vehicle_id})" if vehicle_name and vehicle_name != vehicle_id else vehicle_id
+        template_vars = {
+            "vehicle_id": vehicle_id,
+            "vehicle_label": label,
+            "owner_username": owner_username,
+            "support_until": as_utc(until).strftime('%Y-%m-%d %H:%M UTC'),
+            "vehicle_url": f"{base_url}/vehicle/{quote(vehicle_id, safe='')}",
+            "server_base_url": settings.SERVER_BASE_URL,
+        }
+        send_notification_to_all_admins(
+            "🛟 {{ _('Support mode enabled') }}: {{ vehicle_id }}",
+            "email/admin_support_mode_enabled.txt",
+            "email/admin_support_mode_enabled.html",
+            "support mode notification",
+            template_vars,
+        )
+    except Exception as e:
+        logger.error(f"Error preparing support mode admin notification: {e}", exc_info=True)
 
 
 # Jinja placeholders, not %-substitution. These strings are compiled and cached as

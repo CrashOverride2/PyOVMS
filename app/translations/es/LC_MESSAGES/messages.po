@@ -34,6 +34,13 @@ msgstr ""
 msgid "%(manual)s manual · %(auto)s automatic"
 msgstr "%(manual)s manuales · %(auto)s automáticas"
 
+#: app/templates/_vehicle_support.html
+#, python-format
+msgid "%(owner)s has granted the administrators access to this vehicle until %(until)s."
+msgstr ""
+"%(owner)s ha concedido a los administradores acceso a este vehículo hasta el "
+"%(until)s."
+
 #: app/templates/_vehicle_logs.html
 msgid "(days to keep)."
 msgstr "(días de conservación)."
@@ -49,6 +56,18 @@ msgstr "(dejar sin marcar para solo V3)"
 #: app/templates/admin_logs.html
 msgid "(max)"
 msgstr "(máx.)"
+
+#: app/templates/_vehicle_events.html
+msgid "12 V battery"
+msgstr "Batería de 12 V"
+
+#: app/templates/vehicle_detail.html
+msgid "12 V battery charge"
+msgstr "Carga de la batería de 12 V"
+
+#: app/templates/_vehicle_events.html
+msgid "12 V battery charged"
+msgstr "Batería de 12 V cargada"
 
 #: app/templates/edit_user.html
 #, python-format
@@ -67,9 +86,21 @@ msgstr "Batería de 12V"
 msgid "12V System"
 msgstr "Sistema de 12V"
 
+#: app/routers/ui/vehicles.py
+msgid "24 hours"
+msgstr "24 horas"
+
 #: app/templates/profile.html app/templates/profile_webauthn_tab.html
 msgid "2FA"
 msgstr "2FA"
+
+#: app/routers/ui/vehicles.py
+msgid "30 days"
+msgstr "30 días"
+
+#: app/routers/ui/vehicles.py
+msgid "7 days"
+msgstr "7 días"
 
 #: app/templates/edit_vehicle.html
 msgid "<Server Password>"
@@ -114,6 +145,24 @@ msgstr ""
 "prolongada. La cuenta no tenía vehículos y no mostró actividad durante más de 37 "
 "días."
 
+#: app/templates/email/admin_support_mode_enabled.html
+#: app/templates/email/admin_support_mode_enabled.txt
+msgid ""
+"A user has granted the administrators remote access to their vehicle. Until the time "
+"below, every administrator can open the vehicle as if it were their own: live data, "
+"logs, charges and the terminal. Administrator API keys can also access the vehicle "
+"over MQTT. Trips and notification settings remain private."
+msgstr ""
+"Un usuario ha concedido a los administradores acceso remoto a su vehículo. Hasta la "
+"hora indicada abajo, cada administrador puede abrir el vehículo como si fuera suyo: "
+"datos en directo, registros, cargas y el terminal. Las claves API de los "
+"administradores también pueden acceder al vehículo por MQTT. Los viajes y los ajustes"
+" de notificación siguen siendo privados."
+
+#: app/routers/ui/users.py
+msgid "A user who owns vehicles cannot be made an administrator."
+msgstr "Un usuario que posee vehículos no puede convertirse en administrador."
+
 # months
 #: app/templates/email/admin_lifecycle_vehicle.txt
 msgid "A vehicle has been automatically deleted due to 12+ months of inactivity."
@@ -157,6 +206,11 @@ msgstr "Anulación:"
 msgid "About WebAuthn Security Keys"
 msgstr "Acerca de las claves de seguridad WebAuthn"
 
+#: app/templates/email/admin_support_mode_enabled.html
+#: app/templates/email/admin_support_mode_enabled.txt
+msgid "Access granted until"
+msgstr "Acceso concedido hasta"
+
 #: app/routers/ui/profile.py
 #, python-format
 msgid "Account '%(name)s' has been deleted."
@@ -199,8 +253,8 @@ msgstr "Acciones"
 msgid "Activate Account"
 msgstr "Activar cuenta"
 
-#: app/templates/autoprovision_management.html app/templates/profile.html
-#: app/templates/users_management.html
+#: app/templates/_vehicle_support.html app/templates/autoprovision_management.html
+#: app/templates/profile.html app/templates/users_management.html
 msgid "Active"
 msgstr "Activo"
 
@@ -304,14 +358,6 @@ msgid "Administrator"
 msgstr "Administrador"
 
 #: app/routers/ui/vehicles.py
-msgid "Admins cannot view charge information."
-msgstr "Los administradores no pueden ver la información de carga."
-
-#: app/routers/ui/vehicles.py
-msgid "Admins cannot view detailed vehicle information."
-msgstr "Los administradores no pueden ver información detallada del vehículo."
-
-#: app/routers/ui/vehicles.py
 msgid "Admins cannot view trip information."
 msgstr "Los administradores no pueden ver la información de viajes."
 
@@ -389,7 +435,8 @@ msgstr ""
 msgid "Always test rotation in a development environment first."
 msgstr "Pruebe siempre la rotación primero en un entorno de desarrollo."
 
-#: app/templates/_vehicle_overview.html app/templates/index.html
+#: app/templates/_vehicle_events.html app/templates/_vehicle_overview.html
+#: app/templates/index.html
 msgid "Ambient temperature"
 msgstr "Temperatura ambiente"
 
@@ -811,7 +858,7 @@ msgstr "Falta el token CSRF en el envío del formulario."
 msgid "CSRF token missing from session. Please refresh the page."
 msgstr "Falta el token CSRF en la sesión. Actualice la página."
 
-#: app/templates/_vehicle_overview.html
+#: app/templates/_vehicle_events.html app/templates/_vehicle_overview.html
 msgid "Cabin temperature"
 msgstr "Temperatura del habitáculo"
 
@@ -899,6 +946,10 @@ msgstr "Estadísticas de celdas"
 #: app/templates/profile.html
 msgid "Change Password"
 msgstr "Cambiar contraseña"
+
+#: app/templates/_vehicle_support.html
+msgid "Change the end of support mode to the selected time from now?"
+msgstr "¿Cambiar el final del modo de soporte a la duración elegida a partir de ahora?"
 
 #: app/routers/ui/vehicles.py
 #, python-format
@@ -1012,6 +1063,14 @@ msgid ""
 msgstr ""
 "Haga clic en el botón de abajo y siga las indicaciones de su navegador para registrar"
 " su clave de seguridad o autenticador biométrico."
+
+#: app/templates/vehicle_detail.html
+msgid "Climate control"
+msgstr "Climatización"
+
+#: app/templates/_vehicle_events.html
+msgid "Close"
+msgstr "Cerrar"
 
 #: app/templates/_vehicle_terminal.html
 msgid "Command Terminal"
@@ -1208,6 +1267,10 @@ msgstr "Eliminar"
 msgid "Delete Charge"
 msgstr "Eliminar carga"
 
+#: app/templates/_vehicle_events.html app/templates/vehicle_detail.html
+msgid "Delete Event"
+msgstr "Eliminar evento"
+
 #: app/templates/profile.html
 msgid "Delete My Account"
 msgstr "Eliminar mi cuenta"
@@ -1369,6 +1432,7 @@ msgid "DroidSans Mono"
 msgstr "DroidSans Mono"
 
 #: app/templates/_charge_list.html app/templates/_trip_list.html
+#: app/templates/_vehicle_events.html app/templates/_vehicle_support.html
 #: app/templates/charge_detail.html app/templates/trip_detail.html
 msgid "Duration"
 msgstr "Duración"
@@ -1456,6 +1520,10 @@ msgstr "Activar bloqueo de correo desechable"
 msgid "Enable in this browser"
 msgstr "Activar en este navegador"
 
+#: app/templates/_vehicle_support.html
+msgid "Enable support mode"
+msgstr "Activar el modo de soporte"
+
 #: app/templates/admin_dashboard.html
 msgid "Enabled"
 msgstr "Activado"
@@ -1475,6 +1543,16 @@ msgstr "SOC final"
 #: app/templates/charge_detail.html app/templates/trip_detail.html
 msgid "End Time"
 msgstr "Hora de finalización"
+
+#: app/templates/_vehicle_support.html
+msgid "End support mode now"
+msgstr "Finalizar el modo de soporte ahora"
+
+#: app/templates/_vehicle_support.html
+msgid "End support mode now? The administrators lose access immediately."
+msgstr ""
+"¿Finalizar el modo de soporte ahora? Los administradores pierden el acceso de "
+"inmediato."
 
 #: app/templates/trip_detail.html app/templates/vehicle_detail.html
 msgid "Ending"
@@ -1500,6 +1578,10 @@ msgstr "Energía cargada:"
 #: app/templates/_trip_list.html app/templates/trip_detail.html
 msgid "Energy Used"
 msgstr "Energía utilizada"
+
+#: app/templates/_vehicle_events.html
+msgid "Energy into 12 V battery"
+msgstr "Energía a la batería de 12 V"
 
 #: app/routers/ui/auth.py
 msgid "Enter 2FA Code"
@@ -1551,6 +1633,10 @@ msgstr "Error"
 msgid "Error deleting charge log: "
 msgstr "Error al eliminar el registro de carga: "
 
+#: app/templates/vehicle_detail.html
+msgid "Error deleting event: "
+msgstr "Error al eliminar el evento: "
+
 #: app/templates/trip_detail.html app/templates/vehicle_detail.html
 msgid "Error deleting trip: "
 msgstr "Error al eliminar el viaje: "
@@ -1578,6 +1664,31 @@ msgstr "Errores:"
 #: app/templates/_vehicle_overview.html
 msgid "Est. Range"
 msgstr "Autonomía est."
+
+#: app/templates/vehicle_detail.html
+msgid "Event"
+msgstr "Evento"
+
+#: app/templates/vehicle_detail.html
+msgid "Events"
+msgstr "Eventos"
+
+#: app/templates/_vehicle_support.html
+msgid "Every access by an administrator is recorded in the security log."
+msgstr "Cada acceso de un administrador queda registrado en el registro de seguridad."
+
+#: app/templates/email/admin_support_mode_enabled.html
+#: app/templates/email/admin_support_mode_enabled.txt
+msgid "Every access is recorded in the security events."
+msgstr "Cada acceso queda registrado en los eventos de seguridad."
+
+#: app/templates/_vehicle_support.html
+msgid ""
+"Every access is recorded in the security log. Trips and notification settings are not"
+" available in support mode."
+msgstr ""
+"Cada acceso queda registrado en el registro de seguridad. Los viajes y los ajustes de"
+" notificación no están disponibles en el modo de soporte."
 
 #: app/templates/profile.html
 msgid "Expired"
@@ -1623,6 +1734,10 @@ msgstr "Exportar ubicación (GPX)"
 msgid "Export Location (KML)"
 msgstr "Exportar ubicación (KML)"
 
+#: app/templates/_vehicle_support.html
+msgid "Extend or shorten: new duration from now"
+msgstr "Ampliar o acortar: nueva duración a partir de ahora"
+
 #: app/templates/vehicle_detail.html
 msgid "Failed"
 msgstr "Error"
@@ -1655,6 +1770,10 @@ msgstr "Error al cargar las estadísticas de carga (Estado: "
 #: app/templates/vehicle_detail.html
 msgid "Failed to load data (Status: "
 msgstr "Error al cargar los datos (Estado: "
+
+#: app/templates/vehicle_detail.html
+msgid "Failed to load events (Status: "
+msgstr "Error al cargar los eventos (Estado: "
 
 #: app/templates/trip_detail.html
 msgid "Failed to load trip details (Status: "
@@ -1752,6 +1871,10 @@ msgstr "Generar nueva contraseña"
 msgid "Generating..."
 msgstr "Generando..."
 
+#: app/templates/_vehicle_support.html
+msgid "Give all administrators access to this vehicle for the selected time?"
+msgstr "¿Dar a todos los administradores acceso a este vehículo durante el tiempo elegido?"
+
 #: app/templates/webauthn_register.html
 msgid ""
 "Give your security key a recognizable name (e.g., \"YubiKey 5C\", \"Touch ID\", "
@@ -1789,6 +1912,8 @@ msgstr "Calentando la batería"
 #: app/templates/email/admin_lifecycle_vehicle.txt
 #: app/templates/email/admin_new_user_notification.html
 #: app/templates/email/admin_new_user_notification.txt
+#: app/templates/email/admin_support_mode_enabled.html
+#: app/templates/email/admin_support_mode_enabled.txt
 #: app/templates/email/password_reset_body.html app/templates/email/password_reset_body.txt
 #: app/templates/email/unused_vehicle_warning.html
 #: app/templates/email/unused_vehicle_warning.txt
@@ -2252,6 +2377,10 @@ msgstr "Cargando detalles de la carga..."
 msgid "Loading charge logs..."
 msgstr "Cargando registros de carga..."
 
+#: app/templates/_vehicle_events.html
+msgid "Loading events..."
+msgstr "Cargando eventos..."
+
 #: app/templates/_charge_statistics.html app/templates/_trip_statistics.html
 msgid "Loading statistics..."
 msgstr "Cargando estadísticas..."
@@ -2578,7 +2707,8 @@ msgid "Newer"
 msgstr "Más recientes"
 
 #: app/templates/_charge_list.html app/templates/_trip_list.html
-#: app/templates/_trip_search_heatmap.html app/templates/add_vehicle_wizard.html
+#: app/templates/_trip_search_heatmap.html app/templates/_vehicle_events.html
+#: app/templates/add_vehicle_wizard.html
 msgid "Next"
 msgstr "Siguiente"
 
@@ -2630,6 +2760,10 @@ msgstr "No se encontraron registros de fallos o depuración para este vehículo.
 #: app/templates/vehicle_detail.html
 msgid "No data available to generate a heatmap."
 msgstr "No hay datos disponibles para generar un mapa de calor."
+
+#: app/templates/_vehicle_events.html
+msgid "No events have been recorded for this vehicle yet."
+msgstr "Aún no se han registrado eventos para este vehículo."
 
 #: app/templates/_vehicle_logs.html
 msgid "No history records stored yet. Enable the standard session logs on the module with:"
@@ -2789,6 +2923,10 @@ msgstr "Alerta de seguridad OVMS: dirección IP bloqueada"
 msgid "Odometer"
 msgstr "Odómetro"
 
+#: app/templates/_vehicle_support.html
+msgid "Off"
+msgstr "Desactivado"
+
 #: app/templates/_live_view_labels.html app/templates/_vehicle_overview.html
 #: app/templates/admin_dashboard.html app/templates/index.html
 msgid "Offline"
@@ -2807,6 +2945,14 @@ msgstr "Un dominio por línea. Estos siempre omiten la lista de bloqueo."
 msgid "Online"
 msgstr "En línea"
 
+#: app/routers/ui/vehicles.py
+msgid "Only the vehicle's owner can change support mode."
+msgstr "Solo el propietario del vehículo puede cambiar el modo de soporte."
+
+#: app/templates/admin_dashboard.html
+msgid "Open"
+msgstr "Abrir"
+
 #: app/templates/_vehicle_logs.html
 msgid "Open Data Log Browser"
 msgstr "Abrir el explorador de registros"
@@ -2814,6 +2960,11 @@ msgstr "Abrir el explorador de registros"
 #: app/templates/email/admin_ip_blocked.html
 msgid "Open Security Events"
 msgstr "Abrir eventos de seguridad"
+
+#: app/templates/email/admin_support_mode_enabled.html
+#: app/templates/email/admin_support_mode_enabled.txt
+msgid "Open Vehicle"
+msgstr "Abrir vehículo"
 
 #: app/templates/add_vehicle_wizard.html
 msgid ""
@@ -2870,6 +3021,8 @@ msgstr "Resumen"
 #: app/templates/admin_dashboard.html app/templates/autoprovision_management.html
 #: app/templates/edit_vehicle.html app/templates/email/admin_lifecycle_vehicle.html
 #: app/templates/email/admin_lifecycle_vehicle.txt
+#: app/templates/email/admin_support_mode_enabled.html
+#: app/templates/email/admin_support_mode_enabled.txt
 msgid "Owner"
 msgstr "Propietario"
 
@@ -2878,7 +3031,8 @@ msgid "Owner Email"
 msgstr "Correo del propietario"
 
 #: app/templates/_charge_list.html app/templates/_trip_list.html
-#: app/templates/_trip_search_heatmap.html app/templates/vehicle_datalogs.html
+#: app/templates/_trip_search_heatmap.html app/templates/_vehicle_events.html
+#: app/templates/vehicle_datalogs.html
 msgid "Page"
 msgstr "Página"
 
@@ -2955,6 +3109,10 @@ msgstr "Pausar transmisión"
 msgid "Pending deletion"
 msgstr "Eliminación pendiente"
 
+#: app/templates/vehicle_detail.html
+msgid "Permanently delete this event? This cannot be undone."
+msgstr "¿Eliminar este evento de forma permanente? Esta acción no se puede deshacer."
+
 #: app/templates/profile_webauthn_tab.html
 msgid "Phishing-resistant - cannot be tricked by fake websites"
 msgstr "Resistente al phishing: no puede ser engañado por sitios web falsos"
@@ -2962,6 +3120,10 @@ msgstr "Resistente al phishing: no puede ser engañado por sitios web falsos"
 #: app/templates/webauthn_register.html
 msgid "Platform authenticators (Touch ID, Face ID, Windows Hello)"
 msgstr "Autenticadores de plataforma (Touch ID, Face ID, Windows Hello)"
+
+#: app/routers/ui/vehicles.py
+msgid "Please choose a valid duration."
+msgstr "Elija una duración válida."
 
 #: app/templates/base.html
 msgid "Please confirm"
@@ -3016,7 +3178,7 @@ msgid "Preparing to charge"
 msgstr "Preparando la carga"
 
 #: app/templates/_charge_list.html app/templates/_trip_list.html
-#: app/templates/_trip_search_heatmap.html
+#: app/templates/_trip_search_heatmap.html app/templates/_vehicle_events.html
 msgid "Previous"
 msgstr "Anterior"
 
@@ -3087,6 +3249,8 @@ msgstr "PyOVMS Control"
 #: app/templates/email/admin_lifecycle_vehicle.txt
 #: app/templates/email/admin_new_user_notification.html
 #: app/templates/email/admin_new_user_notification.txt
+#: app/templates/email/admin_support_mode_enabled.html
+#: app/templates/email/admin_support_mode_enabled.txt
 #: app/templates/email/password_reset_body.html app/templates/email/password_reset_body.txt
 #: app/templates/email/unused_vehicle_warning.html
 #: app/templates/email/unused_vehicle_warning.txt
@@ -3341,7 +3505,7 @@ msgstr "Error en la rotación"
 msgid "Running Task:"
 msgstr "Tarea en ejecución:"
 
-#: app/templates/_charge_list.html
+#: app/templates/_charge_list.html app/templates/_vehicle_events.html
 msgid "SOC"
 msgstr "SOC"
 
@@ -3559,6 +3723,10 @@ msgstr "Mostrar mapa de calor"
 msgid "Show fewer"
 msgstr "Mostrar menos"
 
+#: app/templates/_vehicle_events.html
+msgid "Show on map"
+msgstr "Mostrar en el mapa"
+
 #: app/templates/profile.html
 msgid ""
 "Show vehicle notifications as system notifications while this site is open in a "
@@ -3632,8 +3800,8 @@ msgstr "Odómetro inicial"
 msgid "Start SOC"
 msgstr "SOC inicial"
 
-#: app/templates/_charge_list.html app/templates/charge_detail.html
-#: app/templates/trip_detail.html
+#: app/templates/_charge_list.html app/templates/_vehicle_events.html
+#: app/templates/charge_detail.html app/templates/trip_detail.html
 msgid "Start Time"
 msgstr "Hora de inicio"
 
@@ -3714,6 +3882,78 @@ msgstr "Resumen"
 msgid "Sunday"
 msgstr "Domingo"
 
+#: app/templates/admin_dashboard.html app/templates/vehicle_detail.html
+msgid "Support"
+msgstr "Soporte"
+
+#: app/templates/_vehicle_support.html
+msgid "Support Mode"
+msgstr "Modo de soporte"
+
+#: app/templates/email/admin_support_mode_enabled.html
+#: app/templates/email/admin_support_mode_enabled.txt
+msgid "Support Mode Enabled"
+msgstr "Modo de soporte activado"
+
+#: app/templates/vehicle_detail.html
+msgid "Support mode"
+msgstr "Modo de soporte"
+
+#: app/templates/admin_dashboard.html
+#, python-format
+msgid "Support mode active until %(until)s"
+msgstr "Modo de soporte activo hasta el %(until)s"
+
+#: app/notifications/mail/admin.py
+msgid "Support mode enabled"
+msgstr "Modo de soporte activado"
+
+#: app/routers/ui/vehicles.py
+msgid "Support mode enabled. The administrators have been notified."
+msgstr "Modo de soporte activado. Se ha avisado a los administradores."
+
+#: app/routers/ui/vehicles.py
+msgid "Support mode ended."
+msgstr "Modo de soporte finalizado."
+
+#: app/templates/_vehicle_support.html
+msgid ""
+"Support mode ends automatically when the chosen time is up. You can end it at any "
+"time."
+msgstr ""
+"El modo de soporte finaliza automáticamente cuando termina el tiempo elegido. Puede "
+"finalizarlo en cualquier momento."
+
+#: app/routers/ui/vehicles.py
+msgid "Support mode extended."
+msgstr "Modo de soporte modificado."
+
+#: app/templates/_vehicle_support.html
+msgid ""
+"Support mode gives the server administrators temporary remote access to this vehicle,"
+" for example to help you with a problem. While it is active, every administrator can "
+"open this vehicle as if it were their own: live data, logs, charges and the terminal,"
+" including sending commands. Their API keys can also reach the vehicle over MQTT."
+msgstr ""
+"El modo de soporte da a los administradores del servidor acceso remoto temporal a "
+"este vehículo, por ejemplo para ayudarle con un problema. Mientras está activo, cada "
+"administrador puede abrir este vehículo como si fuera suyo: datos en directo, "
+"registros, cargas y el terminal, incluido el envío de comandos. Sus claves API "
+"también pueden acceder al vehículo por MQTT."
+
+#: app/templates/_vehicle_support.html
+#, python-format
+msgid "Support mode is active until %(until)s."
+msgstr "El modo de soporte está activo hasta el %(until)s."
+
+#: app/routers/ui/vehicles.py
+msgid "Support mode is not active for this vehicle."
+msgstr "El modo de soporte no está activo para este vehículo."
+
+#: app/routers/ui/vehicles.py
+msgid "Support mode was not active."
+msgstr "El modo de soporte no estaba activo."
+
 #: app/templates/security_events_dashboard.html
 msgid "Suspicious"
 msgstr "Sospechoso"
@@ -3779,6 +4019,10 @@ msgstr "ID del vehículo de destino"
 #: app/templates/edit_autoprovision_profile.html
 msgid "Target Vehicle Name (Display Name)"
 msgstr "Nombre del vehículo de destino (nombre para mostrar)"
+
+#: app/templates/_vehicle_events.html
+msgid "Target temperature"
+msgstr "Temperatura objetivo"
 
 #: app/templates/vehicle_detail.html
 msgid "Terminal"
@@ -3916,6 +4160,18 @@ msgid ""
 msgstr ""
 "Este cambio afecta a la forma de iniciar sesión en su cuenta, así que confirme su "
 "contraseña antes de continuar."
+
+#: app/templates/charge_detail.html app/templates/vehicle_detail.html
+msgid "This charge is still being recorded and cannot be deleted until it has ended."
+msgstr ""
+"Esta carga todavía se está registrando y no se puede eliminar hasta que haya "
+"terminado."
+
+#: app/templates/vehicle_detail.html
+msgid "This event is still being recorded and cannot be deleted until it has ended."
+msgstr ""
+"Este evento todavía se está registrando y no se puede eliminar hasta que haya "
+"terminado."
 
 #: app/templates/email/account_deletion_warning.html
 #: app/templates/email/account_deletion_warning.txt
@@ -4287,6 +4543,10 @@ msgstr "Actualizar usuario"
 msgid "Update Vehicle"
 msgstr "Actualizar vehículo"
 
+#: app/templates/_vehicle_support.html
+msgid "Update support mode"
+msgstr "Modificar el modo de soporte"
+
 #: app/templates/admin_dashboard.html
 msgid "Uptime:"
 msgstr "Tiempo de actividad:"
@@ -4478,7 +4738,8 @@ msgstr "Configuración CLI del servidor V3"
 msgid "V3/MQTT Configuration Details"
 msgstr "Detalles de configuración V3/MQTT"
 
-#: app/templates/vehicle_detail.html
+#: app/templates/email/admin_support_mode_enabled.html
+#: app/templates/email/admin_support_mode_enabled.txt app/templates/vehicle_detail.html
 msgid "Vehicle"
 msgstr "Vehículo"
 
@@ -4522,6 +4783,10 @@ msgstr "Registros de datos del vehículo"
 #, python-format
 msgid "Vehicle Detail: %(id)s"
 msgstr "Detalle del vehículo: %(id)s"
+
+#: app/templates/_vehicle_events.html
+msgid "Vehicle Events"
+msgstr "Eventos del vehículo"
 
 #: app/templates/admin_dashboard.html app/templates/email/admin_lifecycle_vehicle.html
 #: app/templates/email/admin_lifecycle_vehicle.txt
@@ -4730,6 +4995,15 @@ msgstr "¡Bienvenido a PyOVMS!"
 msgid "What is WebAuthn?"
 msgstr "¿Qué es WebAuthn?"
 
+#: app/templates/_vehicle_events.html
+msgid ""
+"What the parked vehicle did on its own: climate control and charging the 12 V "
+"battery. Recorded from V3 metrics while charge logging is on."
+msgstr ""
+"Lo que hizo el vehículo estacionado por sí solo: climatización y carga de la batería "
+"de 12 V. Se registra a partir de métricas V3 mientras el registro de cargas está "
+"activo."
+
 #: app/templates/edit_vehicle.html
 msgid "When both protocols are active, choose which one sends alerts to avoid duplicates."
 msgstr ""
@@ -4752,6 +5026,15 @@ msgstr "Sí, eliminar carga"
 #: app/templates/trip_detail.html app/templates/vehicle_detail.html
 msgid "Yes, Delete Trip"
 msgstr "Sí, eliminar viaje"
+
+#: app/templates/vehicle_detail.html
+#, python-format
+msgid ""
+"You are viewing the vehicle of %(owner)s with their permission until %(until)s. Every"
+" access is recorded."
+msgstr ""
+"Está viendo el vehículo de %(owner)s con su permiso hasta el %(until)s. Cada acceso "
+"queda registrado."
 
 #: app/routers/ui/command_favorites.py
 #, python-format
@@ -4856,6 +5139,10 @@ msgid ""
 msgstr ""
 "Sus datos de viaje no se pudieron eliminar en este momento, por lo que se conservó la"
 " cuenta. Inténtelo de nuevo."
+
+#: app/templates/_vehicle_support.html
+msgid "Your trips and your notification settings stay private."
+msgstr "Sus viajes y sus ajustes de notificación siguen siendo privados."
 
 #: app/templates/login.html
 msgid "Your username"
@@ -5004,7 +5291,7 @@ msgid "ntfy topic cannot be empty."
 msgstr "El tema ntfy no puede estar vacío."
 
 #: app/templates/_charge_list.html app/templates/_trip_list.html
-#: app/templates/_trip_search_heatmap.html
+#: app/templates/_trip_search_heatmap.html app/templates/_vehicle_events.html
 msgid "of"
 msgstr "de"
 
@@ -5047,6 +5334,12 @@ msgstr "su@correo.com"
 
 #~ msgid "12V Battery:"
 #~ msgstr "Batería de 12V:"
+
+#~ msgid "Admins cannot view charge information."
+#~ msgstr "Los administradores no pueden ver la información de carga."
+
+#~ msgid "Admins cannot view detailed vehicle information."
+#~ msgstr "Los administradores no pueden ver información detallada del vehículo."
 
 #~ msgid "As an admin, you must assign this vehicle to a user."
 #~ msgstr "Como administrador, debe asignar este vehículo a un usuario."

@@ -6,6 +6,7 @@ from typing import Dict, Optional
 
 from app.config import settings
 from app.models import api as models_api
+from app.utils.command_summary import summarize_command
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,8 @@ class MqttInteractiveClient:
                 future = self.command_futures.get(command_id)
                 if future and not future.done():
                     response_payload = msg.payload.decode()
-                    logger.info(f"MQTT Interactive: Received response for command ID {command_id}: {response_payload}")
+                    # Length only: the reply is the owner's data, and every admin reads this log.
+                    logger.info(f"MQTT Interactive: Received response for command ID {command_id} ({len(response_payload)} chars)")
                     future.set_result(response_payload)
         except Exception as e:
             logger.error(f"Error processing MQTT interactive response on topic {msg.topic}: {e}", exc_info=True)
@@ -79,7 +81,7 @@ class MqttInteractiveClient:
         topic = f"ovms/{user}/{vehicle_id}/client/{self.client_id}/command/{command_id}"
 
         try:
-            logger.info(f"MQTT Interactive: Sending command '{command}' to topic '{topic}'")
+            logger.info(f"MQTT Interactive: Sending command '{summarize_command(command)}' to topic '{topic}'")
             result = self._client.publish(topic, command)
             if result.rc != mqtt.MQTT_ERR_SUCCESS:
                 return models_api.CommandResponse(vehicle_id=vehicle_id, success=False, error_message=f"MQTT publish error: {mqtt.error_string(result.rc)}")

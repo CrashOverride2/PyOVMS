@@ -186,3 +186,4 @@ def init_db_models_import():
     """
     from app.models import db as models_db  # noqa: F401
     from app.services.charge_logger import models as charge_logger_models  # noqa: F401
+    from app.services.event_logger import models as event_logger_models  # noqa: F401

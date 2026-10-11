@@ -31,6 +31,7 @@ from app.services.disposable_email_service import (
     DEFAULT_REMOTE_URL,
 )
 from app.config import settings
+from app.services import support_mode
 from app.csrf_protection import verify_csrf_token
 
 logger = logging.getLogger(__name__)
@@ -98,6 +99,9 @@ def ui_admin_dashboard(
         "disposable_email_state": disposable_email_state,
         "lifecycle_warn_ids": lifecycle_warn_ids,
         "lifecycle_delete_ids": lifecycle_delete_ids,
+        # Vehicle row id -> end of the owner's support grant: the vehicles an admin
+        # may open right now (app/services/support_mode.py).
+        "support_vehicles": support_mode.get_active_support_vehicles(db),
     })
 
 @router.get("/logs", response_class=HTMLResponse, name="ui_admin_logs")

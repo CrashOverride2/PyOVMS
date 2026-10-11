@@ -1,5 +1,5 @@
+import asyncio
 import logging
-import time
 from typing import Optional
 import datetime
 import requests
@@ -11,17 +11,22 @@ from app import crud
 from app.connection_manager import manager as v2_manager
 from app.mqtt_interactive_client import mqtt_interactive_client
 from app.config import settings
+from app.utils.command_summary import summarize_command
 
 # A deletion must not fail on a restarting Karto, but it must also not hang the
 # request forever. Three tries with a short pause covers a rolling restart.
 KARTO_DELETE_ATTEMPTS = 3
 KARTO_DELETE_RETRY_SECONDS = 2.0
+# Per attempt. Each attempt carries a key of its own, valid for one minute, so this
+# has to stay below that — see trigger_karto_vehicle_deletion().
+KARTO_DELETE_TIMEOUT_SECONDS = 30
+KARTO_DELETE_KEY_LIFETIME = datetime.timedelta(minutes=1)
 
 logger = logging.getLogger(__name__)
 
 async def _send_v2_command(vehicle_id_upper: str, command_str: str) -> models_api.CommandResponse:
     """Sends a command via the V2/TCP protocol."""
-    logger.info(f"Sending command '{command_str}' to {vehicle_id_upper} via V2/TCP.")
+    logger.info(f"Sending command '{summarize_command(command_str)}' to {vehicle_id_upper} via V2/TCP.")
     response_data = await v2_manager.forward_to_car(vehicle_id_upper, command_str, source_app_conn=None)
     
     if response_data is None:
@@ -45,7 +50,7 @@ async def _send_v2_command(vehicle_id_upper: str, command_str: str) -> models_ap
 async def _send_v3_command(vehicle: models_db.Vehicle, command_str: str) -> models_api.CommandResponse:
     """Sends a command via the V3/MQTT protocol."""
     vehicle_id_upper = vehicle.vehicle_id.upper()
-    logger.info(f"Sending command '{command_str}' to {vehicle_id_upper} via V3/MQTT.")
+    logger.info(f"Sending command '{summarize_command(command_str)}' to {vehicle_id_upper} via V3/MQTT.")
     if not vehicle.owner or not vehicle.owner.username:
         return models_api.CommandResponse(vehicle_id=vehicle_id_upper, success=False, error_message="Vehicle has no owner, cannot construct MQTT topic.")
     
@@ -110,77 +115,70 @@ class KartoDeletionFailed(Exception):
     """Karto could not confirm that a vehicle's trip data was removed."""
 
 
-async def trigger_karto_vehicle_deletion(db: Session, vehicle_id: str, current_user: models_db.User) -> None:
-    """
-    Delete all trip data for a vehicle in Karto. Raises KartoDeletionFailed if it
-    could not be confirmed.
+def karto_deletion_actor(
+    owner: Optional[models_db.User], fallback: Optional[models_db.User]
+) -> Optional[models_db.User]:
+    """The user whose internal key deletes a vehicle's trips in Karto: the owner while
+    the account is active, otherwise `fallback` (an active admin)."""
+    if owner is not None and owner.is_active:
+        return owner
+    return fallback
 
-    This used to be fire-and-forget: a failed call was logged and the vehicle was
-    removed from the main server anyway. Karto being briefly unreachable therefore
-    left the complete GPS history behind — and because a vehicle id becomes free
-    again on deletion, whoever registered the same id next inherited it.
 
-    Raising instead means the caller can keep the vehicle and let the owner retry,
-    which is the only outcome that makes "delete my vehicle" mean what it says.
-    """
+async def trigger_karto_vehicle_deletion(
+    db: Session, vehicle_id: str, current_user: Optional[models_db.User]
+) -> None:
+    """Delete all trip data for a vehicle in Karto. Raises KartoDeletionFailed if it
+    could not be confirmed or there is no user to act as, so the caller keeps the vehicle."""
     if not settings.ENABLE_KARTO_TRIP_TRACKING:
         return
+    if current_user is None:
+        raise KartoDeletionFailed(
+            f"No active user to delete the trip data of {vehicle_id} in Karto as."
+        )
 
     logger.info(f"Karto: Triggering deletion of all trip data for vehicle {vehicle_id}.")
 
-    # 1. Create a temporary API key for this internal operation
-    temp_key_name = f"temp-karto-delete-{vehicle_id}-{datetime.datetime.now(datetime.timezone.utc).timestamp()}"
-    expires_delta = datetime.timedelta(minutes=1)
-    db_api_key, plain_key = crud.apikey.create_api_key(
-        db=db, user_id=current_user.id, name=temp_key_name, expires_delta=expires_delta,
-        # Server plumbing: exists only for the duration of this call.
-        purpose=crud.apikey.KeyPurpose.INTERNAL,
-    )
+    url = f"{settings.SERVER_BASE_URL.rstrip('/')}/api/karto/v1/vehicles/{vehicle_id}/trips"
+    # Deleting the vehicle takes the running trip too.
+    params = {"include_in_progress": "true"}
 
-    try:
-        # 2. Construct the full URL and headers for the API call
-        url = f"{settings.SERVER_BASE_URL.rstrip('/')}/api/karto/v1/vehicles/{vehicle_id}/trips"
-        headers = {"X-API-Key": plain_key}
-        # Karto's bulk delete keeps a trip that is still running unless asked —
-        # for the app's "delete all trips" that keeps the ride whole. Deleting the
-        # vehicle has to take everything, or the reaper later completes that one
-        # trip under a vehicle id that may already belong to someone else.
-        params = {"include_in_progress": "true"}
+    def delete_once(plain_key: str) -> None:
+        response = requests.delete(url, headers={"X-API-Key": plain_key}, params=params,
+                                   timeout=KARTO_DELETE_TIMEOUT_SECONDS)
+        response.raise_for_status()
 
-        # 3. Define the blocking request function to be run in a threadpool.
-        #    Retries a few times: the common failure is a restarting Karto, not a
-        #    permanent one, and a transient blip must not cost the user their
-        #    deletion.
-        def do_delete_request():
-            last_error = None
-            for attempt in range(1, KARTO_DELETE_ATTEMPTS + 1):
-                try:
-                    response = requests.delete(url, headers=headers, params=params, timeout=30)
-                    response.raise_for_status()
-                    logger.info(
-                        f"Karto: trip data for vehicle {vehicle_id} deleted "
-                        f"(status {response.status_code}, attempt {attempt})."
-                    )
-                    return
-                except requests.RequestException as e:
-                    last_error = e
-                    logger.warning(
-                        f"Karto: deletion attempt {attempt}/{KARTO_DELETE_ATTEMPTS} for "
-                        f"vehicle {vehicle_id} failed: {e}"
-                    )
-                    if attempt < KARTO_DELETE_ATTEMPTS:
-                        time.sleep(KARTO_DELETE_RETRY_SECONDS)
-            raise KartoDeletionFailed(
-                f"Karto did not confirm deletion of trip data for {vehicle_id}: {last_error}"
+    # Retried a few times: the common failure is a restarting Karto, not a permanent
+    # one, and a transient blip must not cost the user their deletion.
+    last_error = None
+    for attempt in range(1, KARTO_DELETE_ATTEMPTS + 1):
+        if attempt > 1:
+            await asyncio.sleep(KARTO_DELETE_RETRY_SECONDS)
+        # A key per attempt. Karto recognises it by exactly this name and a lifetime of at
+        # most 5 minutes — change neither without Karto.
+        temp_key_name = f"temp-karto-delete-{vehicle_id}-{datetime.datetime.now(datetime.timezone.utc).timestamp()}"
+        db_api_key, plain_key = crud.apikey.create_api_key(
+            db=db, user_id=current_user.id, name=temp_key_name, expires_delta=KARTO_DELETE_KEY_LIFETIME,
+            # Server plumbing: exists only for the duration of this call.
+            purpose=crud.apikey.KeyPurpose.INTERNAL,
+        )
+        try:
+            await run_in_threadpool(delete_once, plain_key)
+            logger.info(f"Karto: trip data for vehicle {vehicle_id} deleted (attempt {attempt}).")
+            return
+        except requests.RequestException as e:
+            last_error = e
+            logger.warning(
+                f"Karto: deletion attempt {attempt}/{KARTO_DELETE_ATTEMPTS} for "
+                f"vehicle {vehicle_id} failed: {e}"
             )
+        finally:
+            crud.apikey.delete_api_key_by_id_and_user(db, api_key_id=db_api_key.id, user_id=current_user.id)
+            logger.debug("Karto: Cleaned up temporary API key used for vehicle deletion.")
 
-        # 4. Execute the request in a non-blocking way
-        await run_in_threadpool(do_delete_request)
-
-    finally:
-        # 5. Ensure the temporary API key is deleted
-        crud.apikey.delete_api_key_by_id_and_user(db, api_key_id=db_api_key.id, user_id=current_user.id)
-        logger.debug("Karto: Cleaned up temporary API key used for vehicle deletion.")
+    raise KartoDeletionFailed(
+        f"Karto did not confirm deletion of trip data for {vehicle_id}: {last_error}"
+    )
 
 
 async def trigger_karto_deletion_for_user_vehicles(
@@ -207,5 +205,7 @@ async def trigger_karto_deletion_for_user_vehicles(
         f"Karto: deleting trip data for {len(vehicle_ids)} vehicle(s) of user "
         f"'{user.username}' before the account is removed."
     )
+    # As the owner where possible, so the deletion does not hinge on Karto's admin path.
+    actor = karto_deletion_actor(user, acting_user)
     for vehicle_id in vehicle_ids:
-        await trigger_karto_vehicle_deletion(db, vehicle_id, acting_user)
+        await trigger_karto_vehicle_deletion(db, vehicle_id, actor)

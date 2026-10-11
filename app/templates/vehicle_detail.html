@@ -21,7 +21,7 @@
     @beforeunload.window="disconnect">
 
     <div class="flex flex-wrap items-center gap-3 sm:gap-4 mb-6">
-        <a href="{{ url_for('ui_dashboard') }}"
+        <a href="{{ url_for('ui_admin_dashboard') if viewing_as_support else url_for('ui_dashboard') }}"
             class="flex-none px-4 py-2 text-sm font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors duration-200">← {{ _('Dashboard') }}</a>
         <div class="min-w-0 flex-1 basis-40">
             <h1 class="break-words text-2xl md:text-3xl font-bold text-neon-blue">{{ vehicle.vehicle_name or vehicle.vehicle_id }}</h1>
@@ -32,6 +32,13 @@
             class="flex-none ml-auto px-4 py-2 text-sm font-medium text-neon-magenta border border-neon-magenta rounded-md hover:bg-neon-magenta hover:text-dark-bg transition-colors duration-200">{{ _('Edit Vehicle') }}</a>
         {% endif %}
     </div>
+
+    {% if viewing_as_support %}
+    <div class="mb-6 p-4 rounded-md border border-amber-500/50 bg-amber-900/20 text-amber-200 text-sm" role="status">
+        <p class="font-semibold">{{ _('Support mode') }}</p>
+        <p>{{ _('You are viewing the vehicle of %(owner)s with their permission until %(until)s. Every access is recorded.') % {'owner': vehicle.owner_username or '', 'until': support.until | datetimeformat} }}</p>
+    </div>
+    {% endif %}
 
     <template x-teleport="body">
         <div x-show="tripsState.tripToDelete" x-cloak
@@ -107,7 +114,7 @@
                 <svg class="h-4 w-4 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"/></svg>
                 <span>{{ _('Overview') }}</span>
             </button>
-            {% if settings.ENABLE_KARTO_TRIP_TRACKING and vehicle.enable_trip_tracking %}
+            {% if is_owner and settings.ENABLE_KARTO_TRIP_TRACKING and vehicle.enable_trip_tracking %}
             <button type="button" @click="activateTripsTab" :class="tabClasses.trips" data-tab="trips" class="tab-btn">
                 <svg class="h-4 w-4 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"/></svg>
                 <span>{{ _('Trips') }}</span>
@@ -121,6 +128,12 @@
             <button type="button" @click="activateChargesTab" :class="tabClasses.charges" data-tab="charges" class="tab-btn">
                 <svg class="h-4 w-4 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"/></svg>
                 <span>{{ _('Charges') }}</span>
+            </button>
+            {% endif %}
+            {% if show_events_tab %}
+            <button type="button" @click="activateEventsTab" :class="tabClasses.events" data-tab="events" class="tab-btn">
+                <svg class="h-4 w-4 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                <span>{{ _('Events') }}</span>
             </button>
             {% endif %}
             <button type="button" @click="activateTerminalTab" :class="tabClasses.terminal" data-tab="terminal" class="tab-btn">
@@ -139,9 +152,15 @@
                 <svg class="h-4 w-4 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>
                 <span>{{ _('Logs') }}</span>
             </button>
+            {% if is_owner %}
             <button type="button" @click="activateNotificationsTab" :class="tabClasses.notifications" data-tab="notifications" class="tab-btn">
                 <svg class="h-4 w-4 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg>
                 <span>{{ _('Notifications') }}</span>
+            </button>
+            {% endif %}
+            <button type="button" @click="activateSupportTab" :class="tabClasses.support" data-tab="support" class="tab-btn">
+                <svg class="h-4 w-4 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16.712 4.33a9.027 9.027 0 0 1 1.652 1.306c.51.51.944 1.064 1.306 1.652M16.712 4.33l-3.448 4.138m3.448-4.138a9.014 9.014 0 0 0-9.424 0M19.67 7.288l-4.138 3.448m4.138-3.448a9.014 9.014 0 0 1 0 9.424m-4.138-5.976a3.736 3.736 0 0 0-.88-1.388 3.737 3.737 0 0 0-1.388-.88m2.268 2.268a3.765 3.765 0 0 1 0 2.528m-2.268-4.796a3.765 3.765 0 0 0-2.528 0m4.796 4.796c-.181.506-.475.982-.88 1.388a3.736 3.736 0 0 1-1.388.88m2.268-2.268 4.138 3.448m0 0a9.027 9.027 0 0 1-1.306 1.652c-.51.51-1.064.944-1.652 1.306m0 0-3.448-4.138m3.448 4.138a9.014 9.014 0 0 1-9.424 0m5.976-4.138a3.765 3.765 0 0 1-2.528 0m0 0a3.736 3.736 0 0 1-1.388-.88 3.737 3.737 0 0 1-.88-1.388m2.268 2.268L7.288 19.67m0 0a9.024 9.024 0 0 1-1.652-1.306 9.027 9.027 0 0 1-1.306-1.652m0 0 4.138-3.448M4.33 16.712a9.014 9.014 0 0 1 0-9.424m4.138 5.976a3.765 3.765 0 0 1 0-2.528m0 0c.181-.506.475-.982.88-1.388a3.736 3.736 0 0 1 1.388-.88m-2.268 2.268L4.33 7.288m6.406 1.18L7.288 4.33m0 0a9.024 9.024 0 0 0-1.652 1.306A9.025 9.025 0 0 0 4.33 7.288"/></svg>
+                <span>{{ _('Support') }}</span>
             </button>
         </nav>
 
@@ -152,7 +171,7 @@
                 </div>
             </template>
 
-            {% if settings.ENABLE_KARTO_TRIP_TRACKING and vehicle.enable_trip_tracking %}
+            {% if is_owner and settings.ENABLE_KARTO_TRIP_TRACKING and vehicle.enable_trip_tracking %}
             <template x-if="tabVisibility.trips">
                 <div class="tab-content">
                     {% include '_vehicle_trips.html' %}
@@ -170,6 +189,14 @@
             <template x-if="tabVisibility.charges">
                 <div class="tab-content">
                     {% include '_vehicle_charges.html' %}
+                </div>
+            </template>
+            {% endif %}
+
+            {% if show_events_tab %}
+            <template x-if="tabVisibility.events">
+                <div class="tab-content">
+                    {% include '_vehicle_events.html' %}
                 </div>
             </template>
             {% endif %}
@@ -198,9 +225,17 @@
                 </div>
             </template>
 
+            {% if is_owner %}
             <template x-if="tabVisibility.notifications">
                 <div class="tab-content">
                     {% include '_vehicle_notifications.html' %}
+                </div>
+            </template>
+            {% endif %}
+
+            <template x-if="tabVisibility.support">
+                <div class="tab-content">
+                    {% include '_vehicle_support.html' %}
                 </div>
             </template>
         </div>
@@ -210,7 +245,7 @@
 
 {% block scripts %}
 {{ super() }}
-<script src="{{ url_for('static', path='/js/vehicle_live_view.js') }}"></script>
+<script src="{{ url_for('static', path='/js/vehicle_live_view.js') }}?v={{ asset_version('js/vehicle_live_view.js') }}"></script>
 <script nonce="{{ request.state.csp_nonce }}">
     const vehicleDetailTranslations = {
         metrics: {
@@ -269,6 +304,19 @@
             ending: {{ _('Ending') | tojson | safe }},
             since: {{ _('since') | tojson | safe }},
             lastPoint: {{ _('Last position') | tojson | safe }},
+        },
+        events: {
+            kinds: {
+                climate: {{ _('Climate control') | tojson | safe }},
+                aux_charge: {{ _('12 V battery charge') | tojson | safe }}
+            },
+            unknownKind: {{ _('Event') | tojson | safe }},
+            failedToLoad: {{ _('Failed to load events (Status: ') | tojson | safe }},
+            confirmDelete: {{ _('Permanently delete this event? This cannot be undone.') | tojson | safe }},
+            confirmDeleteLabel: {{ _('Delete Event') | tojson | safe }},
+            stillRecording: {{ _('This event is still being recorded and cannot be deleted until it has ended.') | tojson | safe }},
+            deleteFailed: {{ _('Error deleting event: ') | tojson | safe }},
+            networkError: {{ _('Network error: ') | tojson | safe }}
         },
         favorites: {
             saveFailed: {{ _('Could not save favorite.') | tojson | safe }},
@@ -999,7 +1047,14 @@ function createTripsState() {
                     if (response.ok) {
                         this.fetchTrips(this.pagination.current_page || 1);
                     } else {
-                        response.json().then(data => window.ovmsDialog.alert({ message: `{{ _('Error deleting trip: ') }}${data.detail || response.statusText}`, danger: true }));
+                        response.json().catch(() => ({})).then(data => {
+                            // Gone already — deleted in another tab or in the app: what was asked for.
+                            if (response.status === 404 && data.detail === 'trip_not_found') {
+                                this.fetchTrips(this.pagination.current_page || 1);
+                                return;
+                            }
+                            window.ovmsDialog.alert({ message: `{{ _('Error deleting trip: ') }}${data.detail || response.statusText}`, danger: true });
+                        });
                     }
                 })
                 .catch(err => window.ovmsDialog.alert({ message: `{{ _('Network error: ') }}${err.message}`, danger: true }));
@@ -1194,7 +1249,19 @@ function createTripsState() {
                         if (response.ok) {
                             this.fetchCharges(this.pagination.current_page || 1);
                         } else {
-                            response.json().then(data => window.ovmsDialog.alert({ message: `{{ _('Error deleting charge log: ') }}${data.detail || response.statusText}`, danger: true }));
+                            response.json().catch(() => ({})).then(data => {
+                                // Gone already — deleted in another tab or in the app: what was asked for.
+                                if (response.status === 404 && data.detail === 'charge_log_not_found') {
+                                    this.fetchCharges(this.pagination.current_page || 1);
+                                    return;
+                                }
+                                // Still being recorded: the server refuses it (409) until the charge has ended.
+                                if (response.status === 409) {
+                                    window.ovmsDialog.alert({ message: `{{ _('This charge is still being recorded and cannot be deleted until it has ended.') }}`, danger: true });
+                                    return;
+                                }
+                                window.ovmsDialog.alert({ message: `{{ _('Error deleting charge log: ') }}${data.detail || response.statusText}`, danger: true });
+                            });
                         }
                     })
                     .catch(err => window.ovmsDialog.alert({ message: `{{ _('Network error: ') }}${err.message}`, danger: true }));
@@ -1212,6 +1279,392 @@ function createTripsState() {
             },
             formatSoc(soc) { return soc !== null ? `${soc.toFixed(1)}%` : 'N/A'; },
             formatEnergy(kwh) { return kwh !== null ? `${kwh.toFixed(2)} kWh` : 'N/A'; }
+        };
+    }
+
+    // The page's own map tiles: Protomaps when PROTOMAPS_URL is set, OpenStreetMap otherwise.
+    function addVehicleMapBaseLayer(map, container) {
+        const protomapsUrl = {{ PROTOMAPS_URL | tojson | safe }};
+
+        if (protomapsUrl) {
+            if (typeof protomapsL === 'undefined' || (protomapsUrl.endsWith('.pmtiles') && typeof pmtiles === 'undefined')) {
+                console.error('Protomaps scripts (protomaps-leaflet.js and/or pmtiles.js) are not loaded.');
+                container.innerHTML = `<div class="flex items-center justify-center h-full text-red-400 p-4 text-center">{{ _("Map Error: Protomaps scripts failed to load. Check the browser console and server configuration.") }}</div>`;
+                return;
+            }
+            try {
+                const paintRules = [
+                    { dataLayer: "water", symbolizer: new protomapsL.PolygonSymbolizer({ fill: "#1e3a8a" }) },
+                    { dataLayer: "landuse", symbolizer: new protomapsL.PolygonSymbolizer({ fill: "#161b22" }) },
+                    { dataLayer: "natural", symbolizer: new protomapsL.PolygonSymbolizer({ fill: "#161b22" }) },
+                    { dataLayer: "transit", symbolizer: new protomapsL.LineSymbolizer({ color: "#374151", width: 1 })},
+                    {
+                        dataLayer: "roads",
+                        symbolizer: new protomapsL.LineSymbolizer({
+                            color: (z,f) => (f.props.highway_kind === "highway" || f.props.highway_kind === "motorway") ? "#6b7280" : "#4b5563",
+                            width: (z,f) => (f.props.highway_kind === "highway" || f.props.highway_kind === "motorway") ? (z > 14 ? 3 : 2) : (z > 14 ? 2 : 1)
+                        })
+                    },
+                    { dataLayer: "buildings", symbolizer: new protomapsL.PolygonSymbolizer({ fill: "#22282f" }) },
+                    { dataLayer: "boundaries", symbolizer: new protomapsL.LineSymbolizer({ color: "#39FF14", width: 0.5, opacity: 0.4 }) }
+                ];
+                const labelRules = [
+                    {
+                        dataLayer: "places",
+                        symbolizer: new protomapsL.CenteredTextSymbolizer({
+                            label_props: ["name:{{ user_locale }}","name"],
+                            fill: (z,f) => (f.props.kind === 'country' || f.props.kind === 'region') ? '#FFF01F' : '#c9d1d9',
+                            stroke: "#0d1117",
+                            width: 2,
+                            font: (z,f) => {
+                                if (f.props.kind === 'country') return "bold 14px RobotoMono, monospace";
+                                if (f.props.kind === 'region') return "bold 12px RobotoMono, monospace";
+                                return "11px RobotoMono, monospace";
+                            }
+                        })
+                    },
+                    {
+                        dataLayer: "roads",
+                        symbolizer: new protomapsL.LineLabelSymbolizer({
+                            label_props: ["name:{{ user_locale }}","name"],
+                            fill: "#8b949e",
+                            stroke: "#0d1117",
+                            width: 2,
+                            font: "10px RobotoMono, monospace"
+                        })
+                    },
+                    { dataLayer: "water", symbolizer: new protomapsL.CenteredTextSymbolizer({ label_props: ["name"], fill: "#00c6ff", stroke: "#0d1117", font: "italic 12px sans-serif" }) },
+                    { dataLayer: "pois", symbolizer: new protomapsL.CenteredTextSymbolizer({ label_props: ["name"], fill: "#c9d1d9", stroke: "#0d1117", font: "10px sans-serif" }) }
+                ];
+                let mapUrl = protomapsUrl;
+                if (protomapsUrl.endsWith('.pmtiles') && typeof pmtiles !== 'undefined') {
+                    const pmtilesSource = new pmtiles.FetchSource(protomapsUrl, new Headers({'Cache-Control': 'no-cache', 'Pragma': 'no-cache'}));
+                    pmtilesSource.chromeWindowsNoCache = true;
+                    mapUrl = new pmtiles.PMTiles(pmtilesSource);
+                }
+                protomapsL.leafletLayer({
+                    url: mapUrl,
+                    paintRules: paintRules,
+                    labelRules: labelRules,
+                    backgroundColor: "#0d1117"
+                }).addTo(map);
+            } catch (e) {
+                 console.error('Error initializing Protomaps layer:', e);
+                 container.innerHTML = `<div class="flex items-center justify-center h-full text-red-400 p-4 text-center">{{ _("Map Error: Could not initialize Protomaps layer.") }}</div>`;
+            }
+        } else {
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors', maxZoom: 19
+            }).addTo(map);
+        }
+    }
+
+    // Climate and 12 V events of the parked vehicle. Fields are precomputed in mapEvent()
+    // (CSP build); every optional figure has a show* flag.
+    const EVENT_KIND_CLASSES = {
+        climate: 'bg-sky-900/40 text-sky-300 border-sky-700/60',
+        aux_charge: 'bg-yellow-900/30 text-yellow-300 border-yellow-700/60'
+    };
+    const EVENT_KIND_CLASS_UNKNOWN = 'bg-gray-800 text-text-secondary border-border-color';
+
+    function createEventLogState() {
+        return {
+            hasBeenInitialized: false,
+            isLoading: true,
+            isPaginating: false,
+            error: null,
+            events: [],
+            displayEvents: [],
+            pagination: {},
+            vehicleId: null,
+            dateTimeFormatter: null,
+            showLoading: true,
+            showError: false,
+            showEmpty: false,
+            showList: false,
+            listClass: '',
+            hasPagination: false,
+            showPrevPage: false,
+            showNextPage: false,
+            currentPageText: '1',
+            totalPagesText: '1',
+            // Only the newest list request may write the list.
+            requestSeq: 0,
+            // Re-read while the tab is shown.
+            isActive: false,
+            refreshTimer: null,
+            refreshDue: false,
+            // The position of one event on a Leaflet map in a dialog, made on first use.
+            showMap: false,
+            mapTitle: '',
+            mapSubtitle: '',
+            map: null,
+            mapMarker: null,
+
+            init(vehicleId, userTimezone) {
+                if (this.hasBeenInitialized || !vehicleId) return;
+                this.hasBeenInitialized = true;
+                this.vehicleId = vehicleId;
+                const options = { dateStyle: 'medium', timeStyle: 'short' };
+                try {
+                    this.dateTimeFormatter = new Intl.DateTimeFormat(undefined, { ...options, timeZone: userTimezone });
+                } catch (e) {
+                    this.dateTimeFormatter = new Intl.DateTimeFormat(undefined, options);
+                }
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden && this.refreshDue) {
+                        this.refreshDue = false;
+                        this.refresh();
+                    }
+                });
+                this.fetchEvents(1);
+            },
+
+            setActive(active) {
+                this.isActive = !!active;
+                if (this.isActive) { this.scheduleRefresh(); return; }
+                clearTimeout(this.refreshTimer);
+                this.refreshTimer = null;
+                // x-if takes the tab's DOM, the map's element with it.
+                this.closeMap();
+                this.teardownMap();
+            },
+
+            openMapFromButton(domEvent) {
+                const eventId = domEvent?.currentTarget?.dataset?.eventId;
+                const item = this.displayEvents.find((e) => String(e.id) === eventId);
+                if (!item || !item.showLocation) return;
+                this.mapTitle = item.kindText;
+                this.mapSubtitle = item.startTimeText;
+                this.showMap = true;
+                // Leaflet measures its container: draw once the dialog is laid out.
+                requestAnimationFrame(() => this.drawMap(item.latitude, item.longitude));
+            },
+            drawMap(lat, lon, attempt = 0) {
+                const container = document.getElementById('event-position-map');
+                if (!container || typeof L === 'undefined' || !this.showMap) return;
+                // Centre only once the container is laid out.
+                if ((container.offsetWidth === 0 || container.offsetHeight === 0) && attempt < 30) {
+                    requestAnimationFrame(() => this.drawMap(lat, lon, attempt + 1));
+                    return;
+                }
+                if (this.map && this.map.getContainer() !== container) this.teardownMap();
+                if (!this.map) {
+                    this.map = L.map(container);
+                    addVehicleMapBaseLayer(this.map, container);
+                }
+                this.map.invalidateSize({ pan: false });
+                this.map.setView([lat, lon], 16, { animate: false });
+                const popup = document.createElement('div');
+                const title = document.createElement('strong');
+                title.textContent = this.mapTitle;
+                popup.append(title, document.createElement('br'), document.createTextNode(this.mapSubtitle));
+                if (this.mapMarker) this.mapMarker.setLatLng([lat, lon]).setPopupContent(popup);
+                else this.mapMarker = L.marker([lat, lon]).addTo(this.map).bindPopup(popup);
+                // Re-measure after the dialog settles and re-centre.
+                setTimeout(() => {
+                    if (!this.map || !this.showMap) return;
+                    this.map.invalidateSize({ pan: false });
+                    this.map.setView([lat, lon], this.map.getZoom(), { animate: false });
+                }, 300);
+            },
+            closeMap() {
+                this.showMap = false;
+            },
+            teardownMap() {
+                if (this.map) this.map.remove();
+                this.map = null;
+                this.mapMarker = null;
+            },
+            scheduleRefresh() {
+                clearTimeout(this.refreshTimer);
+                this.refreshTimer = null;
+                if (!this.isActive || !this.hasBeenInitialized) return;
+                const page = this.pagination.current_page || 1;
+                const anyInProgress = this.events.some((e) => e.in_progress === true);
+                if (page !== 1 && !anyInProgress) return;
+                this.refreshTimer = setTimeout(() => this.refresh(), anyInProgress ? 30000 : 60000);
+            },
+            refresh() {
+                if (document.hidden) { this.refreshDue = true; return; }
+                this.fetchEvents(this.pagination.current_page || 1, { silent: true });
+            },
+
+            refreshViewState() {
+                this.showLoading = this.isLoading;
+                this.showError = !!this.error;
+                const hasEvents = this.events.length > 0;
+                this.showEmpty = !this.isLoading && !this.error && !hasEvents;
+                this.showList = !this.isLoading && !this.error && hasEvents;
+                this.listClass = this.isPaginating ? 'opacity-60' : '';
+                const currentPage = this.pagination.current_page || 1;
+                const totalPages = this.pagination.total_pages || 1;
+                this.hasPagination = totalPages > 1;
+                this.showPrevPage = this.hasPagination && currentPage > 1;
+                this.showNextPage = this.hasPagination && currentPage < totalPages;
+                this.currentPageText = String(currentPage);
+                this.totalPagesText = String(totalPages);
+            },
+
+            async fetchEvents(page = 1, { silent = false } = {}) {
+                if (!this.vehicleId) return;
+                const seq = ++this.requestSeq;
+                clearTimeout(this.refreshTimer);
+                this.refreshTimer = null;
+                if (!silent) {
+                    if (this.events.length > 0) this.isPaginating = true; else this.isLoading = true;
+                    this.error = null;
+                    this.refreshViewState();
+                }
+                const url = new URL(`/api/chargelogs/v1/vehicles/${this.vehicleId}/events`, window.location.origin);
+                url.searchParams.set('page', page);
+                try {
+                    const response = await fetch(url, { credentials: 'include' });
+                    if (seq !== this.requestSeq) return;
+                    if (!response.ok) {
+                        const contentType = response.headers.get('content-type') || '';
+                        if (contentType.includes('application/json')) {
+                            const err = await response.json();
+                            throw new Error(err.detail || `${vehicleDetailTranslations.events.failedToLoad}${response.status})`);
+                        }
+                        throw new Error(`${vehicleDetailTranslations.errors.service_unavailable}${response.status})`);
+                    }
+                    const data = await response.json();
+                    if (seq !== this.requestSeq) return;
+                    this.events = data.events || [];
+                    this.pagination = data.pagination || {};
+                    this.error = null;
+                    this.displayEvents = this.events.map((e) => this.mapEvent(e));
+                } catch (err) {
+                    if (seq !== this.requestSeq) return;
+                    // A failed background refresh keeps the list that is shown.
+                    if (!silent || this.events.length === 0) this.error = err.message;
+                } finally {
+                    if (seq === this.requestSeq) {
+                        const wasPaginating = this.isPaginating;
+                        this.isLoading = false;
+                        this.isPaginating = false;
+                        this.refreshViewState();
+                        // Re-armed after every attempt, failed ones included.
+                        this.scheduleRefresh();
+                        if (wasPaginating) {
+                            setTimeout(() => {
+                                const el = document.getElementById('event-list-anchor');
+                                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }, 0);
+                        }
+                    }
+                }
+            },
+
+            mapEvent(e) {
+                const t = vehicleDetailTranslations.events;
+                const inProgress = e.in_progress === true;
+                const kindText = t.kinds[e.kind] || t.unknownKind;
+                let durationSeconds = e.duration_seconds;
+                if (inProgress && e.start_time) {
+                    durationSeconds = Math.max(0, Math.round((Date.now() - new Date(e.start_time).getTime()) / 1000));
+                }
+                const cabinStart = liveView.temperature(e.cabin_temp_start);
+                const cabinEnd = liveView.temperature(e.cabin_temp_end);
+                const setpoint = liveView.temperature(e.cabin_setpoint);
+                const ambient = liveView.temperature(e.ambient_temp);
+                const hasLocation = this.isNumber(e.latitude) && this.isNumber(e.longitude)
+                    && !(e.latitude === 0 && e.longitude === 0);
+                return {
+                    id: e.id,
+                    isClimate: e.kind === 'climate',
+                    isAuxCharge: e.kind === 'aux_charge',
+                    kindText,
+                    kindClass: EVENT_KIND_CLASSES[e.kind] || EVENT_KIND_CLASS_UNKNOWN,
+                    // A climate event the DC/DC converter ran during is one event, flagged.
+                    showAuxChargedBadge: e.kind === 'climate' && e.aux_charged === true,
+                    inProgress,
+                    inProgressText: vehicleDetailTranslations.trips.inProgress,
+                    // A row being recorded is refused by the server (409).
+                    canDelete: !inProgress,
+                    startTimeText: this.formatDateTime(e.start_time),
+                    durationText: this.formatDuration(durationSeconds),
+                    showSoc: this.isNumber(e.start_soc) || this.isNumber(e.end_soc),
+                    socText: this.formatRange(this.formatNumber(e.start_soc, 1, ' %'), this.formatNumber(e.end_soc, 1, ' %')),
+                    showCabinTemp: cabinStart !== null || cabinEnd !== null,
+                    cabinTempText: this.formatRange(cabinStart, cabinEnd),
+                    showSetpoint: setpoint !== null,
+                    setpointText: setpoint || '',
+                    showAmbient: ambient !== null,
+                    ambientText: ambient || '',
+                    showAuxVoltage: this.isNumber(e.aux_voltage_start) || this.isNumber(e.aux_voltage_end),
+                    auxVoltageText: this.formatRange(this.formatNumber(e.aux_voltage_start, 2, ' V'), this.formatNumber(e.aux_voltage_end, 2, ' V')),
+                    showAuxEnergy: this.isNumber(e.aux_energy_wh),
+                    auxEnergyText: this.formatEnergyWh(e.aux_energy_wh),
+                    showLocation: hasLocation,
+                    latitude: hasLocation ? e.latitude : null,
+                    longitude: hasLocation ? e.longitude : null
+                };
+            },
+
+            goToPreviousPage() {
+                const currentPage = this.pagination.current_page || 1;
+                if (currentPage > 1) this.fetchEvents(currentPage - 1);
+            },
+            goToNextPage() {
+                const currentPage = this.pagination.current_page || 1;
+                const totalPages = this.pagination.total_pages || 1;
+                if (currentPage < totalPages) this.fetchEvents(currentPage + 1);
+            },
+
+            async deleteEventFromButton(domEvent) {
+                const eventId = domEvent?.currentTarget?.dataset?.eventId;
+                if (!eventId) return;
+                const t = vehicleDetailTranslations.events;
+                const confirmed = await window.ovmsDialog.confirm({
+                    message: t.confirmDelete, confirmLabel: t.confirmDeleteLabel, danger: true
+                });
+                if (!confirmed) return;
+                const reload = () => this.fetchEvents(this.pagination.current_page || 1);
+                try {
+                    const response = await fetch(`/api/chargelogs/v1/events/${encodeURIComponent(eventId)}`, { method: 'DELETE', credentials: 'include' });
+                    if (response.ok) { reload(); return; }
+                    const data = await response.json().catch(() => ({}));
+                    // Gone already — deleted in another tab or in the app: what was asked for.
+                    if (response.status === 404 && data.detail === 'event_not_found') { reload(); return; }
+                    if (response.status === 409) {
+                        window.ovmsDialog.alert({ message: t.stillRecording, danger: true });
+                        reload();
+                        return;
+                    }
+                    window.ovmsDialog.alert({ message: `${t.deleteFailed}${data.detail || response.statusText}`, danger: true });
+                } catch (err) {
+                    window.ovmsDialog.alert({ message: `${t.networkError}${err.message}`, danger: true });
+                }
+            },
+
+            isNumber(value) { return typeof value === 'number' && Number.isFinite(value); },
+            formatNumber(value, digits, unit) {
+                if (!this.isNumber(value)) return null;
+                return new Intl.NumberFormat(vehicleDetailConfig.liveView.lang, {
+                    minimumFractionDigits: digits, maximumFractionDigits: digits
+                }).format(value) + unit;
+            },
+            formatRange(start, end) {
+                if (start !== null && end !== null) return `${start} → ${end}`;
+                return start ?? end ?? '';
+            },
+            formatEnergyWh(wh) {
+                if (!this.isNumber(wh)) return '';
+                return wh >= 1000 ? this.formatNumber(wh / 1000, 2, ' kWh') : this.formatNumber(wh, 0, ' Wh');
+            },
+            formatDateTime(isoString) {
+                if (!isoString || !this.dateTimeFormatter) return 'N/A';
+                return this.dateTimeFormatter.format(new Date(isoString));
+            },
+            formatDuration(seconds) {
+                if (!this.isNumber(seconds)) return 'N/A';
+                if (seconds < 60) return `${Math.round(seconds)}s`;
+                const h = Math.floor(seconds / 3600);
+                const m = Math.floor((seconds % 3600) / 60);
+                return h > 0 ? `${h}h ${m}m` : `${m}m`;
+            }
         };
     }
 
@@ -1646,11 +2099,13 @@ function createTripsState() {
                 trips: '',
                 search: '',
                 charges: '',
+                events: '',
                 terminal: '',
                 cell_stats: '',
                 metrics: '',
                 logs: '',
-                notifications: ''
+                notifications: '',
+                support: ''
             },
             cellStatsTabButtonClass: 'hidden',
             cellStatsTabDisabled: true,
@@ -1659,11 +2114,13 @@ function createTripsState() {
                 trips: false,
                 search: false,
                 charges: false,
+                events: false,
                 terminal: false,
                 cell_stats: false,
                 metrics: false,
                 logs: false,
-                notifications: false
+                notifications: false,
+                support: false
             },
             hasCellStatsAvailable: false,
             hasMeaningfulTpmsDataAvailable: false,
@@ -1756,12 +2213,13 @@ function createTripsState() {
             tripsState: createTripsState(),
             chargeLogState: createChargeLogState(),
             chargeStatsState: createChargeStatsState(),
+            eventLogState: createEventLogState(),
             searchState: createSearchState(),
             v2_metrics_grouped: {{ v2_metrics_grouped | tojson | safe }},
             v3_metrics_grouped: {{ v3_metrics_grouped | tojson | safe }},
             
             init() {
-                ['statsState', 'tripsState', 'chargeLogState', 'chargeStatsState', 'searchState'].forEach(key => {
+                ['statsState', 'tripsState', 'chargeLogState', 'chargeStatsState', 'eventLogState', 'searchState'].forEach(key => {
                     const state = this[key];
                     if (!state) return;
                     Object.keys(state).forEach(prop => {
@@ -1819,6 +2277,8 @@ function createTripsState() {
                         this.chargeLogState.init(vehicleDetailConfig.vehicleId, this.userTimezone);
                         this.chargeStatsState.init(vehicleDetailConfig.vehicleId);
                     }
+                    if (newTab === "events") this.eventLogState.init(vehicleDetailConfig.vehicleId, this.userTimezone);
+                    this.eventLogState.setActive(newTab === "events");
                 });
 
                 this.$watch("searchState.form.relation", (newVal) => {
@@ -1901,6 +2361,10 @@ function createTripsState() {
                     this.chargeLogState.init(vehicleDetailConfig.vehicleId, this.userTimezone);
                     this.chargeStatsState.init(vehicleDetailConfig.vehicleId);
                 }
+                if (this.activeTab === "events") {
+                    this.eventLogState.init(vehicleDetailConfig.vehicleId, this.userTimezone);
+                    this.eventLogState.setActive(true);
+                }
 
                 this.$nextTick(() => {
                     this.ensureOverviewMapReady();
@@ -1913,7 +2377,7 @@ function createTripsState() {
             },
 
             updateTabClasses() {
-                const tabs = ['overview', 'trips', 'search', 'charges', 'terminal', 'cell_stats', 'metrics', 'logs', 'notifications'];
+                const tabs = ['overview', 'trips', 'search', 'charges', 'events', 'terminal', 'cell_stats', 'metrics', 'logs', 'notifications', 'support'];
                 for (const tab of tabs) {
                     this.tabClasses[tab] = this.activeTab === tab ? 'tab-btn-active' : '';
                 }
@@ -1922,7 +2386,7 @@ function createTripsState() {
                 this.cellStatsTabButtonClass = this.hasCellStatsAvailable ? this.tabClasses.cell_stats : 'hidden';
             },
             updateTabVisibility() {
-                const tabs = ['overview', 'trips', 'search', 'charges', 'terminal', 'cell_stats', 'metrics', 'logs', 'notifications'];
+                const tabs = ['overview', 'trips', 'search', 'charges', 'events', 'terminal', 'cell_stats', 'metrics', 'logs', 'notifications', 'support'];
                 for (const tab of tabs) {
                     this.tabVisibility[tab] = this.activeTab === tab;
                 }
@@ -2426,79 +2890,7 @@ function createTripsState() {
                 this.overviewMapResizeObserver = new ResizeObserver(() => { if (this.map) this.map.invalidateSize({ pan: false }); });
                 this.overviewMapResizeObserver.observe(mapContainer);
 
-                const protomapsUrl = {{ PROTOMAPS_URL | tojson | safe }};
-
-                if (protomapsUrl) {
-                    if (typeof protomapsL === 'undefined' || (protomapsUrl.endsWith('.pmtiles') && typeof pmtiles === 'undefined')) {
-                        console.error('Protomaps scripts (protomaps-leaflet.js and/or pmtiles.js) are not loaded.');
-                        document.getElementById('vehicle-map').innerHTML = `<div class="flex items-center justify-center h-full text-red-400 p-4 text-center">{{ _("Map Error: Protomaps scripts failed to load. Check the browser console and server configuration.") }}</div>`;
-                        return;
-                    }
-                    try {
-                        const paintRules = [
-                            { dataLayer: "water", symbolizer: new protomapsL.PolygonSymbolizer({ fill: "#1e3a8a" }) },
-                            { dataLayer: "landuse", symbolizer: new protomapsL.PolygonSymbolizer({ fill: "#161b22" }) },
-                            { dataLayer: "natural", symbolizer: new protomapsL.PolygonSymbolizer({ fill: "#161b22" }) },
-                            { dataLayer: "transit", symbolizer: new protomapsL.LineSymbolizer({ color: "#374151", width: 1 })},
-                            {
-                                dataLayer: "roads",
-                                symbolizer: new protomapsL.LineSymbolizer({
-                                    color: (z,f) => (f.props.highway_kind === "highway" || f.props.highway_kind === "motorway") ? "#6b7280" : "#4b5563",
-                                    width: (z,f) => (f.props.highway_kind === "highway" || f.props.highway_kind === "motorway") ? (z > 14 ? 3 : 2) : (z > 14 ? 2 : 1)
-                                })
-                            },
-                            { dataLayer: "buildings", symbolizer: new protomapsL.PolygonSymbolizer({ fill: "#22282f" }) },
-                            { dataLayer: "boundaries", symbolizer: new protomapsL.LineSymbolizer({ color: "#39FF14", width: 0.5, opacity: 0.4 }) }
-                        ];
-                        const labelRules = [
-                            {
-                                dataLayer: "places",
-                                symbolizer: new protomapsL.CenteredTextSymbolizer({
-                                    label_props: ["name:{{ user_locale }}","name"],
-                                    fill: (z,f) => (f.props.kind === 'country' || f.props.kind === 'region') ? '#FFF01F' : '#c9d1d9',
-                                    stroke: "#0d1117",
-                                    width: 2,
-                                    font: (z,f) => {
-                                        if (f.props.kind === 'country') return "bold 14px RobotoMono, monospace";
-                                        if (f.props.kind === 'region') return "bold 12px RobotoMono, monospace";
-                                        return "11px RobotoMono, monospace";
-                                    }
-                                })
-                            },
-                            {
-                                dataLayer: "roads",
-                                symbolizer: new protomapsL.LineLabelSymbolizer({
-                                    label_props: ["name:{{ user_locale }}","name"],
-                                    fill: "#8b949e",
-                                    stroke: "#0d1117",
-                                    width: 2,
-                                    font: "10px RobotoMono, monospace"
-                                })
-                            },
-                            { dataLayer: "water", symbolizer: new protomapsL.CenteredTextSymbolizer({ label_props: ["name"], fill: "#00c6ff", stroke: "#0d1117", font: "italic 12px sans-serif" }) },
-                            { dataLayer: "pois", symbolizer: new protomapsL.CenteredTextSymbolizer({ label_props: ["name"], fill: "#c9d1d9", stroke: "#0d1117", font: "10px sans-serif" }) }
-                        ];
-                        let mapUrl = protomapsUrl;
-                        if (protomapsUrl.endsWith('.pmtiles') && typeof pmtiles !== 'undefined') {
-                            const pmtilesSource = new pmtiles.FetchSource(protomapsUrl, new Headers({'Cache-Control': 'no-cache', 'Pragma': 'no-cache'}));
-                            pmtilesSource.chromeWindowsNoCache = true;
-                            mapUrl = new pmtiles.PMTiles(pmtilesSource);
-                        }
-                        protomapsL.leafletLayer({
-                            url: mapUrl,
-                            paintRules: paintRules,
-                            labelRules: labelRules,
-                            backgroundColor: "#0d1117"
-                        }).addTo(this.map);
-                    } catch (e) {
-                         console.error('Error initializing Protomaps layer:', e);
-                         document.getElementById('vehicle-map').innerHTML = `<div class="flex items-center justify-center h-full text-red-400 p-4 text-center">{{ _("Map Error: Could not initialize Protomaps layer.") }}</div>`;
-                    }
-                } else {
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '© OpenStreetMap contributors', maxZoom: 19
-                    }).addTo(this.map);
-                }
+                addVehicleMapBaseLayer(this.map, mapContainer);
 
                 if (initialLat !== null) { this.marker = L.marker([initialLat, initialLon]).addTo(this.map).bindPopup({{ (vehicle.vehicle_name or vehicle.vehicle_id) | tojson | safe }}); }
                 // Protomaps sizes its canvas at layer-add time; a proxy or font-load reflow can
@@ -2588,11 +2980,13 @@ function createTripsState() {
             activateTripsTab() { this.activeTab = 'trips'; },
             activateSearchTab() { this.activeTab = 'search'; },
             activateChargesTab() { this.activeTab = 'charges'; },
+            activateEventsTab() { this.activeTab = 'events'; },
             activateTerminalTab() { this.activeTab = 'terminal'; },
             activateCellStatsTab() { if (!this.cellStatsTabDisabled) this.activeTab = 'cell_stats'; },
             activateMetricsTab() { this.activeTab = 'metrics'; },
             activateLogsTab() { this.activeTab = 'logs'; },
-            activateNotificationsTab() { this.activeTab = 'notifications'; }
+            activateNotificationsTab() { this.activeTab = 'notifications'; },
+            activateSupportTab() { this.activeTab = 'support'; }
         }));
 
         Alpine.data('notifForms', () => ({

@@ -127,6 +127,42 @@ class WebSocketConnectionManager:
             ]
         if not subscribers:
             return 0
+        await self._tell_withdrawn(topic, sockets)
+        logger.info(f"Topic '{topic}' withdrawn from {len(subscribers)} client(s).")
+        return len(subscribers)
+
+    def withdraw_topic_from_others_threadsafe(self, topic: str, keep_user_id: int) -> bool:
+        """
+        Withdraw a topic from every socket not of `keep_user_id`, from a request
+        thread; see withdraw_topic_from_others().
+        """
+        if topic not in self.subscriptions:
+            return False
+        return self._schedule(
+            self.withdraw_topic_from_others(topic, keep_user_id),
+            f"withdrawal of topic '{topic}' from all but user {keep_user_id}",
+        )
+
+    async def withdraw_topic_from_others(self, topic: str, keep_user_id: int) -> int:
+        """Withdraw a topic from every socket that is not `keep_user_id`'s; return how many.
+        Used when a support grant ends; a socket of unknown account is withdrawn too."""
+        async with self._lock:
+            subscribers = self.subscriptions.get(topic)
+            if not subscribers:
+                return 0
+            gone = {cid for cid in subscribers if self.connection_users.get(cid) != keep_user_id}
+            if not gone:
+                return 0
+            subscribers -= gone
+            if not subscribers:
+                del self.subscriptions[topic]
+            sockets = [(cid, self.active_connections[cid]) for cid in gone if cid in self.active_connections]
+        await self._tell_withdrawn(topic, sockets)
+        logger.info(f"Topic '{topic}' withdrawn from {len(gone)} client(s) other than user {keep_user_id}.")
+        return len(gone)
+
+    async def _tell_withdrawn(self, topic: str, sockets) -> None:
+        """Send `subscribe_rejected` for `topic`; a socket that cannot be told is reaped."""
         frame = msgpack.packb({"type": "subscribe_rejected", "topic": topic}, use_bin_type=True)
         for client_id, ws in sockets:
             try:
@@ -134,8 +170,6 @@ class WebSocketConnectionManager:
             except Exception as e:
                 logger.warning(f"Send error for client '{client_id}' on topic '{topic}': {e}. Marking for disconnect.")
                 await self.disconnect(client_id)
-        logger.info(f"Topic '{topic}' withdrawn from {len(subscribers)} client(s).")
-        return len(subscribers)
 
     async def disconnect_user(self, user_id: int, code: int = 1008) -> int:
         """

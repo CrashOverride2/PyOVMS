@@ -25,12 +25,14 @@ from app.metrics_manager import metrics_manager
 import datetime
 from app import crud
 from app.services.charge_logger.charge_manager import charge_manager
+from app.services.event_logger.event_manager import event_manager
 from app.security_manager import security_manager, set_notification_function
 from app.security_events import security_event_logger, SecurityEventType
 from app.notifications import send_admin_security_notification
 from app import notifications
-from app.services.vehicle_service import trigger_karto_vehicle_deletion
+from app.services.vehicle_service import karto_deletion_actor, trigger_karto_vehicle_deletion
 from app.services.mqtt_sync_worker import mqtt_sync_worker
+from app.services import support_mode
 
 module_logger = logging.getLogger(__name__)
 
@@ -233,6 +235,8 @@ def _run_housekeeping_pass(db) -> None:
          "Housekeeping: Deleted {n} account(s) with an expired verification link."),
         ("close stale charge sessions", lambda: charge_manager.check_for_stale_sessions(db),
          "Housekeeping: Closed {n} orphaned charge session(s) no longer recorded."),
+        ("close stale vehicle events", lambda: event_manager.check_for_stale_events(db),
+         "Housekeeping: Closed {n} orphaned vehicle event(s) no longer recorded."),
     )
     for label, step, message in steps:
         try:
@@ -287,6 +291,38 @@ async def periodic_housekeeping(shutdown_event: asyncio.Event):
         except Exception as e:
             module_logger.error(f"Housekeeping pass failed: {e}", exc_info=True)
     module_logger.info("Housekeeping task finished.")
+
+SUPPORT_EXPIRY_INTERVAL_SECONDS = 60
+
+
+async def periodic_support_expiry(shutdown_event: asyncio.Event):
+    """End support grants whose time is up: once at startup, then every minute.
+
+    Access itself ends by the clock; this pass withdraws open subscriptions, rewrites the
+    broker ACL and files SUPPORT_MODE_EXPIRED. A pass that raises is logged."""
+    while not shutdown_event.is_set():
+        try:
+            await run_in_threadpool(support_mode.expire_due_grants)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            module_logger.error(f"Support mode expiry pass failed: {e}", exc_info=True)
+        try:
+            # Whatever slipped past a withdrawal (a subscribe racing the end).
+            await run_in_threadpool(support_mode.withdraw_lapsed_subscriptions)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            module_logger.error(f"Support mode subscription check failed: {e}", exc_info=True)
+        try:
+            for _ in range(SUPPORT_EXPIRY_INTERVAL_SECONDS):
+                if shutdown_event.is_set():
+                    break
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            break
+    module_logger.info("Support mode expiry task finished.")
+
 
 async def periodic_lifecycle_housekeeping(shutdown_event: asyncio.Event):
     """Daily lifecycle management: warn/delete inactive vehicles and abandoned accounts."""
@@ -353,12 +389,11 @@ async def periodic_lifecycle_housekeeping(shutdown_event: asyncio.Event):
                     car_conn = connection_manager.get_car_connection(vehicle_id)
                     if car_conn:
                         await car_conn.close()
-                    if admin_user:
-                        # Raises KartoDeletionFailed if the trip data could not be
-                        # removed. The delete below is inside this try on purpose:
-                        # the vehicle then survives and the next daily run retries,
-                        # rather than leaving an orphaned GPS history behind.
-                        await trigger_karto_vehicle_deletion(db, vehicle_id, admin_user)
+                    # As the owner while the account is active, otherwise as the admin. On failure the
+                    # vehicle is kept and the next daily run retries.
+                    await trigger_karto_vehicle_deletion(
+                        db, vehicle_id, karto_deletion_actor(owner, admin_user)
+                    )
                     crud.vehicle.delete_vehicle(db, vehicle_db_id)
                     if owner_email:
                         await asyncio.to_thread(notifications.send_vehicle_auto_deleted_email, vehicle_id, vehicle_name, owner_email, owner_display)
@@ -405,10 +440,11 @@ async def periodic_lifecycle_housekeeping(shutdown_event: asyncio.Event):
                         car_conn = connection_manager.get_car_connection(vehicle.vehicle_id)
                         if car_conn:
                             await car_conn.close()
-                        if admin_user:
-                            # Same as above: a failure here aborts the account
-                            # deletion and it is retried on the next run.
-                            await trigger_karto_vehicle_deletion(db, vehicle.vehicle_id, admin_user)
+                        # Same as above: a failure here aborts the account
+                        # deletion and it is retried on the next run.
+                        await trigger_karto_vehicle_deletion(
+                            db, vehicle.vehicle_id, karto_deletion_actor(user, admin_user)
+                        )
                     crud.user.delete_user(db, user_id)
                     await asyncio.to_thread(notifications.send_lifecycle_admin_notification, "account_auto_deleted", {
                         "username": username,
@@ -435,6 +471,7 @@ async def start_background_tasks(shutdown_event: asyncio.Event) -> list[asyncio.
         asyncio.create_task(periodic_vehicle_data_broadcaster(shutdown_event)),
         asyncio.create_task(periodic_lifecycle_housekeeping(shutdown_event)),
         asyncio.create_task(mqtt_sync_worker.run(shutdown_event)),
+        asyncio.create_task(periodic_support_expiry(shutdown_event)),
     ]
     server_tasks = await start_tcp_server_main()
     tasks.extend(server_tasks)

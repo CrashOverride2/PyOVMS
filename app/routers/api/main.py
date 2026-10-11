@@ -22,6 +22,8 @@ from app.utils.vehicle_state_parser import parse_vehicle_state_to_json, parse_v2
 from app.metrics_manager import metrics_manager
 from app.dependencies import require_active_api_user, require_admin_api_user
 from app.widget_push_service import widget_push_service
+from app.services import support_mode
+from app.utils.vehicle_access import can_administer_vehicle, is_vehicle_owner
 
 logger = logging.getLogger(__name__)
 
@@ -92,11 +94,17 @@ def api_create_vehicle(
         raise HTTPException(status_code=400, detail=f"Vehicle ID '{vehicle_in.vehicle_id}' already registered.")
 
     owner_id_to_use = current_user.id
-    if current_user.is_admin and vehicle_in.owner_id is not None:
-        if not crud.user.get_user_by_id(db, vehicle_in.owner_id):
+    if current_user.is_admin:
+        # Admins own no vehicles, so an admin registers a vehicle for a regular user.
+        if vehicle_in.owner_id is None:
+            raise HTTPException(status_code=400, detail="Administrators cannot own vehicles; specify the owner_id of a regular user.")
+        owner = crud.user.get_user_by_id(db, vehicle_in.owner_id)
+        if not owner:
             raise HTTPException(status_code=404, detail=f"Specified owner ID {vehicle_in.owner_id} not found.")
-        owner_id_to_use = vehicle_in.owner_id
-    elif not current_user.is_admin and vehicle_in.owner_id is not None and vehicle_in.owner_id != current_user.id:
+        if owner.is_admin:
+            raise HTTPException(status_code=400, detail="Administrators cannot own vehicles; specify the owner_id of a regular user.")
+        owner_id_to_use = owner.id
+    elif vehicle_in.owner_id is not None and vehicle_in.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to assign vehicle to another user.")
 
     created_vehicle = crud.vehicle.create_vehicle(db, vehicle_in, owner_id=owner_id_to_use)
@@ -107,9 +115,18 @@ def api_create_vehicle(
             dependencies=[Depends(require_active_api_user)])
 def api_list_all_vehicles(
     db: Session = Depends(get_db),
-    current_user: models_db.User = Depends(require_active_api_user) 
+    current_user: models_db.User = Depends(require_active_api_user)
 ):
-    return v2_manager.get_all_vehicle_infos(db, current_user)
+    infos = v2_manager.get_all_vehicle_infos(db, current_user)
+    # An admin's list holds the vehicles under a support grant too; audited as a read.
+    if current_user.is_admin:
+        for info in infos:
+            if info.owner_username == current_user.username:
+                continue
+            vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, info.vehicle_id)
+            if vehicle_db is not None:
+                support_mode.check_vehicle_access(current_user, vehicle_db, kind="api")
+    return infos
 
 @router.get("/vehicles/{vehicle_db_id}", response_model=models_api.VehicleSecureInfo,
             dependencies=[Depends(require_active_api_user)])
@@ -122,7 +139,7 @@ def api_get_vehicle(
     if not db_vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found by DB ID")
 
-    if not current_user.is_admin and db_vehicle.owner_id != current_user.id:
+    if not support_mode.check_vehicle_access(current_user, db_vehicle, kind="api"):
         raise HTTPException(status_code=403, detail="Not authorized to access this vehicle")
 
     vehicle_info = v2_manager.get_vehicle_info(db, db_vehicle)
@@ -142,7 +159,7 @@ def api_update_vehicle(
     if not current_vehicle_db:
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Vehicle to update not found.")
 
-    if not current_user.is_admin and current_vehicle_db.owner_id != current_user.id:
+    if not can_administer_vehicle(current_user, current_vehicle_db):
         raise HTTPException(status_code=403, detail="Not authorized to update this vehicle")
 
     if vehicle_in.vehicle_id is not None and vehicle_in.vehicle_id.upper() != current_vehicle_db.vehicle_id:
@@ -151,7 +168,14 @@ def api_update_vehicle(
     updated_vehicle = crud.vehicle.update_vehicle(db, vehicle_db_id, vehicle_in)
     if not updated_vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found by DB ID for update (unexpected).")
-    return v2_manager.get_vehicle_info(db, updated_vehicle)
+    info = v2_manager.get_vehicle_info(db, updated_vehicle)
+    # Administration needs no grant, so without one the answer carries no live state.
+    if info is not None and not support_mode.check_vehicle_access(current_user, updated_vehicle, kind="api"):
+        info = info.model_copy(update={
+            "latest_status_parsed": None, "latest_location_parsed": None,
+            "latest_tpms_parsed": None, "latest_diag_parsed": None, "address": None,
+        })
+    return info
 
 @router.delete("/vehicles/{vehicle_db_id}", status_code=http_status.HTTP_204_NO_CONTENT,
                dependencies=[Depends(require_active_api_user)])
@@ -164,7 +188,7 @@ async def api_delete_vehicle(
     if not vehicle_to_delete_db:
         raise HTTPException(status_code=404, detail="Vehicle not found by DB ID for deletion")
 
-    if not current_user.is_admin and vehicle_to_delete_db.owner_id != current_user.id:
+    if not can_administer_vehicle(current_user, vehicle_to_delete_db):
         raise HTTPException(status_code=403, detail="Not authorized to delete this vehicle")
 
     # Karto first, and only proceed if it confirmed — see the UI route for why.
@@ -196,7 +220,7 @@ async def api_get_available_metrics(
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not vehicle_db:
         raise HTTPException(status_code=404, detail="Vehicle not found")
-    if not current_user.is_admin and vehicle_db.owner_id != current_user.id:
+    if not await run_in_threadpool(support_mode.check_vehicle_access, current_user, vehicle_db, kind="api"):
         raise HTTPException(status_code=403, detail="Not authorized to access this vehicle's metrics")
 
     # V2 metrics are derived from cached messages, run in threadpool as it might do some processing
@@ -228,7 +252,7 @@ async def api_query_specific_metrics(
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not vehicle_db:
         raise HTTPException(status_code=404, detail="Vehicle not found")
-    if not current_user.is_admin and vehicle_db.owner_id != current_user.id:
+    if not await run_in_threadpool(support_mode.check_vehicle_access, current_user, vehicle_db, kind="api"):
         raise HTTPException(status_code=403, detail="Not authorized to access this vehicle's metrics")
 
     # Get all available metrics
@@ -264,7 +288,11 @@ async def send_vehicle_command_api(
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not vehicle_db:
         raise HTTPException(status_code=404, detail="Vehicle not found")
-    if not current_user.is_admin and vehicle_db.owner_id != current_user.id:
+    allowed = await run_in_threadpool(
+        support_mode.check_vehicle_access, current_user, vehicle_db, kind="command",
+        detail={"command": support_mode.summarize_command(cmd_req.command_code_with_args), "via": "api"},
+    )
+    if not allowed:
         raise HTTPException(status_code=403, detail="Not authorized to command this vehicle")
     
     return await send_command_to_vehicle(vehicle_db, cmd_req.command_code_with_args)
@@ -281,7 +309,8 @@ def send_manual_notification_api(
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not vehicle_db:
         raise HTTPException(status_code=404, detail="Vehicle not found")
-    if not current_user.is_admin and vehicle_db.owner_id != current_user.id:
+    # Notifications are the owner's, support mode or not (app/utils/vehicle_access.py).
+    if not is_vehicle_owner(current_user, vehicle_db):
         raise HTTPException(status_code=403, detail="Not authorized to send notifications for this vehicle")
 
     title_to_use = payload.title or f"PyOVMS Info: {vehicle_db.vehicle_id}"
@@ -318,7 +347,7 @@ def api_create_ap_profile(
 
     # Non-admins may only target vehicles they own; admins may target any vehicle
     target_vehicle = crud.vehicle.get_vehicle_by_vehicle_id(db, profile_in.target_vehicle_id.upper())
-    if target_vehicle and not current_user.is_admin and target_vehicle.owner_id != current_user.id:
+    if target_vehicle and not can_administer_vehicle(current_user, target_vehicle):
         raise HTTPException(
             status_code=403,
             detail="Not authorized to create an AP profile targeting a vehicle you do not own."
@@ -341,7 +370,7 @@ def get_vehicle_state_detailed_api(
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not vehicle_db:
         raise HTTPException(status_code=404, detail=f"Vehicle '{vehicle_module_id.upper()}' not found.")
-    if not current_user.is_admin and vehicle_db.owner_id != current_user.id:
+    if not support_mode.check_vehicle_access(current_user, vehicle_db, kind="api"):
         raise HTTPException(status_code=403, detail="Not authorized to access this vehicle's state")
 
     return parse_vehicle_state_to_json(vehicle_db)
@@ -359,7 +388,8 @@ async def api_reset_badge_count(
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not vehicle_db:
         raise HTTPException(status_code=404, detail=f"Vehicle '{vehicle_module_id.upper()}' not found.")
-    if not current_user.is_admin and vehicle_db.owner_id != current_user.id:
+    # The badge mirrors the owner's phone icon; support mode does not reach it.
+    if not is_vehicle_owner(current_user, vehicle_db):
         raise HTTPException(status_code=403, detail="Not authorized to reset badge count for this vehicle")
 
     # Reset badge count in background
@@ -439,7 +469,9 @@ def api_register_unified_push_endpoint(
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not vehicle_db:
         raise HTTPException(status_code=404, detail=f"Vehicle '{vehicle_module_id.upper()}' not found.")
-    if not current_user.is_admin and vehicle_db.owner_id != current_user.id:
+    # A push target is the owner's alone: one an admin registered under support mode
+    # would outlive the grant and keep delivering the owner's notifications.
+    if not is_vehicle_owner(current_user, vehicle_db):
         raise HTTPException(status_code=403, detail="Not authorized to register push endpoint for this vehicle")
 
     device_id = body.device_id or 'legacy'
@@ -476,7 +508,7 @@ def api_register_fcm_token(
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not vehicle_db:
         raise HTTPException(status_code=404, detail=f"Vehicle '{vehicle_module_id.upper()}' not found.")
-    if not current_user.is_admin and vehicle_db.owner_id != current_user.id:
+    if not is_vehicle_owner(current_user, vehicle_db):
         raise HTTPException(status_code=403, detail="Not authorized to register push token for this vehicle")
 
     device_id = body.device_id or 'legacy'
@@ -530,13 +562,34 @@ def _get_owned_vehicle_or_404(
 ) -> models_db.Vehicle:
     """Resolve a module id to a vehicle the caller may read, or raise.
 
-    Mirrors `_get_datalog_vehicle_or_raise` in the UI router. 404 before 403 is
-    deliberate and matches the rest of this file.
+    The owner, or an admin under the owner's support grant (audited). Mirrors
+    `_get_datalog_vehicle_or_raise` in the UI router. 404 before 403 is deliberate
+    and matches the rest of this file.
     """
     vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
     if not vehicle_db:
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Vehicle not found")
-    if not current_user.is_admin and vehicle_db.owner_id != current_user.id:
+    if not support_mode.check_vehicle_access(current_user, vehicle_db, kind="api"):
+        raise HTTPException(
+            status_code=http_status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this vehicle",
+        )
+    return vehicle_db
+
+
+def _get_vehicle_owner_or_404(
+    db: Session, current_user: models_db.User, vehicle_module_id: str
+) -> models_db.Vehicle:
+    """Like `_get_owned_vehicle_or_404`, but the owner only: notification targets.
+
+    Support mode opens the vehicle's data to the admins, never its notification
+    targets — listing them shows the owner's endpoints and addresses, and one an
+    admin added would outlive the grant.
+    """
+    vehicle_db = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_module_id.upper())
+    if not vehicle_db:
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Vehicle not found")
+    if not is_vehicle_owner(current_user, vehicle_db):
         raise HTTPException(
             status_code=http_status.HTTP_403_FORBIDDEN,
             detail="Not authorized to access this vehicle",
@@ -733,7 +786,7 @@ def api_list_push_subscriptions(
     Push tokens, UnifiedPush endpoints and ntfy credentials are not projected — see
     _push_subscription_info.
     """
-    vehicle_db = _get_owned_vehicle_or_404(db, current_user, vehicle_module_id)
+    vehicle_db = _get_vehicle_owner_or_404(db, current_user, vehicle_module_id)
 
     subscriptions = [
         _push_subscription_info(sub)
@@ -759,7 +812,7 @@ def api_delete_push_subscription(
     The delete is scoped to the vehicle in SQL as well as by the ownership check, so a
     subscription id belonging to someone else's vehicle deletes nothing and answers 404.
     """
-    vehicle_db = _get_owned_vehicle_or_404(db, current_user, vehicle_module_id)
+    vehicle_db = _get_vehicle_owner_or_404(db, current_user, vehicle_module_id)
 
     if not crud.push_subscription.delete_subscription(db, subscription_id, vehicle_db.id):
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Subscription not found")
@@ -800,7 +853,7 @@ def api_add_email_recipient(
     than accumulating duplicates, and the per-vehicle subscription cap applies
     exactly as it does to a device registration.
     """
-    vehicle_db = _get_owned_vehicle_or_404(db, current_user, vehicle_module_id)
+    vehicle_db = _get_vehicle_owner_or_404(db, current_user, vehicle_module_id)
 
     subscription = crud.push_subscription.add_manual_email(db, vehicle_db.id, body.email)
     db.commit()
@@ -871,7 +924,7 @@ def api_add_ntfy_subscription(
     credentials rather than accumulating duplicates. The credentials are stored
     encrypted and are never read back out — see PushSubscriptionInfo.
     """
-    vehicle_db = _get_owned_vehicle_or_404(db, current_user, vehicle_module_id)
+    vehicle_db = _get_vehicle_owner_or_404(db, current_user, vehicle_module_id)
 
     subscription = crud.push_subscription.add_manual_ntfy(
         db, vehicle_db.id,

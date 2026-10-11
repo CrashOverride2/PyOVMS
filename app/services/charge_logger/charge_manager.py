@@ -67,6 +67,9 @@ class ChargeManager:
         self.vehicle_charge_logging_cache: Dict[str, tuple[int, bool]] = {}
         # vehicle_id -> monotonic timestamp of the last session end, for the gap check.
         self._last_session_end: Dict[str, float] = {}
+        # vehicle_id -> `v.c.charging` as last sent. Only a vehicle never heard since the
+        # start may resume an open row.
+        self._seen_charging: Dict[str, bool] = {}
         # Guards active_sessions and every decision taken on it. They are reached from
         # paho's network thread (V3), the event loop (V2), the housekeeping pass on the
         # threadpool and the API's threadpool. Unlocked, the pass could read a row as
@@ -89,6 +92,10 @@ class ChargeManager:
         logger.debug(f"ChargeManager processing metric '{metric_name}={value}' for '{vehicle_id}'")
 
         with self._lock:
+            previously_charging = None
+            if metric_name == 'v.c.charging':
+                previously_charging = self._seen_charging.get(vehicle_id)
+                self._seen_charging[vehicle_id] = bool(value and value.lower() in ['yes', 'true', '1'])
             db = SessionLocal()
             try:
                 vehicle_cache_entry = self.vehicle_charge_logging_cache.get(vehicle_id)
@@ -131,9 +138,16 @@ class ChargeManager:
                             if not vehicle:
                                 self.vehicle_charge_logging_cache.pop(vehicle_id, None)
                                 return
-                        self._start_charge_session(db, vehicle, timestamp, retained)
+                        # Retained or live: a vehicle heard not charging has ended the row's charge.
+                        self._start_charge_session(
+                            db, vehicle, timestamp, retained,
+                            may_adopt=previously_charging is not False)
                     elif not is_charging and session:
-                        self._end_charge_session(db, vehicle_id, timestamp)
+                        self._end_charge_session(
+                            db, vehicle_id, self._end_time(session, timestamp, retained))
+                    elif not is_charging and previously_charging is not False:
+                        # Not charging and nothing held: close a row a restart left open.
+                        self._close_unheld_rows(db, vehicle_db_id)
 
                 session = self.active_sessions.get(vehicle_id)
                 if session:
@@ -218,9 +232,18 @@ class ChargeManager:
         return False
 
     def _start_charge_session(self, db: Session, vehicle: ovms_models.Vehicle, timestamp: datetime.datetime,
-                              retained: bool = False):
-        if self._adopt_open_session(db, vehicle, timestamp, retained):
+                              retained: bool = False, may_adopt: bool = True):
+        if may_adopt and self._adopt_open_session(db, vehicle, timestamp, retained):
             return
+        if not may_adopt:
+            # Heard not charging since the start: an unheld open row has ended, never resume it.
+            try:
+                self._close_unheld_rows(db, vehicle.id)
+            except Exception as e:
+                # The housekeeping pass closes it later; the charge starting now must
+                # not be lost over it — `v.c.charging` is not sent again.
+                db.rollback()
+                logger.error(f"Could not close the open rows of {vehicle.vehicle_id}: {e}", exc_info=True)
         logger.info(f"Starting new charge session for vehicle {vehicle.vehicle_id}")
 
         metrics = metrics_manager.get_metrics_for_vehicle(vehicle.vehicle_id) or {}
@@ -249,6 +272,33 @@ class ChargeManager:
         )
         logger.debug(f"Created ActiveChargeSession in memory for {vehicle.vehicle_id}: {self.active_sessions[vehicle.vehicle_id]}")
         self._save_charge_point(db, new_log.id, timestamp, metrics)
+
+    def _end_time(self, session: ActiveChargeSession, timestamp: datetime.datetime,
+                  retained: bool) -> datetime.datetime:
+        """When a "no" ends the session. A retained one is the module's last word, not
+        when it said it — after a broker reconnect, the charge that ended while the link
+        was down — so it ends where the session was last heard. Except where that would
+        discard a charge the retained `v.c.kwh` says happened: a session not heard again
+        after its start would be under the minimum and deleted, so it keeps the arrival
+        time instead, as before."""
+        if not retained:
+            return timestamp
+        heard = session.last_metric_time
+        too_short = (heard - session.start_time).total_seconds() < self.MIN_SESSION_DURATION_SECONDS
+        if too_short and (session.last_known_kwh or 0) > 0:
+            return timestamp
+        return heard
+
+    def _close_unheld_rows(self, db: Session, vehicle_db_id: int):
+        held = self._held_charge_log_ids()
+        open_ids = [
+            row.id for row in db.query(models.ChargeLog.id)
+            .filter(models.ChargeLog.vehicle_id_fk == vehicle_db_id, models.ChargeLog.end_time.is_(None))
+            .all()
+        ]
+        for log_id in open_ids:
+            if log_id not in held:
+                self._close_open_row(db, log_id)
 
     def _end_charge_session(self, db: Session, vehicle_id: str, timestamp: datetime.datetime):
         session = self.active_sessions.pop(vehicle_id, None)

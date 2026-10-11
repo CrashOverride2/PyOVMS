@@ -85,6 +85,12 @@ class Vehicle(Base):
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.datetime.now(datetime.timezone.utc), onupdate=lambda: datetime.datetime.now(datetime.timezone.utc))
     unused_reminder_sent_at = Column(DateTime(timezone=True), nullable=True)
 
+    # Support mode: while now < support_until, every admin may access this vehicle.
+    # A grant is void unless support_granted_by_id is the owner.
+    support_until = Column(DateTime(timezone=True), nullable=True, index=True)
+    support_enabled_at = Column(DateTime(timezone=True), nullable=True)
+    support_granted_by_id = Column(Integer, nullable=True)
+
     historical_data = relationship(
         "HistoricalData",
         foreign_keys="[HistoricalData.vehicle_id_fk]",
@@ -99,6 +105,8 @@ class Vehicle(Base):
         cascade="all, delete-orphan" 
     )
     charge_logs = relationship("ChargeLog", back_populates="vehicle", cascade="all, delete-orphan")
+    # Climate and 12 V events; ORM cascade, as SQLite enforces no foreign key.
+    vehicle_events = relationship("VehicleEvent", cascade="all, delete-orphan")
     push_subscriptions = relationship("PushSubscription", back_populates="vehicle", cascade="all, delete-orphan")
 
     def __repr__(self):

@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from app.config import settings 
 from app.models import db as models_db
 from app.utils.crypto import decrypt_data
+from app.utils.vehicle_access import support_active
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,8 @@ class MosquittoAuthManager:
 
     def regenerate_acl_file(self, db: Session) -> bool:
         if not self.is_enabled() or not self.acl_path: return False
+        # Imported here: app.crud.apikey imports this module's singleton.
+        from app.crud.apikey import is_internal_key_name
         logger.info("MQTT: Regenerating ACL file.")
         acl_lines = [
             "# PyOVMS Auto-Generated ACL File",
@@ -120,7 +123,10 @@ class MosquittoAuthManager:
 
         # Backend service users
         if settings.MQTT_BACKEND_METRICS_SUB_USER:
-            acl_lines.extend([f"user {settings.MQTT_BACKEND_METRICS_SUB_USER}", "topic read ovms/+/+/metric/#", "topic read $SYS/broker/state", ""])
+            acl_lines.extend([f"user {settings.MQTT_BACKEND_METRICS_SUB_USER}", "topic read ovms/+/+/metric/#",
+                              # The module's events, for the vehicle event log (`…/event` and `…/event/<name>`).
+                              "topic read ovms/+/+/event/#",
+                              "topic read $SYS/broker/state", ""])
         if settings.MQTT_BACKEND_NOTIFY_SUB_USER:
             acl_lines.extend([f"user {settings.MQTT_BACKEND_NOTIFY_SUB_USER}", "topic read ovms/+/+/notify/#", "topic read $SYS/broker/state", ""])
         
@@ -151,7 +157,11 @@ class MosquittoAuthManager:
                 ""
             ])
 
+        now_utc = datetime.now(timezone.utc)
         vehicles_by_owner: dict[str, list[str]] = {}
+        # (owner username, VID) of every vehicle whose owner has granted support mode;
+        # every admin's API keys get the owner's rights on it while that runs.
+        support_grants: list[tuple[str, str]] = []
         for vehicle in db.query(models_db.Vehicle).options(joinedload(models_db.Vehicle.owner)).all():
             if (
                 vehicle.protocol in ('v3', 'both')
@@ -163,8 +173,9 @@ class MosquittoAuthManager:
                 topic = f"ovms/{vehicle.owner.username}/{vid}/#"
                 acl_lines.extend([f"user {vid}", f"topic readwrite {topic}", ""])
                 vehicles_by_owner.setdefault(vehicle.owner.username, []).append(vid)
+                if support_active(vehicle, now_utc):
+                    support_grants.append((vehicle.owner.username, vid))
 
-        now_utc = datetime.now(timezone.utc)
         for key in db.query(models_db.ApiKey).options(joinedload(models_db.ApiKey.user)).filter(
             models_db.ApiKey.is_active == True,
             (models_db.ApiKey.expires_at == None) | (models_db.ApiKey.expires_at > now_utc)
@@ -172,7 +183,14 @@ class MosquittoAuthManager:
             if not (key.user and key.user.username and key.user.is_active):
                 continue
             owned = vehicles_by_owner.get(key.user.username, [])
-            if not owned:
+            # Support mode: an admin's key reaches a granted vehicle like the owner's key, under
+            # the owner's prefix. Never an internal key, no discovery rules.
+            support = (
+                [(owner, vid) for (owner, vid) in support_grants if owner != key.user.username]
+                if key.user.is_admin and not is_internal_key_name(key.name)
+                else []
+            )
+            if not owned and not support:
                 # No MQTT-capable vehicle: no topic rules at all, so the broker denies
                 # everything for this account.
                 continue
@@ -181,10 +199,15 @@ class MosquittoAuthManager:
                 base = f"ovms/{key.user.username}/{vid}"
                 acl_lines.append(f"topic read {base}/#")
                 acl_lines.append(f"topic write {base}/client/#")
+            for owner, vid in support:
+                base = f"ovms/{owner}/{vid}"
+                acl_lines.append(f"topic read {base}/#")
+                acl_lines.append(f"topic write {base}/client/#")
 
-            discovery_base = f"ovms/{key.user.username}"
-            acl_lines.append(f"topic read {discovery_base}/+/metric/m/version")
-            acl_lines.append(f"topic write {discovery_base}/discovery/client/#")
+            if owned:
+                discovery_base = f"ovms/{key.user.username}"
+                acl_lines.append(f"topic read {discovery_base}/+/metric/m/version")
+                acl_lines.append(f"topic write {discovery_base}/discovery/client/#")
             acl_lines.append("")
 
         with self._file_lock:

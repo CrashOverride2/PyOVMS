@@ -8,6 +8,8 @@ from app.models import api as models_api
 from app.models import db as models_db
 from app.config import settings
 from app.utils.vehicle_data_presenter import parse_stored_msgs_for_vehicle_info
+from app.utils.vehicle_access import can_access_vehicle
+from app.utils.command_summary import summarize_command
 import logging
 
 logger = logging.getLogger(__name__)
@@ -264,12 +266,22 @@ class ConnectionManager:
     def get_all_vehicle_infos(self, db: Session, current_user: Optional[models_db.User] = None) -> List[models_api.VehicleInfo]:
         infos = []
         
-        db_vehicles_query = db.query(models_db.Vehicle).options(joinedload(models_db.Vehicle.owner))
-        if current_user and not current_user.is_admin:
-            db_vehicles_query = db_vehicles_query.filter(models_db.Vehicle.owner_id == current_user.id)
-        
-        all_db_vehicles = db_vehicles_query.order_by(models_db.Vehicle.vehicle_id).all()
         now_utc = datetime.datetime.now(datetime.timezone.utc)
+        db_vehicles_query = db.query(models_db.Vehicle).options(joinedload(models_db.Vehicle.owner))
+        if current_user is not None:
+            # A user's own vehicles; an admin's also those whose owner granted support
+            # mode — the admin dashboard, which lists everything, calls without a user.
+            if current_user.is_admin:
+                db_vehicles_query = db_vehicles_query.filter(
+                    (models_db.Vehicle.owner_id == current_user.id)
+                    | (models_db.Vehicle.support_until > now_utc)
+                )
+            else:
+                db_vehicles_query = db_vehicles_query.filter(models_db.Vehicle.owner_id == current_user.id)
+
+        all_db_vehicles = db_vehicles_query.order_by(models_db.Vehicle.vehicle_id).all()
+        if current_user is not None:
+            all_db_vehicles = [v for v in all_db_vehicles if can_access_vehicle(current_user, v, now_utc)]
         V3_TIMEOUT_SECONDS = 15 * 60 
 
         for db_vehicle_data in all_db_vehicles:
@@ -342,9 +354,12 @@ class ConnectionManager:
     async def forward_to_car(self, vehicle_id: str, command_code_with_args: str, source_app_conn: Optional[ClientConnection]) -> Optional[str]:
         car_conn = self.get_car_connection(vehicle_id)
         source_display = source_app_conn.addr_str if source_app_conn else "API/UI"
+        # The log is read by every admin (/admin/logs): the command's verb, never its
+        # arguments (`3,4,<password>`), and never the reply — that is the owner's data.
+        cmd_log = summarize_command(command_code_with_args)
 
         if not (car_conn and car_conn.authenticated):
-            logger.warning(f"TCP Car {vehicle_id} not connected/authenticated. Cannot forward command '{command_code_with_args}' from {source_display}")
+            logger.warning(f"TCP Car {vehicle_id} not connected/authenticated. Cannot forward command '{cmd_log}' from {source_display}")
             return None
 
         loop = asyncio.get_event_loop()
@@ -354,26 +369,26 @@ class ConnectionManager:
         command_key = f"c{cmd_num_str}"
 
         if command_key in car_conn.command_futures and not car_conn.command_futures[command_key].done():
-            logger.warning(f"TCP Previous command '{command_key}' to {vehicle_id} from {source_display} still pending. New command C{command_code_with_args} not sent.")
+            logger.warning(f"TCP Previous command '{command_key}' to {vehicle_id} from {source_display} still pending. New command C{cmd_log} not sent.")
             return "BUSY_PENDING_COMMAND"
 
         car_conn.command_futures[command_key] = future
 
-        logger.info(f"TCP Forwarding command C{command_code_with_args} from {source_display} to car {vehicle_id} ({car_conn.addr_str})")
+        logger.info(f"TCP Forwarding command C{cmd_log} from {source_display} to car {vehicle_id} ({car_conn.addr_str})")
         await car_conn.send_encrypted_message("C", command_code_with_args)
 
         try:
             response_data = await asyncio.wait_for(future, timeout=20.0) 
-            logger.info(f"TCP Received response for command C{command_code_with_args} from car {vehicle_id}: {response_data[:100] if response_data else 'None'}")
+            logger.info(f"TCP Received response for command C{cmd_log} from car {vehicle_id} ({len(response_data) if response_data else 0} chars)")
             return response_data
         except asyncio.TimeoutError:
-            logger.warning(f"TCP Timeout waiting for response to C{command_code_with_args} from car {vehicle_id}")
+            logger.warning(f"TCP Timeout waiting for response to C{cmd_log} from car {vehicle_id}")
             if car_conn.command_futures.get(command_key) == future: 
                  if not future.done(): future.set_exception(asyncio.TimeoutError("Command timed out"))
                  del car_conn.command_futures[command_key]
             return "TIMEOUT"
         except asyncio.CancelledError:
-            logger.info(f"TCP Command C{command_code_with_args} to car {vehicle_id} was cancelled (e.g., connection closed).")
+            logger.info(f"TCP Command C{cmd_log} to car {vehicle_id} was cancelled (e.g., connection closed).")
             if car_conn.command_futures.get(command_key) == future:
                  if not future.done(): future.cancel() 
                  del car_conn.command_futures[command_key]

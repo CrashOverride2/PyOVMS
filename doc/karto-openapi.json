@@ -1785,7 +1785,7 @@
     },
     "/api/karto/v1/vehicles/{vehicle_id}/trips": {
       "delete": {
-        "description": "Deletes all completed trips, their GPS points and map previews for a vehicle.\nThis is an irreversible operation. Ensures the authenticated user has\npermission before deleting.\n\nA trip still in progress is kept, as a single one cannot be deleted (409): the\ntracker would start a new trip with the next point, and the deleted ride would\ncome back as its second half. It is listed once it has ended and can be deleted\nthen. `include_in_progress=true` deletes it as well \u2014 for deleting the vehicle.",
+        "description": "Deletes all completed trips, their GPS points and map previews for a vehicle.\nThis is an irreversible operation. Allowed for the vehicle's owner, and for an\nactive admin using the main server's internal deletion key for this vehicle: the\nmain server calls this route when it deletes a vehicle or an account, with a\none-minute key of the acting user, who is often an admin. It is the only route\nwhere an admin may act on another user's trips \u2014 none may read them.\n\nA trip still in progress is kept, as a single one cannot be deleted (409): the\ntracker would start a new trip with the next point, and the deleted ride would\ncome back as its second half. It is listed once it has ended and can be deleted\nthen. `include_in_progress=true` deletes it as well \u2014 for deleting the vehicle.",
         "operationId": "delete_all_trips_for_vehicle_api_karto_v1_vehicles__vehicle_id__trips_delete",
         "parameters": [
           {

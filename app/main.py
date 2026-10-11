@@ -26,6 +26,7 @@ logging.config.dictConfig(LOGGING_CONFIG)
 
 from app.config import settings
 from app.lifespan import lifespan
+from app.services.support_mode import client_ip_var as support_client_ip_var
 from app.dependencies import require_current_user_from_cookie_fully_authenticated, get_client_ip
 from app.i18n import babel_configs, get_locale
 from app.routers.ui import templates, custom_datetime_formatter, tojson_filter, humanize_key
@@ -49,6 +50,9 @@ module_logger = logging.getLogger(__name__)
 class SecurityMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         client_ip = await get_client_ip(request)
+        # For the support-mode audit (app/services/support_mode.py): the task call_next
+        # starts, and the threadpool hops after it, run on a copy of this context.
+        support_client_ip_var.set(client_ip)
         if security_manager.is_blocked(client_ip):
             return JSONResponse(
                 status_code=http_status.HTTP_429_TOO_MANY_REQUESTS,

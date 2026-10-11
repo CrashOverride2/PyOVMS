@@ -1,0 +1,61 @@
+{# Support mode: the owner switches it; an admin sees the status only. #}
+<div class="bg-input-bg p-5 rounded-md border border-neon-blue/70 shadow-md space-y-4">
+    <div class="flex flex-wrap items-center gap-3">
+        <h2 class="text-xl font-semibold text-neon-blue">{{ _('Support Mode') }}</h2>
+        {% if support.active %}
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-900/50 text-amber-300 border border-amber-500/40">{{ _('Active') }}</span>
+        {% else %}
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-700/60 text-gray-300 border border-gray-500/30">{{ _('Off') }}</span>
+        {% endif %}
+    </div>
+
+    {% if is_owner %}
+    <p class="text-sm text-text-secondary">{{ _('Support mode gives the server administrators temporary remote access to this vehicle, for example to help you with a problem. While it is active, every administrator can open this vehicle as if it were their own: live data, logs, charges and the terminal, including sending commands. Their API keys can also reach the vehicle over MQTT.') }}</p>
+    <ul class="text-sm text-text-secondary list-disc pl-5 space-y-1">
+        <li>{{ _('Your trips and your notification settings stay private.') }}</li>
+        <li>{{ _('Every access by an administrator is recorded in the security log.') }}</li>
+        <li>{{ _('Support mode ends automatically when the chosen time is up. You can end it at any time.') }}</li>
+    </ul>
+
+    {% if support.active %}
+    <p class="text-sm text-amber-300">{{ _('Support mode is active until %(until)s.') % {'until': support.until | datetimeformat} }}</p>
+    {% endif %}
+
+    {% set enable_msg = _('Give all administrators access to this vehicle for the selected time?') if not support.active else _('Change the end of support mode to the selected time from now?') %}
+    <form method="POST" action="{{ url_for('ui_enable_support_mode', vehicle_module_id=vehicle.vehicle_id) }}"
+          class="js-confirm-form space-y-3" data-confirm-safe data-confirm-message='{{ enable_msg | tojson }}'>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <fieldset>
+            <legend class="text-sm font-medium text-text-primary mb-2">{{ _('Duration') if not support.active else _('Extend or shorten: new duration from now') }}</legend>
+            <div class="flex flex-wrap gap-3">
+                {% for key, label in support.durations %}
+                <label class="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-border-color bg-card-bg cursor-pointer text-sm text-text-primary">
+                    <input type="radio" name="duration" value="{{ key }}" {% if loop.first %}checked{% endif %} class="accent-neon-blue">
+                    <span>{{ label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </fieldset>
+        <button type="submit" class="px-4 py-2 text-sm font-medium text-neon-blue border border-neon-blue rounded-md hover:bg-neon-blue hover:text-dark-bg transition-colors">
+            {{ _('Enable support mode') if not support.active else _('Update support mode') }}
+        </button>
+    </form>
+
+    {% if support.active %}
+    {% set disable_msg = _('End support mode now? The administrators lose access immediately.') %}
+    <form method="POST" action="{{ url_for('ui_disable_support_mode', vehicle_module_id=vehicle.vehicle_id) }}"
+          class="js-confirm-form" data-confirm-safe data-confirm-message='{{ disable_msg | tojson }}'>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="px-4 py-2 text-sm font-medium text-red-400 border border-red-500/60 rounded-md hover:bg-red-500/20 transition-colors">
+            {{ _('End support mode now') }}
+        </button>
+    </form>
+    {% endif %}
+
+    {% else %}
+    <p class="text-sm text-text-secondary">
+        {{ _('%(owner)s has granted the administrators access to this vehicle until %(until)s.') % {'owner': vehicle.owner_username or '', 'until': support.until | datetimeformat} }}
+    </p>
+    <p class="text-sm text-text-secondary">{{ _('Every access is recorded in the security log. Trips and notification settings are not available in support mode.') }}</p>
+    {% endif %}
+</div>

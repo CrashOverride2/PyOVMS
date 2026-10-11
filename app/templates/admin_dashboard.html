@@ -121,7 +121,12 @@
                                 </span>
                             </span>
                         </td>
-                        <td class="px-4 py-2 whitespace-nowrap text-text-primary font-mono">{{ vehicle.vehicle_id }}</td>
+                        <td class="px-4 py-2 whitespace-nowrap text-text-primary font-mono">
+                            {{ vehicle.vehicle_id }}
+                            {% if vehicle.id in support_vehicles %}
+                            <span class="ml-1 inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-700/40 text-amber-300 border border-amber-600/50 font-sans" title="{{ _('Support mode active until %(until)s') % {'until': support_vehicles[vehicle.id] | datetimeformat} }}">{{ _('Support') }}</span>
+                            {% endif %}
+                        </td>
                         <td class="px-4 py-2 text-text-primary max-w-[10rem] break-words">{{ vehicle.vehicle_name or '' }}</td>
                         <td class="px-4 py-2 whitespace-nowrap text-text-secondary">{{ vehicle.owner_username or 'N/A' }}</td>
                         <td class="px-4 py-2 text-text-secondary">
@@ -159,6 +164,9 @@
                             {% endif %}
                         </td>
                         <td class="px-4 py-2 whitespace-nowrap font-medium space-x-2">
+                            {% if vehicle.id in support_vehicles %}
+                            <a href="{{ url_for('ui_vehicle_detail_page', vehicle_module_id=vehicle.vehicle_id) }}" class="text-amber-300 hover:text-amber-200 text-xs">{{ _('Open') }}</a>
+                            {% endif %}
                             <a href="{{ url_for('ui_edit_vehicle_form', vehicle_db_id=vehicle.id) }}" class="text-neon-magenta hover:text-neon-magenta-darker text-xs">{{ _('Edit') }}</a>
                             {% if vehicle.unused_reminder_sent_at %}
                             {# .js-confirm-form, not an inline onsubmit: the CSP allows no inline handlers, so

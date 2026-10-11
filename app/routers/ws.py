@@ -23,6 +23,7 @@ from app.websocket_manager import (
 from app.models import db as models_db
 from app.config import settings
 from app.security_manager import security_manager
+from app.services import support_mode
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["WebSockets"])
@@ -290,21 +291,16 @@ def _canonical_topic(requested: str, user_id: int) -> str:
 
 
 def _resolve_vehicle_topic(requested: str, current_user: models_db.User) -> Optional[str]:
-    """
-    The vehicle topic if this user may watch it (owner or admin), else None.
-
-    Returned in its canonical spelling — the stored id, which the pages send — so one
-    vehicle is one topic in the manager, whatever case the subscribe came in: the
-    broadcaster builds one payload per topic, and a withdrawal (`drop_topic`, when
-    the vehicle is deleted) has to find every subscriber under one name.
-    """
+    """The vehicle topic if this user may watch it, else None: the owner, or an admin
+    while the owner's support grant runs (audited). Returned in the stored id's spelling,
+    so one vehicle is one topic in the manager."""
     vehicle_id = requested[len(VEHICLE_TOPIC_PREFIX):]
     if not vehicle_id:
         return None
     db = SessionLocal()
     try:
         db_vehicle = crud.vehicle.get_vehicle_by_vehicle_id(db, vehicle_id)
-        if db_vehicle and (current_user.is_admin or db_vehicle.owner_id == current_user.id):
+        if db_vehicle and support_mode.check_vehicle_access(current_user, db_vehicle, kind="live"):
             return vehicle_topic(db_vehicle.vehicle_id)
         return None
     finally:
@@ -327,6 +323,9 @@ async def websocket_endpoint(websocket: WebSocket):
         return
 
     client_id = f"{current_user.username}_{secrets.token_hex(4)}"
+    # The support-mode audit of a `vehicle:` subscribe runs in a threadpool hop of
+    # this handler; SecurityMiddleware never sees a WebSocket scope.
+    support_mode.client_ip_var.set(websocket.client.host if websocket.client else None)
     await ws_manager.connect(websocket, client_id, user_id=current_user.id)
     deadline = getattr(websocket.state, "session_deadline", None)
     rejected = 0

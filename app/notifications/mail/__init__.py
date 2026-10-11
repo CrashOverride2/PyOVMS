@@ -9,6 +9,7 @@ from app.notifications.mail.admin import (
     send_lifecycle_admin_notification,
     send_new_user_admin_notification,
     send_notification_to_all_admins,
+    send_support_mode_enabled_admin_notification,
 )
 from app.notifications.mail.user import (
     send_account_deletion_warning_email,
@@ -24,6 +25,7 @@ __all__ = [
     "send_lifecycle_admin_notification",
     "send_new_user_admin_notification",
     "send_notification_to_all_admins",
+    "send_support_mode_enabled_admin_notification",
     "send_password_reset_email",
     "send_unused_vehicle_warning_email",
     "send_vehicle_auto_deleted_email",

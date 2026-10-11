@@ -9,6 +9,7 @@ from app.database import Base
 from app.models import db as models_db
 from app.config import settings as app_settings
 from app.services.charge_logger import models as charge_logger_models
+from app.services.event_logger import models as event_logger_models  # noqa: F401
 
 config = context.config
 

@@ -164,6 +164,9 @@ class VehicleInfo(BaseModel):
     last_seen_v3: Optional[UtcDatetime] = None
     last_message_at: Optional[UtcDatetime] = None
     unused_reminder_sent_at: Optional[UtcDatetime] = None
+    # End of the owner's support grant (app/services/support_mode.py). A time in the
+    # past is an expired grant the minute sweep has not cleared yet, not an active one.
+    support_until: Optional[UtcDatetime] = None
 
     class Config:
         from_attributes = True

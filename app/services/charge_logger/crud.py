@@ -13,22 +13,22 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def check_vehicle_ownership(db: Session, user_id: int, vehicle_id: str) -> bool:
+def check_vehicle_ownership(db: Session, user_id: int, vehicle_id: str, *, kind: str = "charge_api") -> bool:
     """
-    Checks if a user owns the specified vehicle. Admins have access to all.
+    Whether the user may read this vehicle's charges and events: its owner, or an
+    admin while the owner's support grant runs (audited; app/services/support_mode.py).
+    Admins used to pass unconditionally — and for a vehicle that did not exist.
     This function uses the main OVMS DB session.
     """
+    from app.services.support_mode import check_vehicle_access
+
     user = db.query(ovms_models.User).filter(ovms_models.User.id == user_id).first()
     if not user:
         return False
-    if user.is_admin:
-        return True
-    
     vehicle = db.query(ovms_models.Vehicle).filter(
-        ovms_models.Vehicle.vehicle_id == vehicle_id.upper(),
-        ovms_models.Vehicle.owner_id == user_id
+        ovms_models.Vehicle.vehicle_id == vehicle_id.upper()
     ).first()
-    return vehicle is not None
+    return check_vehicle_access(user, vehicle, kind=kind)
 
 def create_charge_log(db: Session, vehicle_id_fk: int, start_time: datetime.datetime, start_soc: Optional[float],
                       start_latitude: Optional[float] = None, start_longitude: Optional[float] = None,

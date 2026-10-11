@@ -210,6 +210,11 @@ def ui_edit_user_submit_route(
     if (not is_admin or not is_active) and crud.user.is_last_active_admin(db, user_db):
         return RedirectResponse(url=f"{redirect_url_on_error}?error_message={quote_plus(_("Cannot remove the last remaining admin account."))}", status_code=status.HTTP_303_SEE_OTHER)
 
+    # Admins own no vehicles (support mode is how they reach one), so an owner of
+    # vehicles cannot be promoted.
+    if is_admin and not user_db.is_admin and crud.user.owns_vehicles(db, user_db.id):
+        return RedirectResponse(url=f"{redirect_url_on_error}?error_message={quote_plus(_("A user who owns vehicles cannot be made an administrator."))}", status_code=status.HTTP_303_SEE_OTHER)
+
     if user_db.id == current_admin.id:
         if not is_active: return RedirectResponse(url=f"{redirect_url_on_error}?error_message={quote_plus(_("Admin cannot deactivate themselves."))}", status_code=status.HTTP_303_SEE_OTHER)
         if not is_admin: return RedirectResponse(url=f"{redirect_url_on_error}?error_message={quote_plus(_("Admin cannot remove their own admin status."))}", status_code=status.HTTP_303_SEE_OTHER)

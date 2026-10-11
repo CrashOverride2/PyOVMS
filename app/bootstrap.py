@@ -235,6 +235,32 @@ def _check_proxy_configuration():
         )
 
 
+def _check_trip_deletion_reaches_karto():
+    """Warn if vehicles have trip tracking on while this server would never delete trips
+    (ENABLE_KARTO_TRIP_TRACKING off: trigger_karto_vehicle_deletion() skips Karto)."""
+    if settings.ENABLE_KARTO_TRIP_TRACKING:
+        return
+    from app.database import SessionLocal
+    from app.models.db import Vehicle
+
+    db = SessionLocal()
+    try:
+        tracked = db.query(Vehicle.id).filter(Vehicle.enable_trip_tracking == True).count()
+    except Exception as exc:
+        module_logger.warning(f"Could not check for vehicles with trip tracking enabled: {exc}")
+        return
+    finally:
+        db.close()
+
+    if tracked:
+        module_logger.warning(
+            "%d vehicle(s) have trip tracking enabled, but ENABLE_KARTO_TRIP_TRACKING is off: "
+            "deleting a vehicle or an account will NOT delete its trips in Karto. If Karto runs, "
+            "set ENABLE_KARTO_TRIP_TRACKING=true.",
+            tracked,
+        )
+
+
 async def initialize_services():
     """Initializes and connects all external services."""
     module_logger.info("Initializing services...")
@@ -243,6 +269,7 @@ async def initialize_services():
     _check_proxy_configuration()
     _check_totp_key_availability()
     init_db_models_import()
+    _check_trip_deletion_reaches_karto()
     initialize_firebase_app()
     initialize_apns_client()
 
@@ -253,15 +280,15 @@ async def initialize_services():
         
         if settings.MQTT_BROKER_HOST and settings.MQTT_BROKER_HOST.strip():
             module_logger.info("MQTT integration is enabled. Connecting backend clients.")
+            # Sync the broker's password and ACL files before the subscribers connect.
+            if mqtt_manager.is_enabled():
+                await run_in_threadpool(mqtt_manager.sync_all_from_db, db)
             if settings.MQTT_BACKEND_METRICS_SUB_USER and settings.MQTT_BACKEND_METRICS_SUB_PASS:
                 mqtt_metrics_subscriber.connect(username=settings.MQTT_BACKEND_METRICS_SUB_USER, password=settings.MQTT_BACKEND_METRICS_SUB_PASS)
             if settings.MQTT_BACKEND_NOTIFY_SUB_USER and settings.MQTT_BACKEND_NOTIFY_SUB_PASS:
                 mqtt_notification_subscriber.connect(username=settings.MQTT_BACKEND_NOTIFY_SUB_USER, password=settings.MQTT_BACKEND_NOTIFY_SUB_PASS)
             if settings.MQTT_BACKEND_INTERACTIVE_USER and settings.MQTT_BACKEND_INTERACTIVE_PASS:
                 mqtt_interactive_client.connect(username=settings.MQTT_BACKEND_INTERACTIVE_USER, password=settings.MQTT_BACKEND_INTERACTIVE_PASS)
-            
-            if mqtt_manager.is_enabled():
-                await run_in_threadpool(mqtt_manager.sync_all_from_db, db)
         else:
             module_logger.info("MQTT integration is disabled (MQTT_BROKER_HOST not set).")
     finally:

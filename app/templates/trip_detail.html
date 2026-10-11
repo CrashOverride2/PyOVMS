@@ -288,7 +288,9 @@ document.addEventListener('alpine:init', () => {
             }
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
-                throw new Error(err.detail || `{{ _('Failed to load trip details (Status: ') }}${response.status})`);
+                // `trip_not_found` is a code for clients, not a sentence: the status says it.
+                const detail = err.detail === 'trip_not_found' ? null : err.detail;
+                throw new Error(detail || `{{ _('Failed to load trip details (Status: ') }}${response.status})`);
             }
             const data = await response.json();
             let current = null;
@@ -486,7 +488,14 @@ document.addEventListener('alpine:init', () => {
                     if (response.ok) {
                         window.location.href = tripDetailConfig.tripDeletedRedirect;
                     } else {
-                        response.json().then(data => window.ovmsDialog.alert({ message: `{{ _('Error deleting trip: ') }}${data.detail || response.statusText}`, danger: true }));
+                        response.json().catch(() => ({})).then(data => {
+                            // Gone already — deleted in another tab or in the app: what was asked for.
+                            if (response.status === 404 && data.detail === 'trip_not_found') {
+                                window.location.href = tripDetailConfig.tripDeletedRedirect;
+                                return;
+                            }
+                            window.ovmsDialog.alert({ message: `{{ _('Error deleting trip: ') }}${data.detail || response.statusText}`, danger: true });
+                        });
                     }
                 })
                 .catch(err => window.ovmsDialog.alert({ message: `{{ _('Network error: ') }}${err.message}`, danger: true }));

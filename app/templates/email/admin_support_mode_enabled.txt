@@ -1,0 +1,15 @@
+{{ _('Support Mode Enabled') }}
+
+{{ _('Hello %(name)s,') % {'name': admin_display_name} }}
+
+{{ _('A user has granted the administrators remote access to their vehicle. Until the time below, every administrator can open the vehicle as if it were their own: live data, logs, charges and the terminal. Administrator API keys can also access the vehicle over MQTT. Trips and notification settings remain private.') }}
+
+{{ _('Owner') }}: {{ owner_username }}
+{{ _('Vehicle') }}: {{ vehicle_label }}
+{{ _('Access granted until') }}: {{ support_until }}
+
+{{ _('Every access is recorded in the security events.') }}
+
+{{ _('Open Vehicle') }}: {{ vehicle_url }}
+
+{{ _('PyOVMS Control Server') }} | {{ server_base_url }}

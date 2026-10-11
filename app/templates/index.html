@@ -138,7 +138,7 @@
 {% endblock %}
 {% block scripts %}
 {% if vehicles %}
-<script src="{{ url_for('static', path='/js/vehicle_live_view.js') }}"></script>
+<script src="{{ url_for('static', path='/js/vehicle_live_view.js') }}?v={{ asset_version('js/vehicle_live_view.js') }}"></script>
 <script nonce="{{ request.state.csp_nonce }}">
     const dashboardConfig = {
         lang: {{ (user_locale or 'en') | tojson | safe }},

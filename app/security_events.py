@@ -53,6 +53,10 @@ class SecurityEventType(str, Enum):
     ADMIN_ACTION = "admin_action"
     DISPOSABLE_EMAIL_BLOCKED = "disposable_email_blocked"
     MQTT_SYNC_FAILED = "mqtt_sync_failed"
+    SUPPORT_MODE_ENABLED = "support_mode_enabled"
+    SUPPORT_MODE_DISABLED = "support_mode_disabled"
+    SUPPORT_MODE_EXPIRED = "support_mode_expired"
+    SUPPORT_ACCESS = "support_access"
 
 
 class SecurityEventSeverity(str, Enum):
@@ -89,6 +93,10 @@ class SecurityEventLogger:
         # real operators out. Neither is routine on a running server.
         SecurityEventType.ADMIN_GRANTED: SecurityEventSeverity.WARNING,
         SecurityEventType.ADMIN_REVOKED: SecurityEventSeverity.WARNING,
+        # Support mode opens a user's vehicle to every admin, and each use of that
+        # is an admin reading someone else's data. Ending or expiring stays INFO.
+        SecurityEventType.SUPPORT_MODE_ENABLED: SecurityEventSeverity.WARNING,
+        SecurityEventType.SUPPORT_ACCESS: SecurityEventSeverity.WARNING,
     }
 
     @staticmethod
@@ -336,3 +344,45 @@ def log_admin_role_change(
         )
     except Exception:
         logger.exception("Failed to record admin role change for user '%s'", target_username)
+
+
+_SUPPORT_CHANGE_TYPES = {
+    "enabled": SecurityEventType.SUPPORT_MODE_ENABLED,
+    "disabled": SecurityEventType.SUPPORT_MODE_DISABLED,
+    "expired": SecurityEventType.SUPPORT_MODE_EXPIRED,
+}
+
+
+def log_support_mode_change(
+    db: Session,
+    *,
+    change: str,
+    vehicle_id: str,
+    owner_id: Optional[int],
+    owner_username: Optional[str],
+    until: Optional[datetime] = None,
+    ip_address: Optional[str] = None,
+    details: Optional[Dict[str, Any]] = None,
+) -> None:
+    """Record that an owner enabled or disabled support mode, or that it expired.
+    Filed under the owner. Never raises."""
+    try:
+        payload: Dict[str, Any] = {"vehicle_id": vehicle_id}
+        if until is not None:
+            payload["until"] = until.isoformat()
+        payload.update(details or {})
+        security_event_logger.log_event(
+            db=db,
+            event_type=_SUPPORT_CHANGE_TYPES[change],
+            user_id=owner_id,
+            username=owner_username,
+            ip_address=ip_address,
+            details=payload,
+        )
+    except Exception:
+        logger.exception("Failed to record support mode change '%s' for vehicle %s", change, vehicle_id)
+        # The caller goes on with this session, so a failed commit must be rolled back.
+        try:
+            db.rollback()
+        except Exception:
+            logger.exception("Rollback after the failed support mode audit failed")

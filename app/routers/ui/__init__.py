@@ -25,6 +25,20 @@ templates.env.add_extension('jinja2.ext.i18n')
 
 templates.env.globals['source_code_url'] = settings.SOURCE_CODE_URL
 
+STATIC_DIR = APP_DIR / "static"
+
+
+def asset_version(path: str) -> str:
+    """A cache key for a static file of ours: its modification time, so a deploy is
+    fetched exactly once."""
+    try:
+        return str(int((STATIC_DIR / path.lstrip("/")).stat().st_mtime))
+    except OSError:
+        return "0"
+
+
+templates.env.globals['asset_version'] = asset_version
+
 TRANSLATIONS_DIR = Path(__file__).resolve().parent.parent.parent / "translations"
 
 templates.env.install_null_translations()

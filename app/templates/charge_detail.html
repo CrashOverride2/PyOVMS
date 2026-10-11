@@ -318,7 +318,19 @@ document.addEventListener('alpine:init', () => {
                     if (response.ok) {
                         window.location.href = chargeDetailConfig.deleteRedirect;
                     } else {
-                        response.json().then(data => window.ovmsDialog.alert({ message: `{{ _('Error deleting charge log: ') }}${data.detail || response.statusText}`, danger: true }));
+                        response.json().catch(() => ({})).then(data => {
+                            // Gone already — deleted in another tab or in the app: what was asked for.
+                            if (response.status === 404 && data.detail === 'charge_log_not_found') {
+                                window.location.href = chargeDetailConfig.deleteRedirect;
+                                return;
+                            }
+                            // Still being recorded: the server refuses it (409) until the charge has ended.
+                            if (response.status === 409) {
+                                window.ovmsDialog.alert({ message: `{{ _('This charge is still being recorded and cannot be deleted until it has ended.') }}`, danger: true });
+                                return;
+                            }
+                            window.ovmsDialog.alert({ message: `{{ _('Error deleting charge log: ') }}${data.detail || response.statusText}`, danger: true });
+                        });
                     }
                 })
                 .catch(err => window.ovmsDialog.alert({ message: `{{ _('Network error: ') }}${err.message}`, danger: true }));
