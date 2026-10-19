@@ -12,6 +12,9 @@ Pinned here:
   once, and the metric that follows confirms the event (`source = both`);
 - a retained value never opens an event, but resumes an open row after a restart;
 - the switch is the vehicle's charge-logging one;
+- cabin temperature and setpoint come only from live readings no older than
+  `HVAC_READING_MAX_AGE_SECONDS` before the start, else from the first one during the
+  event — never the sleeping climate unit's value from the last drive;
 - a stale event is ended at its last activity and an orphaned row is closed;
 - the list API pages newest first and says `in_progress`; the delete refuses the
   event being recorded (409) and answers 404 with `event_not_found`.
@@ -112,6 +115,7 @@ def _utc(value):
 
 def test_climate_while_parked_is_one_event(db, manager, car):
     car.send("v.e.hvac", "yes", _at(0))
+    car.send("v.e.cabintemp", "12", _at(1))
     car.send("v.e.cabintemp", "15", _at(5))
     car.send("v.e.hvac", "no", _at(15))
 
@@ -119,9 +123,57 @@ def test_climate_while_parked_is_one_event(db, manager, car):
     assert event.kind == "climate"
     assert _utc(event.start_time) == _at(0)
     assert _utc(event.end_time) == _at(15)
-    assert event.cabin_temp_start == 4.0 and event.cabin_temp_end == 15.0
+    assert event.cabin_temp_start == 12.0 and event.cabin_temp_end == 15.0
     assert event.aux_charged is False
     assert "CAR1" not in manager.active
+
+
+def test_the_sleeping_climate_units_last_reading_is_not_the_start(db, manager, car):
+    # The climate unit sleeps while the car is parked; the last cabin temperature
+    # and setpoint it sent are from the end of the drive. Recorded as the start,
+    # every preconditioning "cooled" the cabin from 19.5 to the 13.4 it really was.
+    car.send("v.e.cabintemp", "19.5", _at(-120))
+    car.send("v.e.cabinsetpoint", "0", _at(-120))
+    car.send("v.e.hvac", "yes", _at(0))
+    [event] = _events(db)
+    assert event.cabin_temp_start is None and event.cabin_setpoint is None
+
+    car.send("v.e.cabintemp", "13.4", _at(1))
+    car.send("v.e.cabinsetpoint", "22", _at(1))
+    car.send("v.e.cabintemp", "16", _at(4))
+    car.send("v.e.hvac", "no", _at(5))
+
+    [event] = _events(db)
+    assert (event.cabin_temp_start, event.cabin_temp_end, event.cabin_setpoint) == (13.4, 16.0, 22.0)
+
+
+def test_a_reading_from_just_before_the_start_is_the_start(db, manager, car):
+    car.send("v.e.cabintemp", "8", _at(-2))
+    car.send("v.e.hvac", "yes", _at(0))
+    car.send("v.e.cabintemp", "11", _at(3))
+    car.send("v.e.hvac", "no", _at(5))
+
+    [event] = _events(db)
+    assert (event.cabin_temp_start, event.cabin_temp_end) == (8.0, 11.0)
+
+
+def test_a_boost_with_the_climate_unit_asleep_has_no_cabin_temperature(db, manager, car):
+    car.send("v.e.cabintemp", "21.3", _at(-300))
+    car.send("v.e.charging12v", "yes", _at(0))
+    car.send("v.e.charging12v", "no", _at(9))
+
+    [event] = _events(db)
+    assert event.cabin_temp_start is None and event.cabin_temp_end is None
+
+
+def test_a_retained_reading_is_not_fresh(db, manager, car):
+    # After a restart the broker replays the unit's last value: its age is unknown.
+    car.send("v.e.cabintemp", "19.5", _at(-1), retained=True)
+    car.send("v.e.hvac", "yes", _at(0))
+    car.send("v.e.hvac", "no", _at(5))
+
+    [event] = _events(db)
+    assert event.cabin_temp_start is None and event.cabin_temp_end is None
 
 
 def test_the_converter_joining_minutes_later_is_the_same_event(db, manager, car):

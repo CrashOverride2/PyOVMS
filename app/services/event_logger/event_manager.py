@@ -40,6 +40,10 @@ EVENT_AUX_START = 'vehicle.charge.12v.start'
 EVENT_AUX_STOP = 'vehicle.charge.12v.stop'
 RELEVANT_EVENTS = {EVENT_AUX_START, EVENT_AUX_STOP}
 
+# Climate-unit readings by the column that records them. The unit sleeps while the car
+# is parked and the store keeps its value from the last drive, so they are taken live.
+HVAC_READINGS = {'v.e.cabintemp': 'cabin_temp_start', 'v.e.cabinsetpoint': 'cabin_setpoint'}
+
 
 def _truthy(value) -> bool:
     return value is not None and str(value).strip().lower() in ('yes', 'true', '1', 'on')
@@ -65,6 +69,8 @@ class _VehicleState:
     charging: Optional[bool] = None
     # The climate metrics and `v.e.charging12v` as last sent, for the same reason.
     seen: Dict[str, bool] = field(default_factory=dict)
+    # HVAC_READINGS as last received live, with the message time.
+    readings: Dict[str, Tuple[float, datetime.datetime]] = field(default_factory=dict)
 
 
 @dataclass
@@ -79,6 +85,8 @@ class ActiveVehicleEvent:
     aux_charged: bool = False
     aux_energy_wh: Optional[float] = None
     sources: Set[str] = field(default_factory=set)
+    # HVAC_READINGS columns without a fresh value at the start; the first live reading fills them.
+    pending: Set[str] = field(default_factory=set)
 
 
 class EventManager:
@@ -97,6 +105,8 @@ class EventManager:
     MAX_POWER_STEP_SECONDS = 900.0
     # Same margin as the charge log's orphan close (the vehicle-corrected clock).
     ORPHAN_CLOCK_MARGIN_SECONDS = 300
+    # A climate-unit reading older than this before the start is the sleeping unit's.
+    HVAC_READING_MAX_AGE_SECONDS = 600.0
 
     def __init__(self):
         self.active: Dict[str, ActiveVehicleEvent] = {}
@@ -118,6 +128,9 @@ class EventManager:
         says what the module last published, not when: it may resume an open row but
         never opens one, and it moves no clock."""
         if metric_name not in RELEVANT_EVENT_METRICS:
+            if metric_name in HVAC_READINGS and not retained:
+                with self._lock:
+                    self._hvac_reading(vehicle_id, metric_name, value, timestamp)
             active = self.active.get(vehicle_id)
             if active is not None and not retained:
                 with self._lock:
@@ -293,6 +306,9 @@ class EventManager:
             return
 
         metrics = metrics_manager.get_metrics_for_vehicle(vehicle_id) or {}
+        since = as_utc(timestamp) - datetime.timedelta(seconds=self.HVAC_READING_MAX_AGE_SECONDS)
+        readings = {column: self._fresh_reading(vehicle_id, name, since)
+                    for name, column in HVAC_READINGS.items()}
         row = crud.create_event(
             db,
             vehicle_id_fk=vehicle_db_id,
@@ -302,17 +318,17 @@ class EventManager:
             start_soc=_float(metrics.get('v.b.soc')),
             latitude=_float(metrics.get('v.p.latitude')),
             longitude=_float(metrics.get('v.p.longitude')),
-            cabin_temp_start=_float(metrics.get('v.e.cabintemp')),
-            cabin_setpoint=_float(metrics.get('v.e.cabinsetpoint')),
             ambient_temp=_float(metrics.get('v.e.temp')),
             aux_charged=aux_charged,
             aux_voltage_start=_float(metrics.get('v.b.12v.voltage')),
             source=source,
+            **readings,
         )
         self.active[vehicle_id] = ActiveVehicleEvent(
             event_id=row.id, vehicle_id=vehicle_id, vehicle_db_id=vehicle_db_id, kind=kind,
             start_time=timestamp, last_activity=timestamp, last_activity_written=timestamp,
             aux_charged=aux_charged, sources={source},
+            pending={column for column, value in readings.items() if value is None},
         )
         state = self._states.get(vehicle_id)
         if state is not None:
@@ -362,6 +378,7 @@ class EventManager:
                 aux_charged=bool(row.aux_charged),
                 aux_energy_wh=row.aux_energy_wh,
                 sources=set((row.source or 'metric').replace('both', 'metric event').split()),
+                pending={column for column in HVAC_READINGS.values() if getattr(row, column) is None},
             )
             logger.info(f"Resuming open vehicle event {row.id} for {vehicle_id}.")
             if kind == models.KIND_CLIMATE and row.kind == models.KIND_AUX_CHARGE:
@@ -409,7 +426,9 @@ class EventManager:
             end_time=end,
             last_activity=end,
             end_soc=_float(metrics.get('v.b.soc')),
-            cabin_temp_end=_float(metrics.get('v.e.cabintemp')),
+            cabin_temp_end=self._fresh_reading(
+                vehicle_id, 'v.e.cabintemp',
+                active.start_time - datetime.timedelta(seconds=self.HVAC_READING_MAX_AGE_SECONDS)),
             aux_voltage_end=_float(metrics.get('v.b.12v.voltage')),
             aux_charged=active.aux_charged,
             aux_energy_wh=round(active.aux_energy_wh, 1) if active.aux_energy_wh is not None else None,
@@ -436,6 +455,37 @@ class EventManager:
                 active.last_activity_written = active.last_activity
             finally:
                 db.close()
+
+    def _hvac_reading(self, vehicle_id: str, metric_name: str, value, timestamp: datetime.datetime):
+        """Keep a live climate-unit reading; it fills a start value still pending."""
+        reading = _float(value)
+        state = self._states.setdefault(vehicle_id, _VehicleState())
+        if reading is None:
+            state.readings.pop(metric_name, None)
+            return
+        state.readings[metric_name] = (reading, as_utc(timestamp))
+        active = self.active.get(vehicle_id)
+        column = HVAC_READINGS[metric_name]
+        if active is None or column not in active.pending:
+            return
+        active.pending.discard(column)
+        db = SessionLocal()
+        try:
+            self._write(db, vehicle_id, **{column: reading})
+        except Exception as e:
+            db.rollback()
+            logger.warning(f"Could not record {column} of vehicle event {active.event_id}: {e}")
+        finally:
+            db.close()
+
+    def _fresh_reading(self, vehicle_id: str, metric_name: str,
+                       since: datetime.datetime) -> Optional[float]:
+        """The live reading received at or after `since`, else None."""
+        state = self._states.get(vehicle_id)
+        reading = state.readings.get(metric_name) if state is not None else None
+        if reading is None or reading[1] < as_utc(since):
+            return None
+        return reading[0]
 
     def _integrate_power(self, vehicle_id: str, state: _VehicleState, value,
                          timestamp: datetime.datetime, retained: bool):
