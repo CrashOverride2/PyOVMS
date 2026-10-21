@@ -20,7 +20,7 @@ cachecontrol==0.14.4
     # via firebase-admin
 cbor2==6.1.4
     # via webauthn
-certifi==2026.7.22
+certifi==2026.10.19
     # via
     #   httpcore
     #   httpx
@@ -131,7 +131,7 @@ msgpack==1.2.1
     # via cachecontrol
 paho-mqtt==2.1.0
     # via -r requirements.in
-pillow==12.3.0
+pillow==13.0.0
     # via qrcode
 proto-plus==1.28.3
     # via
